@@ -5,3 +5,4 @@
 - Drohne auto follow Personen mit auto crash vermeidung 
 - Klasifzieren zwischen richtigem tablett und falschem tablett in der Mensa und berechnung wie viel von was übergeblieben ist
 - Abschätzung in welchem Land wir uns befinden durch Metadaten + Sonnenposition + wetterberichte und jeglicher anderer Klassifikation
+- Structure for Motion für ein bekanntes Gebäude
