@@ -1,2 +1,8 @@
 numpy
-matplot
+pandas
+scikit-learn
+pytorch
+torchvision
+jupyterlab
+matplotlib
+(timeit)
