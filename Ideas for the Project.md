@@ -7,4 +7,5 @@
 - Abschätzung in welchem Land wir uns befinden durch Metadaten + Sonnenposition + wetterberichte und jeglicher anderer Klassifikation
 - Structure for Motion für ein bekanntes Gebäude
 - Celebrity look a like generator 
-- Find a Person online 
+- Find a Person online
+- **kleine Anzahl an bekannten Orten aus Osnabrück der KI füttern, damit Gebäude im HIntergrund auf anderen Fotos erkannt werden**
