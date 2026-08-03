@@ -9,3 +9,4 @@
 - Celebrity look a like generator 
 - Find a Person online
 - **kleine Anzahl an bekannten Orten aus Osnabrück der KI füttern, damit Gebäude im HIntergrund auf anderen Fotos klassifiziert werden**
+- Bestand testen, man gibt Fotos von einem Raum z.B. wie er vollständig aussieht und dann lässt man nach einem Tag/Event prüfen, ob alles da ist. 
