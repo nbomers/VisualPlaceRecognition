@@ -8,4 +8,4 @@
 - Structure for Motion für ein bekanntes Gebäude
 - Celebrity look a like generator 
 - Find a Person online
-- **kleine Anzahl an bekannten Orten aus Osnabrück der KI füttern, damit Gebäude im HIntergrund auf anderen Fotos erkannt werden**
+- **kleine Anzahl an bekannten Orten aus Osnabrück der KI füttern, damit Gebäude im HIntergrund auf anderen Fotos klassifiziert werden**
