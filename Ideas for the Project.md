@@ -1,0 +1,4 @@
+- Streetview Daten aus Osnabrück Downloaden -> externes Bild location schätzen
+- Sportler tracken und automatisch Sprint / Wurf / Angriffsangel oder Spielerposition auswerten
+- Presence Tracker aber mit Ortung im Raum durch Wifi Signale -> umschaltung von Licht oder unterschiedlichen Setups
+- Drohne auto follow Personen mit auto crash vermeidung 
