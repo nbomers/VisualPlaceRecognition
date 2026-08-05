@@ -1,0 +1,93 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---------- Umgebungen ----------
+.venv/
+venv/
+env/
+ENV/
+.conda/
+envs/
+
+# ---------- Jupyter ----------
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# ---------- Zugangsdaten ----------
+# Niemals Tokens oder API-Schluessel committen.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+secrets.yaml
+
+# ---------- Daten ----------
+# Rohdaten und Zwischenstaende gehoeren nicht ins Repo.
+data/
+datasets/
+*.csv
+*.tsv
+*.parquet
+*.h5
+*.hdf5
+*.zip
+*.tar
+*.tar.gz
+# Ausnahme: kleine Beispieldateien bewusst freigeben
+!data/samples/**
+!**/.gitkeep
+
+# ---------- Modelle & Checkpoints ----------
+models/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+
+# ---------- Logs & Experiment-Tracking ----------
+logs/
+runs/
+outputs/
+wandb/
+mlruns/
+lightning_logs/
+events.out.tfevents.*
+*.log
+
+# ---------- Editoren & IDEs ----------
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# ---------- Betriebssystem ----------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---------- Sonstiges ----------
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
