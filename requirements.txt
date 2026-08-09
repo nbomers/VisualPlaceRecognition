@@ -5,3 +5,16 @@ pytorch
 torchvision
 jupyterlab
 matplotlib
+osmnx
+open_clip_torch
+faiss-cpu
+umap-learn
+pytorch-metric-learning
+folium
+utm
+geopandas
+shapely
+requests
+scipy
+pyyaml
+mapbox-vector-tile
