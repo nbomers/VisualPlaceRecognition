@@ -47,6 +47,15 @@ datasets/
 !data/samples/**
 !**/.gitkeep
 
+# ---------- Heruntergeladene Bilder ----------
+# Bilddaten gehoeren nie ins Repo - einzelne Dokubilder unter docs/ bleiben
+# erlaubt, deshalb hier Ordner statt Dateiendungen.
+images/
+img/
+thumbnails/
+crops/
+panoramas/
+
 # ---------- Modelle & Checkpoints ----------
 models/
 checkpoints/
@@ -55,6 +64,24 @@ checkpoints/
 *.ckpt
 *.onnx
 *.safetensors
+
+# ---------- Embeddings & Indizes ----------
+embeddings/
+*.npy
+*.npz
+*.faiss
+*.index
+*.pkl
+*.pickle
+*.joblib
+
+# ---------- Geodaten & Kachel-Rohdaten ----------
+*.geojson
+*.gpkg
+*.shp
+*.mvt
+*.pbf
+*.jsonl
 
 # ---------- Logs & Experiment-Tracking ----------
 logs/
@@ -88,6 +115,8 @@ $RECYCLE.BIN/
 
 # ---------- Sonstiges ----------
 .cache/
+# osmnx-Cache (Overpass-Antworten)
+cache/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
