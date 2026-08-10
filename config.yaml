@@ -6,33 +6,61 @@
 #
 # Geheimnisse gehören NICHT hierher, sondern in .env (siehe .env.example).
 
-# Ort im Format, das OSM/Nominatim versteht: "Stadt, Land"
+# Ort im Format, das OSM/Nominatim versteht
 city: "Osnabrück, Germany"
 
 # --- Mapillary Vector Tiles ------------------------------------------------
-# zoom 14 ist die Ebene, auf der einzelne Bildpunkte liegen. Niedriger liefert
+
+# Zoom 14 ist die Ebene, auf der einzelne Bildpunkte liegen. Niedriger liefert
 # nur eine ausgedünnte Übersicht, höher vervielfacht die Kachelzahl ohne Gewinn.
 zoom: 14
 max_workers: 8
 
+
+
 # --- Stadtteil-Auswertung --------------------------------------------------
 districts:
+  # true  = Stadtteile berechnen und auswerten
+  # false = Stadtteilberechnung komplett überspringen
+  enabled: false
+
   # OSM-place-Tags, die als Stadtteil gelten
   place_tags: [suburb, quarter, neighbourhood]
-  # kleiner: filtert Mini-Artefakte aus OSM
+
+  # Kleiner: filtert Mini-Artefakte aus OSM
   min_area_km2: 0.05
+
   # Ab welchem Flächenanteil gilt ein Gebiet als in einem anderen enthalten.
   # OSM führt oft Stadtteil UND Ortsteil darin — ohne diese Auflösung
   # würden Bilder doppelt gezählt.
   nesting_threshold: 0.7
 
+  # Administrative Ebenen, die als Stadtteilgliederung geprüft werden.
+  # Die Reihenfolge dient bei gleichwertigen Kandidaten als Präferenz.
+  admin_levels: [10, 9]
+
+  # Mindestanzahl an Stadtteilflächen, damit die Ebene als brauchbar gilt.
+  min_districts_required: 3
+
+
+
 # --- Verifikation gegen mapillary.com --------------------------------------
-# Feste Orte statt "dichtester Bereich": nur so ist der Vergleich mit der
-# Website aussagekräftig. Koordinaten als [lat, lon].
 verification:
+  # true  = konfigurierte Spots prüfen
+  # false = komplette Spot-Verifikation überspringen
+  enabled: false
+
+  # Radius um jeden Verifikationspunkt
   radius_m: 400
+
+  # Einzelne Spots können mit # auskommentiert werden.
+  # Beispiel: Die nächste Zeile wäre dann deaktiviert.
+  # https://nominatim.openstreetmap.org/ui/search.html?q=...
   spots:
     "Markt / Dom": [52.2799, 8.0442]
     "Neumarkt": [52.2740, 8.0470]
     "Hauptbahnhof": [52.2726, 8.0614]
     "Westerberg": [52.2830, 8.0230]
+
+    # "Schinkel": [52.2760, 8.0850]
+    # "Sonnenhügel": [52.2920, 8.0500]
