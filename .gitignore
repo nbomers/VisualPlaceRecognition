@@ -32,9 +32,11 @@ credentials.json
 secrets.yaml
 
 # ---------- Daten ----------
-# Rohdaten und Zwischenstaende gehoeren nicht ins Repo.
+# Rohdaten, Zwischenstaende und generierte Datensaetze gehoeren nicht ins Repo.
 data/
 datasets/
+
+# Tabellarische / binäre Datendateien
 *.csv
 *.tsv
 *.parquet
@@ -43,18 +45,24 @@ datasets/
 *.zip
 *.tar
 *.tar.gz
+
 # Ausnahme: kleine Beispieldateien bewusst freigeben
 !data/samples/**
 !**/.gitkeep
 
 # ---------- Heruntergeladene Bilder ----------
-# Bilddaten gehoeren nie ins Repo - einzelne Dokubilder unter docs/ bleiben
-# erlaubt, deshalb hier Ordner statt Dateiendungen.
+# Mapillary-Bilder und sonstige Bilddaten gehoeren nie ins Repo.
 images/
 img/
 thumbnails/
 crops/
 panoramas/
+
+# Falls Bilder direkt unter data/ liegen:
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.png
+data/**/*.webp
 
 # ---------- Modelle & Checkpoints ----------
 models/
@@ -66,6 +74,7 @@ checkpoints/
 *.safetensors
 
 # ---------- Embeddings & Indizes ----------
+# Generierte CLIP-/AnyLoc-/EigenPlaces-/MixVPR-Embeddings
 embeddings/
 *.npy
 *.npz
@@ -107,6 +116,7 @@ events.out.tfevents.*
 .AppleDouble
 .LSOverride
 ._*
+
 # Windows
 Thumbs.db
 ehthumbs.db
@@ -115,8 +125,10 @@ $RECYCLE.BIN/
 
 # ---------- Sonstiges ----------
 .cache/
-# osmnx-Cache (Overpass-Antworten)
+
+# OSMnx-Cache (Overpass-Antworten)
 cache/
+
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
