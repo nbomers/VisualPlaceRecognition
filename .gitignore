@@ -123,6 +123,9 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
+# ---------- Ergebnisse ----------
+results/
+
 # ---------- Sonstiges ----------
 .cache/
 
