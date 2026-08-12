@@ -9,12 +9,36 @@
 # Ort im Format, das OSM/Nominatim versteht
 city: "Osnabrück, Germany"
 
+# VPR-Methode
+# clip, anyloc, eigenplaces, mixvpr
+vpr:
+  method: "clip"
+
+  # Reproduzierbare MSLS-inspirierte Datensatz-Spezifikation.
+  # Sequenzen sind die Split-Einheit; einzelne Bilder werden niemals getrennt.
+  split_seed: 42
+  train_fraction: 0.70
+  database_fraction: 0.15
+  query_fraction: 0.15
+
+  # Geografische Definition von positiven/negativen Paaren
+  positive_radius_m: 10.0
+  negative_radius_m: 25.0
+
+
+# which specific model
+model : "openai/clip-vit-base-patch32"
+
+dataset_folder : "../data"
+
+
 # --- Mapillary Vector Tiles ------------------------------------------------
 
 # Zoom 14 ist die Ebene, auf der einzelne Bildpunkte liegen. Niedriger liefert
 # nur eine ausgedünnte Übersicht, höher vervielfacht die Kachelzahl ohne Gewinn.
 zoom: 14
-max_workers: 8
+max_workers: "auto"
+image_size: 1024
 
 
 
@@ -22,7 +46,7 @@ max_workers: 8
 districts:
   # true  = Stadtteile berechnen und auswerten
   # false = Stadtteilberechnung komplett überspringen
-  enabled: false
+  enabled: true
 
   # OSM-place-Tags, die als Stadtteil gelten
   place_tags: [suburb, quarter, neighbourhood]
@@ -48,7 +72,7 @@ districts:
 verification:
   # true  = konfigurierte Spots prüfen
   # false = komplette Spot-Verifikation überspringen
-  enabled: false
+  enabled: true
 
   # Radius um jeden Verifikationspunkt
   radius_m: 400
