@@ -1,21 +1,20 @@
 # Projektparameter — bewusst versioniert.
-#
-# Hier stehen alle Werte, die das Ergebnis beeinflussen. Sie gehören ins
-# Repository, damit jede und jeder im Team denselben Datensatz erzeugt und
-# später nachvollziehbar ist, wie eine Zahl zustande kam.
-#
-# Geheimnisse gehören NICHT hierher, sondern in .env (siehe .env.example).
 
-# Ort im Format, das OSM/Nominatim versteht
 city: "Osnabrück, Germany"
 
-# VPR-Methode
-# clip, anyloc, eigenplaces, mixvpr
+# --- VPR ---------------------------------------------------------
 vpr:
+
+  # clip, anyloc, eigenplaces, mixvpr
   method: "clip"
 
-  # Reproduzierbare MSLS-inspirierte Datensatz-Spezifikation.
-  # Sequenzen sind die Split-Einheit; einzelne Bilder werden niemals getrennt.
+  # Recommended:
+  # "openai/clip-vit-base-patch32"
+  # "dinov2"
+  # "" 
+
+  model: "openai/clip-vit-base-patch32"
+
   split_seed: 42
   train_fraction: 0.70
   database_fraction: 0.15
@@ -26,21 +25,19 @@ vpr:
   negative_radius_m: 25.0
 
 
-# which specific model
-model : "openai/clip-vit-base-patch32"
+retrieval:
+  method: "numpy"
+  threshold: 25
 
-dataset_folder : "../data"
 
 
-# --- Mapillary Vector Tiles ------------------------------------------------
+# --- Mapillary Values ------------------------------------------------
 
-# Zoom 14 ist die Ebene, auf der einzelne Bildpunkte liegen. Niedriger liefert
-# nur eine ausgedünnte Übersicht, höher vervielfacht die Kachelzahl ohne Gewinn.
 zoom: 14
 max_workers: "auto"
 image_size: 1024
-
-
+img_download_path: "~/Downloads/images"
+dataset_folder: "../data"
 
 # --- Stadtteil-Auswertung --------------------------------------------------
 districts:
@@ -77,14 +74,9 @@ verification:
   # Radius um jeden Verifikationspunkt
   radius_m: 400
 
-  # Einzelne Spots können mit # auskommentiert werden.
-  # Beispiel: Die nächste Zeile wäre dann deaktiviert.
   # https://nominatim.openstreetmap.org/ui/search.html?q=...
   spots:
     "Markt / Dom": [52.2799, 8.0442]
     "Neumarkt": [52.2740, 8.0470]
     "Hauptbahnhof": [52.2726, 8.0614]
     "Westerberg": [52.2830, 8.0230]
-
-    # "Schinkel": [52.2760, 8.0850]
-    # "Sonnenhügel": [52.2920, 8.0500]
