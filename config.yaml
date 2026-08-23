@@ -2,81 +2,203 @@
 
 city: "Osnabrück, Germany"
 
-# --- VPR ---------------------------------------------------------
+
+# ============================================================
+# VPR
+# ============================================================
+
 vpr:
 
-  # clip, anyloc, eigenplaces, mixvpr
+  # ----------------------------------------------------------
+  # Verfahren
+  # ----------------------------------------------------------
+
+  # Mögliche Methoden:
+  #   clip
+  #   anyloc
+  #   eigenplaces
+  #   mixvpr
+
   method: "clip"
 
-  # Recommended:
-  # "openai/clip-vit-base-patch32"
-  # "dinov2"
-  # "" 
+  # Adapter:
+  #   none
+  #   linear
+  #
+  # Wird aktuell in 04_embeddings und 05_adapters verwendet.
 
-  model: "openai/clip-vit-base-patch32"
+  adapter: "none"
+
+  models:
+    # Hugging Face Modell
+    clip: "openai/clip-vit-base-patch32"
+    anyloc: "dinov2_vitg14"
+    mixvpor: "..."
+    eigenplaces: "..."
+
+
+  # ----------------------------------------------------------
+  # Dataset Split
+  # ----------------------------------------------------------
 
   split_seed: 42
+
   train_fraction: 0.70
   database_fraction: 0.15
   query_fraction: 0.15
 
-  # Geografische Definition von positiven/negativen Paaren
+
+  # ----------------------------------------------------------
+  # Geografische Definition
+  # ----------------------------------------------------------
+
+  # Database-Bild gilt als positives Beispiel,
+  # wenn es höchstens diesen Abstand zum Query hat.
+
   positive_radius_m: 10.0
+
+  # Bilder außerhalb dieses Radius gelten als Negative.
+  #
+  # Der Bereich zwischen positive_radius_m und
+  # negative_radius_m kann später als "hard negative"
+  # verwendet werden.
+
   negative_radius_m: 25.0
 
 
+  # ----------------------------------------------------------
+  # Adapter Training
+  # ----------------------------------------------------------
+
+  adapter_training:
+
+    # Anzahl Triplets pro Batch
+    batch_size: 64
+
+    # Anzahl Trainingsdurchläufe
+    epochs: 20
+
+    # Lernrate
+    learning_rate: 0.001
+
+    # Abstandsmarge der Triplet Loss
+    margin: 0.2
+
+    # Negative Sampling
+    hard_negative_probability: 0.75
+
+
+# ============================================================
+# Retrieval
+# ============================================================
+
 retrieval:
+
+  # Aktuelle Retrieval-Implementierung
   method: "numpy"
-  threshold: 25
+
+  # Maximale geografische Distanz für Ground Truth
+  # bei der Evaluation.
+  threshold: 25.0
 
 
-
-# --- Mapillary Values ------------------------------------------------
+# ============================================================
+# Mapillary
+# ============================================================
 
 zoom: 14
+
 max_workers: "auto"
+
 image_size: 1024
+
 img_download_path: "~/Downloads/images"
+
 dataset_folder: "../data"
 
-# --- Stadtteil-Auswertung --------------------------------------------------
+
+# ============================================================
+# Stadtteil-Auswertung
+# ============================================================
+
 districts:
+
   # true  = Stadtteile berechnen und auswerten
   # false = Stadtteilberechnung komplett überspringen
+
   enabled: true
 
-  # OSM-place-Tags, die als Stadtteil gelten
-  place_tags: [suburb, quarter, neighbourhood]
 
-  # Kleiner: filtert Mini-Artefakte aus OSM
+  # OSM-place-Tags, die als Stadtteil gelten
+
+  place_tags:
+    - suburb
+    - quarter
+    - neighbourhood
+
+
+  # Kleine Flächen herausfiltern
+
   min_area_km2: 0.05
 
-  # Ab welchem Flächenanteil gilt ein Gebiet als in einem anderen enthalten.
-  # OSM führt oft Stadtteil UND Ortsteil darin — ohne diese Auflösung
-  # würden Bilder doppelt gezählt.
+
+  # Ab welchem Flächenanteil gilt ein Gebiet
+  # als in einem anderen enthalten?
+  #
+  # OSM führt häufig Stadtteil UND Ortsteil
+  # innerhalb derselben Fläche.
+
   nesting_threshold: 0.7
 
-  # Administrative Ebenen, die als Stadtteilgliederung geprüft werden.
-  # Die Reihenfolge dient bei gleichwertigen Kandidaten als Präferenz.
-  admin_levels: [10, 9]
 
-  # Mindestanzahl an Stadtteilflächen, damit die Ebene als brauchbar gilt.
+  # Administrative Ebenen, die geprüft werden.
+  # Bei gleichwertigen Kandidaten gilt die Reihenfolge
+  # als Präferenz.
+
+  admin_levels:
+    - 10
+    - 9
+
+
+  # Mindestanzahl an Stadtteilen,
+  # damit eine Ebene als brauchbar gilt.
+
   min_districts_required: 3
 
 
+# ============================================================
+# Verifikation gegen Mapillary
+# ============================================================
 
-# --- Verifikation gegen mapillary.com --------------------------------------
 verification:
+
   # true  = konfigurierte Spots prüfen
   # false = komplette Spot-Verifikation überspringen
+
   enabled: true
 
+
   # Radius um jeden Verifikationspunkt
+
   radius_m: 400
 
-  # https://nominatim.openstreetmap.org/ui/search.html?q=...
+
+  # Verifikationsspots
+
   spots:
-    "Markt / Dom": [52.2799, 8.0442]
-    "Neumarkt": [52.2740, 8.0470]
-    "Hauptbahnhof": [52.2726, 8.0614]
-    "Westerberg": [52.2830, 8.0230]
+
+    "Markt / Dom":
+      - 52.2799
+      - 8.0442
+
+    "Neumarkt":
+      - 52.2740
+      - 8.0470
+
+    "Hauptbahnhof":
+      - 52.2726
+      - 8.0614
+
+    "Westerberg":
+      - 52.2830
+      - 8.0230

@@ -18,3 +18,6 @@ requests
 scipy
 pyyaml
 mapbox-vector-tile
+einops
+PyYAML
+Pillow
