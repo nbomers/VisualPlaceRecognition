@@ -21,3 +21,4 @@ mapbox-vector-tile
 einops
 Pillow
 transformers
+pyarrow
