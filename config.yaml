@@ -19,7 +19,7 @@ vpr:
   #   eigenplaces
   #   mixvpr
 
-  method: "anyloc"
+  method: "faiss"
 
   # Adapter:
   #   none
@@ -69,6 +69,11 @@ vpr:
   # sonst trainiert man gegen die eigene Evaluationsmetrik.
   hard_negative_min_m: 25.0
   hard_negative_max_m: 100.0
+  
+  # Zwei Bilder 5 m auseinander, die in entgegengesetzte Richtungen schauen,
+  # haben keinen gemeinsamen Bildinhalt -- geometrisch aber "positiv".
+  # Maximale zyklische Differenz von compass_angle fuer ein Positiv-Paar.
+  max_heading_diff_deg: 90.0
 
 
   # ----------------------------------------------------------

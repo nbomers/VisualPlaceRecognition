@@ -22,3 +22,6 @@ einops
 Pillow
 transformers
 pyarrow
+tqdm
+nbformat
+nbclient
