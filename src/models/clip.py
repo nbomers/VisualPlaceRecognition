@@ -27,7 +27,7 @@ class CLIPEmbedder:
         )
 
         # Mixed Precision nur auf CUDA verwenden.
-        self.use_amp = use_amp and device == "cuda"
+        self.use_amp = use_amp and device == "cuda" and str(device).startswith("cuda")
 
         # CLIP-Modell laden.
         self.model = (
