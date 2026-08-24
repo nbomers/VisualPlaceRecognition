@@ -15,7 +15,7 @@ NOTEBOOKS = [
 
 
 def run_notebook(notebook):
-    path = Path("src") / notebook
+    path = Path("notebooks") / notebook
 
     print("=" * 50)
     print(f"Starte: {notebook}")
