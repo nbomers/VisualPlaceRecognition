@@ -19,7 +19,7 @@ vpr:
   #   eigenplaces
   #   mixvpr
 
-  method: "clip"
+  method: "anyloc"
 
   # Adapter:
   #   none
@@ -33,7 +33,7 @@ vpr:
     # Hugging Face Modell
     clip: "openai/clip-vit-base-patch32"
     anyloc: "dinov2_vitg14"
-    mixvpor: "..."
+    mixvpr: "..."
     eigenplaces: "..."
 
 
@@ -63,7 +63,12 @@ vpr:
   # negative_radius_m kann später als "hard negative"
   # verwendet werden.
 
-  negative_radius_m: 25.0
+  uncertain_radius_m: 25.0      # 10-25 m: weder positiv noch negativ
+
+  # Hard Negatives MUESSEN oberhalb der Uncertain-Zone liegen,
+  # sonst trainiert man gegen die eigene Evaluationsmetrik.
+  hard_negative_min_m: 25.0
+  hard_negative_max_m: 100.0
 
 
   # ----------------------------------------------------------
@@ -95,11 +100,11 @@ vpr:
 retrieval:
 
   # Aktuelle Retrieval-Implementierung
-  method: "numpy"
+  method: "faiss"
 
   # Maximale geografische Distanz für Ground Truth
   # bei der Evaluation.
-  threshold: 25.0
+  threshold: [5, 10, 25, 50, 100]
 
 
 # ============================================================

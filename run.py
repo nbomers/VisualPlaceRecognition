@@ -8,8 +8,9 @@ NOTEBOOKS = [
     "02_dataset_audit.ipynb",
     "03_image_download.ipynb",
     "04_embeddings.ipynb",
-    "05_retrieval.ipynb",
-    "06_evaluation.ipynb",
+    "05_adapter.ipynb",
+    "06_retrieval.ipynb",
+    "07_evaluation.ipynb",
 ]
 
 
