@@ -1,7 +1,7 @@
 numpy
 pandas
 scikit-learn
-pytorch
+torch
 torchvision
 jupyterlab
 matplotlib
@@ -19,5 +19,5 @@ scipy
 pyyaml
 mapbox-vector-tile
 einops
-PyYAML
 Pillow
+transformers
