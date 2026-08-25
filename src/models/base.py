@@ -67,6 +67,15 @@ class BaseEmbedder:
             return list(self.executor.map(self._load_one, paths))
         return [self._load_one(p) for p in paths]
 
+    def _collate(self, items):
+        """
+        Liste aus _load_one -> Batch-Tensor.
+
+        Default: die Elemente sind bereits Tensoren. CLIP ueberschreibt das,
+        weil sein Processor auf PIL-Bildern arbeitet und selbst batcht.
+        """
+        return torch.stack(items)
+
     # -- Inferenz ------------------------------------------------------
 
     def _forward(self, batch):
@@ -99,7 +108,9 @@ class BaseEmbedder:
         desc = f"{type(self).__name__} embeddings"
         for i, start in enumerate(tqdm(list(range(done, n, batch_size)), desc=desc)):
             paths = image_paths[start : start + batch_size]
-            batch = torch.stack(self._load_batch(paths)).to(self.device)
+            batch = self._collate(self._load_batch(paths)).to(
+                self.device, non_blocking=(self.device_type == "cuda")
+            )
 
             with torch.inference_mode():
                 if self.use_amp:
