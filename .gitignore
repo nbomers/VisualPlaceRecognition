@@ -31,7 +31,7 @@ secrets.yaml
 
 # ---------- Daten ----------
 # Rohdaten, Zwischenstaende und generierte Datensaetze gehoeren nicht ins Repo.
-data/
+data/*
 datasets/
 
 # Tabellarische / binäre Datendateien
@@ -63,7 +63,7 @@ data/**/*.png
 data/**/*.webp
 
 # ---------- Modelle & Checkpoints ----------
-models/
+/models/
 checkpoints/
 *.pt
 *.pth
@@ -122,7 +122,8 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # ---------- Ergebnisse ----------
-results/
+/results/*
+!/results/figures/
 
 # ---------- Sonstiges ----------
 .cache/
@@ -133,3 +134,17 @@ cache/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# ---------- Geklonte Fremd-Repos ----------
+# AnyLoc, MixVPR, EigenPlaces, MegaLoc. Werden per git clone geholt,
+# siehe README. Nie mitcommitten.
+external/
+
+# ---------- Modellgewichte ----------
+weights/
+
+!data/processed/
+data/processed/*
+!data/processed/train_sequences.txt
+!data/processed/database_sequences.txt
+!data/processed/query_sequences.txt
