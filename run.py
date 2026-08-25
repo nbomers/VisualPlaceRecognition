@@ -1,6 +1,7 @@
 from pathlib import Path
 import nbformat
 from nbclient import NotebookClient
+import time
 
 
 NOTEBOOKS = [
@@ -36,6 +37,9 @@ def run_notebook(notebook):
 
 
 for notebook in NOTEBOOKS:
+    start = time.time()
     run_notebook(notebook)
+    end = time.time()
+    print(f"{notebook} took: {(end-start)/60:.2f} minutes")
 
 print("\nPipeline vollständig abgeschlossen.")
