@@ -1,594 +1,305 @@
-
 """
-anyloc.py
+anyloc.py -- AnyLoc (DINOv2 + VLAD) mit derselben Schnittstelle wie CLIPEmbedder.
 
-Simple AnyLoc pipeline based on:
-    DINOv2 local patch descriptors + VLAD aggregation.
-
-Pipeline:
-    Images
-      ↓
-    DINOv2 patch descriptors
-      ↓
-    VLAD cluster vocabulary
-      ↓
-    VLAD global descriptors
-      ↓
-    .pt file
-
-The resulting embeddings can later be used with FAISS for retrieval.
-
-Expected input:
-    A folder containing images.
-
-Example:
-    python anyloc.py ~/Downloads/images
-
-Or:
-    python anyloc.py ~/Downloads/images \
-        --num-clusters 8 \
-        --model-type dinov2_vits14 \
-        --desc-layer 11 \
-        --desc-facet key
+Basiert auf https://github.com/AnyLoc/AnyLoc (BSD-3-Clause).
+Die Modell- und VLAD-Implementierung wird aus dem geklonten Repo importiert,
+nicht nachgebaut. Dieses Modul ist nur der Adapter auf unsere Pipeline.
 """
 
 from __future__ import annotations
 
-import argparse
+import sys
 from pathlib import Path
 
-import einops as ein
+import numpy as np
 import torch
-import yaml
 from PIL import Image
 from torchvision import transforms as T
+from tqdm.auto import tqdm
 
 
-def find_project_root():
-    for dir in (Path.cwd(), *Path.cwd().parents):
-        if (dir / "config.yaml").exists():
-            return dir
-    raise FileNotFoundError("Projektroot nicht gefunden")
-
-
-def find_upwards(name):
-    for d in [Path.cwd(), *Path.cwd().parents]:
-        if (d / name).exists():
-            return d / name
-    return None
-
-
-CFG_FILE = find_upwards("config.yaml")
-assert CFG_FILE, "config.yaml nicht gefunden (liegt im Projektwurzelverzeichnis)."
-CFG = yaml.safe_load(CFG_FILE.read_text())
-
-IMAGE_DIR = CFG["img_download_path"]
-
-# ---------------------------------------------------------------------------
-# AnyLoc imports
-# ---------------------------------------------------------------------------
-from utilities import VLAD, DinoV2ExtractFeatures
-
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
-IMAGE_EXTENSIONS = {
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".webp",
-    ".bmp",
-    ".tif",
-    ".tiff",
-}
-
-
-# ---------------------------------------------------------------------------
-# Device
-# ---------------------------------------------------------------------------
-
-def get_device() -> torch.device:
-    """Select CUDA, MPS or CPU."""
-
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-
-    return torch.device("cpu")
-
-
-# ---------------------------------------------------------------------------
-# Image loading
-# ---------------------------------------------------------------------------
-
-
-
-def load_image(
-    image_path: Path,
-    image_size: int = 320,
-) -> torch.Tensor:
+def _import_anyloc(repo_path):
     """
-    Load and preprocess one image.
+    Importiert VLAD und DinoV2ExtractFeatures aus dem geklonten AnyLoc-Repo.
 
-    Returns:
-        Tensor with shape [C, H, W].
+    Bewusst NICHT auf Modulebene: sonst scheitert schon `import
+    src.models.anyloc`, auch wenn gerade CLIP benutzt wird.
     """
-
-    image = Image.open(image_path).convert("RGB")
-
-    transform = T.Compose([
-        T.ToTensor(),
-        T.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225],
-        ),
-        T.Resize((image_size, image_size)),
-    ])
-
-    return transform(image)
-
-
-# ---------------------------------------------------------------------------
-# DINOv2
-# ---------------------------------------------------------------------------
-
-def load_dino(
-    model_type: str,
-    desc_layer: int,
-    desc_facet: str,
-    device: torch.device,
-) -> DinoV2ExtractFeatures:
-    """
-    Load the DINOv2 feature extractor.
-    """
-
-    print("Loading DINOv2...")
-    print(f"  Model:  {model_type}")
-    print(f"  Layer:  {desc_layer}")
-    print(f"  Facet:  {desc_facet}")
-    print(f"  Device: {device}")
-
-    dino = DinoV2ExtractFeatures(
-        model_type,
-        desc_layer,
-        desc_facet,
-        device=device,
-    )
-
-    print("DINOv2 loaded.")
-
-    return dino
-
-
-@torch.no_grad()
-def extract_dino_descriptors(
-    image_paths: list[Path],
-    dino: DinoV2ExtractFeatures,
-    device: torch.device,
-    image_size: int = 320,
-) -> torch.Tensor:
-    """
-    Extract DINOv2 patch descriptors for all images.
-
-    Returns:
-        Tensor:
-            [N, num_patches, descriptor_dim]
-    """
-
-    descriptors = []
-
-    print(f"Extracting DINOv2 descriptors from {len(image_paths)} images...")
-
-    for i, image_path in enumerate(image_paths):
-
-        image = load_image(
-            image_path,
-            image_size=image_size,
+    repo = Path(repo_path).expanduser().resolve()
+    if not (repo / "utilities.py").exists():
+        raise FileNotFoundError(
+            f"AnyLoc-Repo nicht gefunden unter {repo}. "
+            "git clone https://github.com/AnyLoc/AnyLoc.git und "
+            "vpr.anyloc.repo_path in config.yaml setzen."
         )
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
 
-        _, h, w = image.shape
+    from utilities import VLAD, DinoV2ExtractFeatures  # noqa: E402
 
-        # DINOv2 patch size is 14x14.
-        h_new = (h // 14) * 14
-        w_new = (w // 14) * 14
+    return VLAD, DinoV2ExtractFeatures
 
-        image = T.CenterCrop(
-            (h_new, w_new)
-        )(image)
 
-        image = image.unsqueeze(0).to(device)
+class AnyLocEmbedder:
+    """
+    Erzeugt AnyLoc-VLAD-Deskriptoren.
 
-        descriptor = dino(image)
+    Standardweg ist das offizielle Domaenen-Vokabular: die Cluster-Zentren
+    stammen aus einem anderen Datensatz und sehen unsere Query-Bilder nie.
+    Nur wenn kein Vokabular gefunden wird und fit_fallback_paths gesetzt ist,
+    wird auf einem Subsample selbst gefittet -- dann aber ausschliesslich auf
+    Bildern, die der Aufrufer als unbedenklich uebergibt (train).
+    """
 
-        # Expected:
-        # [1, num_patches, descriptor_dim]
-        descriptors.append(
-            descriptor.cpu()
-        )
-
-        if (i + 1) % 100 == 0 or i == len(image_paths) - 1:
-            print(
-                f"  {i + 1}/{len(image_paths)}"
+    def __init__(
+        self,
+        model_id="dinov2_vitg14",
+        device="cuda",
+        revision=None,  # nur fuer Interface-Kompatibilitaet
+        repo_path="~/third_party/AnyLoc",
+        vocabulary_domain="urban",
+        desc_layer=31,
+        desc_facet="value",
+        num_clusters=32,
+        image_size=322,  # Vielfaches von 14
+        pca_dim=None,
+        fit_fallback_paths=None,
+        fit_sample_images=5000,
+        fit_sample_patches=500_000,
+    ):
+        if image_size % 14 != 0:
+            raise ValueError(
+                f"image_size muss ein Vielfaches von 14 sein, ist {image_size}."
             )
 
-    descriptors = torch.cat(
-        descriptors,
-        dim=0,
-    )
+        VLAD, DinoV2ExtractFeatures = _import_anyloc(repo_path)
 
-    print(
-        f"DINO descriptors: {tuple(descriptors.shape)}"
-    )
+        self.device = torch.device(device)
+        self.image_size = image_size
+        self.num_clusters = num_clusters
+        self.pca_dim = pca_dim
+        self._pca = None  # (mean, components) nach fit_pca
 
-    return descriptors
-
-
-# ---------------------------------------------------------------------------
-# VLAD
-# ---------------------------------------------------------------------------
-
-def build_vlad(
-    descriptors: torch.Tensor,
-    num_clusters: int = 8,
-    assignment: str = "hard",
-    soft_temp: float = 1.0,
-) -> VLAD:
-    """
-    Build the VLAD vocabulary from DINO descriptors.
-
-    The cluster centers are learned from all patch descriptors.
-    """
-
-    print()
-    print("Building VLAD vocabulary...")
-    print(f"  Clusters:   {num_clusters}")
-    print(f"  Assignment: {assignment}")
-
-    vlad = VLAD(
-        num_clusters=num_clusters,
-        desc_dim=None,
-        vlad_mode=assignment,
-        soft_temp=soft_temp,
-    )
-
-    # [N, patches, D]
-    # ->
-    # [N * patches, D]
-    all_descriptors = ein.rearrange(
-        descriptors,
-        "n k d -> (n k) d",
-    )
-
-    print(
-        f"Clustering {all_descriptors.shape[0]} "
-        f"local descriptors..."
-    )
-
-    vlad.fit(all_descriptors)
-
-    print(
-        f"VLAD centers: {tuple(vlad.c_centers.shape)}"
-    )
-
-    return vlad
-
-
-@torch.no_grad()
-def compute_vlad_embeddings(
-    descriptors: torch.Tensor,
-    vlad: VLAD,
-) -> torch.Tensor:
-    """
-    Convert DINOv2 patch descriptors into VLAD descriptors.
-
-    Returns:
-        [N, num_clusters * descriptor_dim]
-    """
-
-    print()
-    print("Generating VLAD embeddings...")
-
-    embeddings = vlad.generate_multi(
-        descriptors
-    )
-
-    print(
-        f"VLAD embeddings: {tuple(embeddings.shape)}"
-    )
-
-    return embeddings
-
-
-# ---------------------------------------------------------------------------
-# Saving / loading
-# ---------------------------------------------------------------------------
-
-def save_embeddings(
-    output_path: Path,
-    image_paths: list[Path],
-    embeddings: torch.Tensor,
-    vlad: VLAD,
-    config: dict,
-) -> None:
-    """
-    Save embeddings, image paths and VLAD vocabulary.
-    """
-
-    output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    data = {
-        "embeddings": embeddings,
-        "image_paths": [
-            str(path)
-            for path in image_paths
-        ],
-        "cluster_centers": vlad.c_centers,
-        "config": config,
-    }
-
-    torch.save(
-        data,
-        output_path,
-    )
-
-    print()
-    print("Saved AnyLoc embeddings to:")
-    print(f"  {output_path}")
-
-
-def load_embeddings(
-    path: Path,
-):
-    """
-    Load a previously generated AnyLoc file.
-    """
-
-    return torch.load(
-        path,
-        map_location="cpu",
-    )
-
-
-# ---------------------------------------------------------------------------
-# Main pipeline
-# ---------------------------------------------------------------------------
-
-def run_anyloc(
-    image_dir: Path,
-    output_path: Path,
-    model_type: str = "dinov2_vits14",
-    desc_layer: int = 11,
-    desc_facet: str = "key",
-    num_clusters: int = 8,
-    image_size: int = 320,
-    assignment: str = "hard",
-    soft_temp: float = 1.0,
-) -> None:
-    """
-    Complete AnyLoc pipeline.
-    """
-
-    # -------------------------------------------------------
-    # Find images
-    # -------------------------------------------------------
-
-    print("=" * 70)
-    print("AnyLoc")
-    print("=" * 70)
-
-    print("Image directory:")
-    print(f"  {image_dir}")
-
-    image_paths = IMAGE_DIR
-
-    if not image_paths:
-        raise RuntimeError(
-            f"No images found in {image_dir}"
+        self.transform = T.Compose(
+            [
+                T.Resize((image_size, image_size), antialias=True),
+                T.ToTensor(),
+                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
         )
 
-    print(
-        f"Found {len(image_paths)} images."
-    )
+        print(f"DINOv2 laden: {model_id}, Layer {desc_layer}, Facet {desc_facet}")
+        self.dino = DinoV2ExtractFeatures(
+            model_id, desc_layer, desc_facet, device=str(self.device)
+        )
 
-    # -------------------------------------------------------
-    # Device
-    # -------------------------------------------------------
+        # Deskriptordimension einmal empirisch bestimmen, statt sie zu raten.
+        with torch.no_grad():
+            probe = torch.zeros(1, 3, image_size, image_size, device=self.device)
+            self.desc_dim = int(self.dino(probe).shape[-1])
+        print(f"Patch-Deskriptor: {self.desc_dim} Dimensionen")
 
-    device = get_device()
+        self.vlad = VLAD(num_clusters=num_clusters, desc_dim=self.desc_dim)
+        self._load_or_fit_vocabulary(
+            repo_path,
+            model_id,
+            desc_layer,
+            desc_facet,
+            vocabulary_domain,
+            fit_fallback_paths,
+            fit_sample_images,
+            fit_sample_patches,
+        )
 
-    # -------------------------------------------------------
-    # DINOv2
-    # -------------------------------------------------------
+        self.vlad_dim = num_clusters * self.desc_dim
+        self.embedding_dim = pca_dim or self.vlad_dim
+        print(
+            f"VLAD-Deskriptor: {self.vlad_dim} Dimensionen"
+            + (f" -> PCA auf {pca_dim}" if pca_dim else "")
+        )
 
-    dino = load_dino(
-        model_type=model_type,
-        desc_layer=desc_layer,
-        desc_facet=desc_facet,
-        device=device,
-    )
+    # ------------------------------------------------------------------
+    # Vokabular
+    # ------------------------------------------------------------------
 
-    # -------------------------------------------------------
-    # Extract local descriptors
-    # -------------------------------------------------------
+    def _load_or_fit_vocabulary(
+        self,
+        repo_path,
+        model_id,
+        layer,
+        facet,
+        domain,
+        fallback_paths,
+        n_imgs,
+        n_patches,
+    ):
+        cache = (
+            Path(repo_path).expanduser()
+            / "cache"
+            / "vocabulary"
+            / model_id
+            / f"l{layer}_{facet}_c{self.num_clusters}"
+            / domain
+            / "c_center.pt"
+        )
 
-    descriptors = extract_dino_descriptors(
-        image_paths=image_paths,
-        dino=dino,
-        device=device,
-        image_size=image_size,
-    )
+        if cache.exists():
+            centers = torch.load(cache, map_location="cpu")
+            if centers.shape != (self.num_clusters, self.desc_dim):
+                raise ValueError(
+                    f"Vokabular {cache} hat Form {tuple(centers.shape)}, "
+                    f"erwartet ({self.num_clusters}, {self.desc_dim})."
+                )
+            self.vlad.c_centers = centers
+            self.vlad.fit(None)  # nur laden, nicht clustern
+            self.vocabulary_source = f"offiziell:{domain}"
+            print(f"Vokabular geladen: {cache}")
+            return
 
-    # -------------------------------------------------------
-    # VLAD vocabulary
-    # -------------------------------------------------------
+        if not fallback_paths:
+            raise FileNotFoundError(
+                f"Kein Vokabular unter {cache}.\n"
+                "Entweder cache.zip aus der AnyLoc-Public-Data entpacken, oder "
+                "fit_fallback_paths mit TRAIN-Bildern uebergeben (niemals query!)."
+            )
 
-    vlad = build_vlad(
-        descriptors=descriptors,
-        num_clusters=num_clusters,
-        assignment=assignment,
-        soft_temp=soft_temp,
-    )
+        print(
+            f"Kein offizielles Vokabular -- fitte auf {min(n_imgs, len(fallback_paths)):,} "
+            "Trainingsbildern. Ergebnisse sind dann nicht mehr mit dem Paper vergleichbar."
+        )
+        rng = np.random.default_rng(42)
+        sample = [
+            fallback_paths[i]
+            for i in rng.choice(
+                len(fallback_paths), min(n_imgs, len(fallback_paths)), replace=False
+            )
+        ]
 
-    # -------------------------------------------------------
-    # Generate global embeddings
-    # -------------------------------------------------------
+        pool, collected = [], 0
+        per_image = max(1, n_patches // len(sample))
+        for start in tqdm(range(0, len(sample), 8), desc="Vokabular"):
+            descs = self._descriptors(sample[start : start + 8])  # [B, P, D]
+            flat = descs.reshape(-1, self.desc_dim)
+            take = min(per_image * descs.shape[0], flat.shape[0])
+            idx = torch.from_numpy(rng.choice(flat.shape[0], take, replace=False))
+            pool.append(flat[idx].cpu())
+            collected += take
+            if collected >= n_patches:
+                break
 
-    embeddings = compute_vlad_embeddings(
-        descriptors=descriptors,
-        vlad=vlad,
-    )
+        self.vlad.fit(torch.cat(pool, dim=0))
+        self.vocabulary_source = f"selbst gefittet auf {collected:,} Patches"
 
-    # -------------------------------------------------------
-    # Save
-    # -------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Extraktion
+    # ------------------------------------------------------------------
 
-    config = {
-        "model_type": model_type,
-        "desc_layer": desc_layer,
-        "desc_facet": desc_facet,
-        "num_clusters": num_clusters,
-        "image_size": image_size,
-        "assignment": assignment,
-        "soft_temp": soft_temp,
-        "num_images": len(image_paths),
-        "descriptor_shape": list(descriptors.shape),
-        "embedding_shape": list(embeddings.shape),
-    }
+    def _descriptors(self, batch_paths):
+        """Patch-Deskriptoren fuer einen Batch: [B, num_patches, desc_dim]."""
+        tensors = []
+        for path in batch_paths:
+            try:
+                with Image.open(path) as img:
+                    tensors.append(self.transform(img.convert("RGB")))
+            except Exception as e:
+                raise RuntimeError(f"Bild nicht lesbar: {path}") from e
 
-    save_embeddings(
-        output_path=output_path,
-        image_paths=image_paths,
-        embeddings=embeddings,
-        vlad=vlad,
-        config=config,
-    )
+        batch = torch.stack(tensors).to(self.device)
+        with torch.no_grad():
+            return self.dino(batch)
 
-    # -------------------------------------------------------
-    # Summary
-    # -------------------------------------------------------
+    def embed_images(
+        self, image_paths, batch_size=4, checkpoint_path=None, checkpoint_every=200
+    ):
+        """
+        L2-normalisierte float32-Embeddings, Shape (len(image_paths), embedding_dim),
+        in der Reihenfolge der Eingabe.
 
-    print()
-    print("=" * 70)
-    print("Done")
-    print("=" * 70)
+        Deskriptoren werden pro Batch verworfen -- der Speicherbedarf ist
+        konstant, nicht linear in der Bildzahl.
+        """
+        n = len(image_paths)
+        if n == 0:
+            return np.empty((0, self.embedding_dim), dtype=np.float32)
 
-    print(f"Images:       {len(image_paths)}")
-    print(f"DINO shape:   {tuple(descriptors.shape)}")
-    print(f"VLAD shape:   {tuple(embeddings.shape)}")
-    print(f"Clusters:     {num_clusters}")
-    print(f"Output:       {output_path}")
+        if self.pca_dim is not None and self._pca is None:
+            raise RuntimeError(
+                "pca_dim gesetzt, aber fit_pca() wurde nicht aufgerufen."
+            )
 
+        out = np.zeros((n, self.embedding_dim), dtype=np.float32)
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
+        done = 0
+        if checkpoint_path is not None:
+            checkpoint_path = Path(checkpoint_path)
+            if checkpoint_path.exists():
+                saved = np.load(checkpoint_path)
+                if (
+                    saved.ndim == 2
+                    and saved.shape[1] == self.embedding_dim
+                    and saved.shape[0] <= n
+                ):
+                    out[: saved.shape[0]] = saved
+                    done = saved.shape[0]
+                    print(f"Checkpoint: {done:,} von {n:,} Bildern uebernommen.")
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Generate AnyLoc/DINOv2+VLAD embeddings."
-    )
+        starts = list(range(done, n, batch_size))
+        for i, start in enumerate(tqdm(starts, desc="AnyLoc embeddings")):
+            paths = image_paths[start : start + batch_size]
+            descs = self._descriptors(paths)
+            vecs = self.vlad.generate_multi(descs)  # [B, K*D]
+            vecs = self._project(vecs)
+            out[start : start + len(paths)] = vecs.cpu().numpy().astype(np.float32)
 
-    parser.add_argument(
-        "image_dir",
-        type=Path,
-        help="Directory containing images.",
-    )
+            if checkpoint_path is not None and (i + 1) % checkpoint_every == 0:
+                self._save_checkpoint(checkpoint_path, out[: start + len(paths)])
 
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("anyloc_embeddings.pt"),
-        help="Output .pt file.",
-    )
+        if checkpoint_path is not None:
+            self._save_checkpoint(checkpoint_path, out)
+        return out
 
-    parser.add_argument(
-        "--model-type",
-        type=str,
-        default="dinov2_vits14",
-        choices=[
-            "dinov2_vits14",
-            "dinov2_vitb14",
-            "dinov2_vitl14",
-            "dinov2_vitg14",
-        ],
-    )
+    # ------------------------------------------------------------------
+    # PCA
+    # ------------------------------------------------------------------
 
-    parser.add_argument(
-        "--desc-layer",
-        type=int,
-        default=11,
-        help="DINOv2 layer used for descriptors.",
-    )
+    def fit_pca(self, image_paths, n_images=10_000, batch_size=4, seed=42):
+        """
+        PCA auf einem Subsample fitten. 49.152 Dimensionen sind fuer 100k
+        Bilder nicht speicherbar; 4.096 sind es.
 
-    parser.add_argument(
-        "--desc-facet",
-        type=str,
-        default="key",
-        choices=[
-            "query",
-            "key",
-            "value",
-            "token",
-        ],
-    )
+        WICHTIG: nur mit train- oder database-Bildern aufrufen, nie mit query.
+        """
+        if self.pca_dim is None:
+            return
+        rng = np.random.default_rng(seed)
+        n = min(n_images, len(image_paths))
+        sample = [
+            image_paths[i] for i in rng.choice(len(image_paths), n, replace=False)
+        ]
 
-    parser.add_argument(
-        "--num-clusters",
-        type=int,
-        default=8,
-        help="Number of VLAD clusters.",
-    )
+        chunks = []
+        for start in tqdm(range(0, n, batch_size), desc="PCA-Sample"):
+            descs = self._descriptors(sample[start : start + batch_size])
+            chunks.append(self.vlad.generate_multi(descs).cpu())
+        X = torch.cat(chunks, dim=0).float()
 
-    parser.add_argument(
-        "--image-size",
-        type=int,
-        default=320,
-        help="Image resize before DINOv2.",
-    )
+        mean = X.mean(dim=0, keepdim=True)
+        _, _, V = torch.pca_lowrank(X - mean, q=min(self.pca_dim, min(X.shape) - 1))
+        self._pca = (mean, V[:, : self.pca_dim])
+        print(
+            f"PCA gefittet: {self.vlad_dim} -> {self._pca[1].shape[1]} Dimensionen "
+            f"auf {n:,} Bildern"
+        )
 
-    parser.add_argument(
-        "--assignment",
-        type=str,
-        default="hard",
-        choices=[
-            "hard",
-            "soft",
-        ],
-        help="VLAD descriptor assignment.",
-    )
+    def _project(self, vecs):
+        vecs = vecs.float().cpu()
+        if self._pca is not None:
+            mean, components = self._pca
+            vecs = (vecs - mean) @ components
+        return torch.nn.functional.normalize(vecs, dim=-1)
 
-    parser.add_argument(
-        "--soft-temp",
-        type=float,
-        default=1.0,
-        help="Soft assignment temperature.",
-    )
-
-    return parser.parse_args()
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    args = parse_args()
-
-    run_anyloc(
-        image_dir=args.image_dir,
-        output_path=args.output,
-        model_type=args.model_type,
-        desc_layer=args.desc_layer,
-        desc_facet=args.desc_facet,
-        num_clusters=args.num_clusters,
-        image_size=args.image_size,
-        assignment=args.assignment,
-        soft_temp=args.soft_temp,
-    )
-
+    @staticmethod
+    def _save_checkpoint(path, array):
+        tmp = path.with_name(path.name + ".tmp.npy")
+        np.save(tmp, array)
+        tmp.replace(path)
