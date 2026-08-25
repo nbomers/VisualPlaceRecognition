@@ -30,35 +30,40 @@ vpr:
   adapter: "none"
 
   models:
-    # Hugging Face Modell
+    # Nur Modellnamen. Die Konfiguration steht in eigenen Bloecken darunter.
     clip: "openai/clip-vit-base-patch32"
+    anyloc: "dinov2_vitg14"
+    mixvpr: "resnet50"
+    eigenplaces: "ResNet50"
+    megaloc: "megaloc"
 
-    anyloc:
-      repo_path: "~/third_party/AnyLoc"
-      vocabulary_domain: "urban"        # urban | indoor | aerial
-      desc_layer: 31
-      desc_facet: "value"
-      num_clusters: 32
-      image_size: 322                   # 23 * 14
-      pca_dim: 4096                     # null = keine Reduktion
-      pca_fit_images: 10000
 
-    mixvpr: 
-      repo_path: "~/third_party/MixVPR"
-      weights: "~/third_party/MixVPR/weights/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt"
-      image_size: 320
-      agg_config:
-        in_channels: 1024
-        in_h: 20
-        in_w: 20
-        out_channels: 1024
-        mix_depth: 4
-        mlp_ratio: 1
-        out_rows: 4
+  anyloc:
+    repo_path: "~/third_party/AnyLoc"
+    vocabulary_domain: "urban"        # urban | indoor | aerial
+    desc_layer: 31
+    desc_facet: "value"
+    num_clusters: 32
+    image_size: 322                   # 23 * 14
+    pca_dim: 4096                     # null = keine Reduktion
+    pca_fit_images: 10000
 
-    eigenplaces:
-      fc_output_dim: 2048          # 128 | 256 | 512 | 2048
-      image_size: 512
+  mixvpr: 
+    repo_path: "~/third_party/MixVPR"
+    weights: "~/third_party/MixVPR/weights/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt"
+    image_size: 320
+    agg_config:
+      in_channels: 1024
+      in_h: 20
+      in_w: 20
+      out_channels: 1024
+      mix_depth: 4
+      mlp_ratio: 1
+      out_rows: 4
+
+  eigenplaces:
+    fc_output_dim: 2048          # 128 | 256 | 512 | 2048
+    image_size: 512
 
 
   # ----------------------------------------------------------
