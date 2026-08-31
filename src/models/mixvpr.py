@@ -66,7 +66,7 @@ class MixEmbedder:
         model_id="resnet50",
         device="cuda",
         revision=None,  # nur fuer Interface-Kompatibilitaet
-        repo_path="~/third_party/MixVPR",
+        repo_path="external/MixVPR",
         weights=None,
         image_size=320,
         agg_config=None,
