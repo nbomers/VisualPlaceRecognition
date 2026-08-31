@@ -49,7 +49,7 @@ class AnyLocEmbedder(BaseEmbedder):
         model_id="dinov2_vitg14",
         device="cuda",
         revision=None,
-        repo_path="~/third_party/AnyLoc",
+        repo_path="external/AnyLoc",
         vocabulary_domain="urban",
         desc_layer=31,
         desc_facet="value",
