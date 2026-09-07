@@ -127,10 +127,11 @@ class BaseEmbedder:
             if checkpoint_path is not None and (i + 1) % checkpoint_every == 0:
                 self._save_checkpoint(checkpoint_path, out[: start + len(paths)])
 
-        # Der Teil-Checkpoint hat seinen Zweck erfuellt und ist so gross wie
-        # das Ergebnis selbst -- bei MixVPR 5,4 GB.
+        # Bewusst noch nicht loeschen: zwischen hier und dem np.save im
+        # Notebook liegen ein paar Zellen, und der Checkpoint ist der einzige
+        # Wiedereinstieg, falls der Kernel dazwischen stirbt.
         if checkpoint_path is not None:
-            checkpoint_path.unlink(missing_ok=True)
+            self._save_checkpoint(checkpoint_path, out)
 
         return out
 
