@@ -38,6 +38,9 @@ vpr:
     megaloc: "megaloc"
 
 
+  clip:
+    revision: "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
+
   anyloc:
     repo_path: "external/AnyLoc"
     vocabulary_domain: "urban"        # urban | indoor | aerial
@@ -126,6 +129,20 @@ vpr:
     # Negative Sampling
     hard_negative_probability: 0.75
 
+    # Abbruch nach so vielen Epochen ohne Verbesserung von val Recall@1.
+    # null = alle epochs durchlaufen. Gespeichert wird ohnehin die beste
+    # Epoche, patience spart nur Zeit.
+    patience: 3
+
+    # Mindestzuwachs, der als Verbesserung zaehlt. Ohne Schwelle setzt
+    # Rauschen den Zaehler staendig zurueck -- bei ~3.200 val-Queries
+    # entspricht ein einzelner Treffer 0.0003.
+    min_delta: 0.001
+
+    # Obergrenze fuer Trainingspaare je Epoche.
+    #   null = alle Paare verwenden
+    max_pairs_per_epoch: null
+
 
 # ============================================================
 # Retrieval
@@ -153,7 +170,6 @@ image_size: 1024
 
 img_download_path: "~/Downloads/images"
 
-dataset_folder: "../data"
 
 
 # ============================================================
