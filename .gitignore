@@ -123,7 +123,7 @@ $RECYCLE.BIN/
 
 # ---------- Ergebnisse ----------
 /results/*
-!/results/figures/
+#!/results/figures/
 
 # ---------- Sonstiges ----------
 .cache/
@@ -145,6 +145,8 @@ weights/
 
 !data/processed/
 data/processed/*
+
+# Sonst - Unterschiedliche Ergebnisse
 !data/processed/train_sequences.txt
 !data/processed/database_sequences.txt
 !data/processed/query_sequences.txt
