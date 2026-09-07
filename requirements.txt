@@ -25,3 +25,4 @@ pyarrow
 tqdm
 nbformat
 nbclient
+timm
