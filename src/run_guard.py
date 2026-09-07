@@ -26,6 +26,22 @@ def metadata_digest(metadata):
     return hashlib.sha256(h.to_numpy().tobytes()).hexdigest()[:16]
 
 
+# Rein lokale Angaben. Ein verschobener Repo-Klon aendert das Modell nicht,
+# darf also auch nicht die Embeddings entwerten.
+_LOKALE_SCHLUESSEL = ("repo_path",)
+
+
+def _model_config(block):
+    """Methodenblock ohne Eintraege, die nur den Ablageort beschreiben."""
+    if not isinstance(block, dict):
+        return block
+    gefiltert = {k: v for k, v in block.items() if k not in _LOKALE_SCHLUESSEL}
+    # Gewichtsdatei ueber den Namen identifizieren, nicht ueber den Pfad.
+    if "weights" in gefiltert:
+        gefiltert["weights"] = Path(str(gefiltert["weights"])).name
+    return gefiltert
+
+
 def embedding_fingerprint(cfg, method, adapter, metadata):
     """Alles, was den Inhalt einer Embedding-Datei bestimmt.
 
@@ -37,7 +53,7 @@ def embedding_fingerprint(cfg, method, adapter, metadata):
         "method": method,
         "model_id": vpr["models"][method],
         "adapter": adapter,
-        "method_config": vpr.get(method),
+        "method_config": _model_config(vpr.get(method)),
         "split": {
             k: vpr.get(k)
             for k in ("split_seed", "train_fraction", "database_fraction", "query_fraction")
@@ -48,11 +64,22 @@ def embedding_fingerprint(cfg, method, adapter, metadata):
     return fp
 
 
+# Abbruchkriterien bestimmen nur, wann das Training endet -- gespeichert wird
+# so oder so die beste Epoche. Sie gehoeren damit nicht zur Identitaet der
+# Gewichte.
+_ABBRUCHKRITERIEN = ("patience", "min_delta")
+
+
 def adapter_fingerprint(cfg, method, base_fingerprint):
     """Fingerabdruck der Adapter-Gewichte: Basis-Embeddings + Trainingsparameter."""
+    training = {
+        k: v
+        for k, v in cfg["vpr"]["adapter_training"].items()
+        if k not in _ABBRUCHKRITERIEN
+    }
     return {
         "trained_on": {**base_fingerprint, "adapter": "none"},
-        "adapter_training": cfg["vpr"]["adapter_training"],
+        "adapter_training": training,
         "positive_radius_m": cfg["vpr"]["positive_radius_m"],
         "uncertain_radius_m": cfg["vpr"]["uncertain_radius_m"],
         "hard_negative_min_m": cfg["vpr"]["hard_negative_min_m"],
