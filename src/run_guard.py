@@ -80,6 +80,8 @@ def adapter_fingerprint(cfg, method, base_fingerprint):
     return {
         "trained_on": {**base_fingerprint, "adapter": "none"},
         "adapter_training": training,
+        "val_fraction": cfg["vpr"].get("val_fraction"),
+        "val_radius_m": cfg["vpr"].get("val_radius_m"),
         "positive_radius_m": cfg["vpr"]["positive_radius_m"],
         "uncertain_radius_m": cfg["vpr"]["uncertain_radius_m"],
         "hard_negative_min_m": cfg["vpr"]["hard_negative_min_m"],
@@ -149,3 +151,68 @@ def _diff(stored, current, prefix=""):
         elif s != c:
             lines.append(f"    {prefix}{key}: gespeichert={s!r}  aktuell={c!r}")
     return "\n".join(x for x in lines if x)
+
+
+# ----------------------------------------------------------------------
+# Config-Pruefung
+#
+# Die Einzelpruefungen lagen ueber die Notebooks verteilt, teils erst hinter
+# stundenlangen Stufen. Hier laufen sie beim Laden der Config.
+# ----------------------------------------------------------------------
+
+
+def validate_config(cfg):
+    vpr = cfg["vpr"]
+    ret = cfg["retrieval"]
+    fehler = []
+
+    if vpr["method"] not in vpr["models"]:
+        fehler.append(
+            f"vpr.method={vpr['method']!r} hat keinen Eintrag unter vpr.models "
+            f"({sorted(vpr['models'])})"
+        )
+
+    if vpr.get("adapter", "none") not in ("none", "None", "linear"):
+        fehler.append(f"vpr.adapter={vpr['adapter']!r} ist unbekannt (none oder linear)")
+
+    anteile = sum(
+        float(vpr[k]) for k in ("train_fraction", "database_fraction", "query_fraction")
+    )
+    if abs(anteile - 1.0) > 1e-6:
+        fehler.append(f"train/database/query_fraction ergeben {anteile}, nicht 1.0")
+
+    val = float(vpr.get("val_fraction", 0.1))
+    if not 0.0 < val < 1.0:
+        fehler.append(f"vpr.val_fraction={val} muss zwischen 0 und 1 liegen")
+
+    # Hard Negatives duerfen nicht in die Unsicherheitszone reichen, sonst
+    # trainiert man gegen die eigene Ground Truth.
+    p_r, u_r = float(vpr["positive_radius_m"]), float(vpr["uncertain_radius_m"])
+    hn_min, hn_max = float(vpr["hard_negative_min_m"]), float(vpr["hard_negative_max_m"])
+    if not p_r <= u_r <= hn_min < hn_max:
+        fehler.append(
+            f"Radien muessen aufsteigend sein: positive({p_r}) <= uncertain({u_r}) "
+            f"<= hard_negative_min({hn_min}) < hard_negative_max({hn_max})"
+        )
+
+    if not 0 < float(vpr["max_heading_diff_deg"]) <= 180:
+        fehler.append("vpr.max_heading_diff_deg muss in (0, 180] liegen")
+
+    # Faellt sonst erst in 07 auf, nachdem 06 schon gelaufen ist.
+    if max(ret["k_values"]) > ret["top_k"]:
+        fehler.append(
+            f"retrieval.k_values geht bis {max(ret['k_values'])}, "
+            f"gespeichert werden aber nur top_k={ret['top_k']} Nachbarn"
+        )
+
+    if not ret["thresholds"] or min(ret["thresholds"]) <= 0:
+        fehler.append("retrieval.thresholds muss positive Werte enthalten")
+
+    if ret["method"] not in ("faiss", "numpy"):
+        fehler.append(f"retrieval.method={ret['method']!r} ist unbekannt")
+
+    if fehler:
+        raise ValueError(
+            "config.yaml ist widerspruechlich:\n"
+            + "\n".join(f"  - {f}" for f in fehler)
+        )
