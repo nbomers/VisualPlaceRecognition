@@ -81,9 +81,11 @@ MIXVPR_GEWICHTE = {
     "quelle": "https://github.com/amaralibey/MixVPR#weights",
 }
 
-ANYLOC_VOKABULAR_QUELLE = (
-    "https://iiitaphyd-my.sharepoint.com/:f:/g/personal/"
-    "robotics_iiit_ac_in/EtpBLzBFfqdHljqQMnm6xdoBzW-4KFLXieXDVN4vPg84Lg?e=BP6ZW1"
+# Einzeldatei-Link aus external/AnyLoc/demo/utilities.py (od_down_links).
+# Der Ordnerlink im Haupt-README taugt dafuer nicht.
+ANYLOC_CACHE_LINK = (
+    "https://iiitaphyd-my.sharepoint.com/:u:/g/personal/"
+    "avneesh_mishra_research_iiit_ac_in/EW-ZqUeWWexNhbLEQvsCk2wBeucxNlhEpsfeUHHOreyLag"
 )
 
 
@@ -145,9 +147,9 @@ def hole_mixvpr_gewichte():
     return []
 
 
-def pruefe_anyloc_vokabular():
+def anyloc_vokabular_pfad():
     a = CFG["vpr"]["anyloc"]
-    vok = (
+    ordner = (
         ROOT
         / a["repo_path"]
         / "cache"
@@ -155,24 +157,56 @@ def pruefe_anyloc_vokabular():
         / CFG["vpr"]["models"]["anyloc"]
         / f"l{a['desc_layer']}_{a['desc_facet']}_c{a['num_clusters']}"
         / a["vocabulary_domain"]
-        / "c_center.pt"
     )
-    if vok.exists():
-        print(f"  AnyLoc-Vokabular: {a['vocabulary_domain']}")
+    vorhanden = [n for n in ("c_center.pt", "c_centers.pt") if (ordner / n).exists()]
+    return ordner, vorhanden
+
+
+def hole_anyloc_vokabular():
+    ordner, vorhanden = anyloc_vokabular_pfad()
+    if vorhanden:
+        print(f"  AnyLoc-Vokabular: {CFG['vpr']['anyloc']['vocabulary_domain']} "
+              f"({vorhanden[0]})")
         return []
 
-    # Die Public-Release-Daten liegen hinter einem SharePoint-Ordnerlink. Der
-    # gibt keine direkte Datei-URL her, ein Skript kommt da nicht dran.
-    return [
-        "AnyLoc-Vokabular fehlt. Der Download laesst sich nicht automatisieren\n"
-        "      (SharePoint-Ordnerlink ohne direkte Datei-URL):\n"
-        f"      {ANYLOC_VOKABULAR_QUELLE}\n"
-        "      Dort cache.zip herunterladen und entpacken, sodass entsteht:\n"
-        f"      {vok.relative_to(ROOT)}\n"
-        "      Ohne das fittet AnyLoc die Cluster-Zentren selbst auf den\n"
-        "      Trainingsbildern -- laeuft, ist dann aber nicht mehr mit den\n"
-        "      Zahlen aus dem Paper vergleichbar."
-    ]
+    try:
+        from onedrivedownloader import download
+    except ImportError:
+        return [
+            "AnyLoc-Vokabular fehlt und onedrivedownloader ist nicht installiert.\n"
+            "      pip install onedrivedownloader   und dieses Skript erneut starten,\n"
+            f"      oder cache.zip von Hand nach {ordner.parents[4].relative_to(ROOT)}\n"
+            f"      entpacken: {ANYLOC_CACHE_LINK}"
+        ]
+
+    ziel = ROOT / CFG["vpr"]["anyloc"]["repo_path"]
+    print("  AnyLoc-Vokabular: lade cache.zip von OneDrive ...")
+    try:
+        download(
+            ANYLOC_CACHE_LINK,
+            filename=str(ziel / "cache.zip"),
+            unzip=True,
+            unzip_path=str(ziel),
+        )
+    except Exception as e:
+        return [
+            f"AnyLoc-Download fehlgeschlagen: {e}\n"
+            f"      Von Hand: {ANYLOC_CACHE_LINK}\n"
+            f"      cache.zip nach {ziel.relative_to(ROOT)} entpacken."
+        ]
+
+    ordner, vorhanden = anyloc_vokabular_pfad()
+    if not vorhanden:
+        return [
+            "cache.zip wurde geladen, enthaelt aber kein Vokabular fuer die\n"
+            f"      aktuelle Konfiguration. Erwartet unter:\n"
+            f"      {ordner.relative_to(ROOT)}\n"
+            "      Passen vocabulary_domain, num_clusters, desc_layer und\n"
+            "      desc_facet in der config.yaml zum Inhalt des Caches?"
+        ]
+
+    print(f"      fertig: {(ordner / vorhanden[0]).relative_to(ROOT)}")
+    return []
 
 
 def main():
@@ -180,7 +214,7 @@ def main():
     ok = all([hole(name, spec) for name, spec in REPOS.items()])
 
     print("\nZusatzdateien:")
-    offen = hole_mixvpr_gewichte() + pruefe_anyloc_vokabular()
+    offen = hole_mixvpr_gewichte() + hole_anyloc_vokabular()
 
     if offen:
         print("\nNoch zu beschaffen:")
