@@ -26,3 +26,5 @@ tqdm
 nbformat
 nbclient
 timm
+fast_pytorch_kmeans
+qdown
