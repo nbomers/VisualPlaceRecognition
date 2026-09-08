@@ -124,14 +124,19 @@ class AnyLocEmbedder(BaseEmbedder):
         n_imgs,
         n_patches,
     ):
-        cache = (
+        ordner = (
             Path(repo_path).expanduser()
             / "cache"
             / "vocabulary"
             / model_id
             / f"l{layer}_{facet}_c{self.num_clusters}"
             / domain
-            / "c_center.pt"
+        )
+        # AnyLoc selbst ist bei der Benennung uneinheitlich: das demo-README
+        # nennt c_center.pt, anyloc_vlad_generate.py c_centers.pt.
+        cache = next(
+            (ordner / n for n in ("c_center.pt", "c_centers.pt") if (ordner / n).exists()),
+            ordner / "c_center.pt",
         )
 
         if cache.exists():
