@@ -11,6 +11,7 @@ bricht sonst irgendwann ein Aufbau, der monatelang lief.
 """
 
 import hashlib
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -81,12 +82,11 @@ MIXVPR_GEWICHTE = {
     "quelle": "https://github.com/amaralibey/MixVPR#weights",
 }
 
-# Einzeldatei-Link aus external/AnyLoc/demo/utilities.py (od_down_links).
-# Der Ordnerlink im Haupt-README taugt dafuer nicht.
-ANYLOC_CACHE_LINK = (
-    "https://iiitaphyd-my.sharepoint.com/:u:/g/personal/"
-    "avneesh_mishra_research_iiit_ac_in/EW-ZqUeWWexNhbLEQvsCk2wBeucxNlhEpsfeUHHOreyLag"
-)
+# Die OneDrive-Links in AnyLocs Repo sind tot (das Konto wurde migriert, der
+# Share gibt 404). Die HuggingFace-Space des Projekts haelt dieselben
+# Vokabulare als Einzeldateien -- kein Zip, kein Zusatzpaket, huggingface_hub
+# kommt ohnehin mit transformers.
+ANYLOC_HF_SPACE = "TheProjectsGuy/AnyLoc"
 
 
 def sha256(pfad, block=1 << 20):
@@ -164,48 +164,42 @@ def anyloc_vokabular_pfad():
 
 def hole_anyloc_vokabular():
     ordner, vorhanden = anyloc_vokabular_pfad()
+    a = CFG["vpr"]["anyloc"]
+
     if vorhanden:
-        print(f"  AnyLoc-Vokabular: {CFG['vpr']['anyloc']['vocabulary_domain']} "
-              f"({vorhanden[0]})")
+        print(f"  AnyLoc-Vokabular: {a['vocabulary_domain']} ({vorhanden[0]})")
         return []
 
     try:
-        from onedrivedownloader import download
+        from huggingface_hub import hf_hub_download
     except ImportError:
         return [
-            "AnyLoc-Vokabular fehlt und onedrivedownloader ist nicht installiert.\n"
-            "      pip install onedrivedownloader   und dieses Skript erneut starten,\n"
-            f"      oder cache.zip von Hand nach {ordner.parents[4].relative_to(ROOT)}\n"
-            f"      entpacken: {ANYLOC_CACHE_LINK}"
+            "AnyLoc-Vokabular fehlt und huggingface_hub ist nicht installiert.\n"
+            "      pip install huggingface_hub   und erneut starten."
         ]
 
-    ziel = ROOT / CFG["vpr"]["anyloc"]["repo_path"]
-    print("  AnyLoc-Vokabular: lade cache.zip von OneDrive ...")
+    relativ = (
+        f"cache/vocabulary/{CFG['vpr']['models']['anyloc']}/"
+        f"l{a['desc_layer']}_{a['desc_facet']}_c{a['num_clusters']}/"
+        f"{a['vocabulary_domain']}/c_centers.pt"
+    )
+    print(f"  AnyLoc-Vokabular: lade {relativ} aus {ANYLOC_HF_SPACE} ...")
     try:
-        download(
-            ANYLOC_CACHE_LINK,
-            filename=str(ziel / "cache.zip"),
-            unzip=True,
-            unzip_path=str(ziel),
+        quelle = hf_hub_download(
+            repo_id=ANYLOC_HF_SPACE, repo_type="space", filename=relativ
         )
     except Exception as e:
         return [
-            f"AnyLoc-Download fehlgeschlagen: {e}\n"
-            f"      Von Hand: {ANYLOC_CACHE_LINK}\n"
-            f"      cache.zip nach {ziel.relative_to(ROOT)} entpacken."
+            f"AnyLoc-Vokabular nicht ladbar: {type(e).__name__}: {e}\n"
+            f"      Erwartet wurde {relativ}\n"
+            f"      in https://huggingface.co/spaces/{ANYLOC_HF_SPACE}/tree/main/cache\n"
+            "      Gibt es die Kombination aus vocabulary_domain, num_clusters,\n"
+            "      desc_layer und desc_facet dort ueberhaupt?"
         ]
 
-    ordner, vorhanden = anyloc_vokabular_pfad()
-    if not vorhanden:
-        return [
-            "cache.zip wurde geladen, enthaelt aber kein Vokabular fuer die\n"
-            f"      aktuelle Konfiguration. Erwartet unter:\n"
-            f"      {ordner.relative_to(ROOT)}\n"
-            "      Passen vocabulary_domain, num_clusters, desc_layer und\n"
-            "      desc_facet in der config.yaml zum Inhalt des Caches?"
-        ]
-
-    print(f"      fertig: {(ordner / vorhanden[0]).relative_to(ROOT)}")
+    ordner.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(quelle, ordner / "c_centers.pt")
+    print(f"      fertig: {(ordner / 'c_centers.pt').relative_to(ROOT)}")
     return []
 
 
