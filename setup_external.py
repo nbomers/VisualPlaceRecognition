@@ -10,6 +10,7 @@ bricht sonst irgendwann ein Aufbau, der monatelang lief.
     python setup_external.py
 """
 
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
@@ -71,19 +72,80 @@ def hole(name, spec):
     return True
 
 
-def pruefe_zusatzdateien():
-    """Gewichte und Vokabular liegen hinter Downloads, nicht hinter git."""
-    offen = []
+# Ein Google-Drive-Download kann statt der Datei eine HTML-Fehlerseite
+# liefern. Die Pruefsumme faengt das ab, bevor die Datei an ihren Platz kommt.
+MIXVPR_GEWICHTE = {
+    "gdrive_id": "1vuz3PvnR7vxnDDLQrdHJaOA04SQrtk5L",
+    "sha256": "97528606773e9920e93ca4d211daeabf1c7312480f38b45379ee5551a1b4dd24",
+    "bytes": 43_747_109,
+    "quelle": "https://github.com/amaralibey/MixVPR#weights",
+}
 
-    ckpt = ROOT / CFG["vpr"]["mixvpr"]["weights"]
-    if ckpt.exists():
-        print(f"  MixVPR-Gewichte: {ckpt.name}")
-    else:
-        offen.append(
-            f"MixVPR-Gewichte fehlen: {ckpt}\n"
-            f"      Download-Link steht im README von {REPOS['mixvpr']['url']}"
-        )
+ANYLOC_VOKABULAR_QUELLE = (
+    "https://iiitaphyd-my.sharepoint.com/:f:/g/personal/"
+    "robotics_iiit_ac_in/EtpBLzBFfqdHljqQMnm6xdoBzW-4KFLXieXDVN4vPg84Lg?e=BP6ZW1"
+)
 
+
+def sha256(pfad, block=1 << 20):
+    h = hashlib.sha256()
+    with open(pfad, "rb") as f:
+        for stueck in iter(lambda: f.read(block), b""):
+            h.update(stueck)
+    return h.hexdigest()
+
+
+def hole_mixvpr_gewichte():
+    ziel = ROOT / CFG["vpr"]["mixvpr"]["weights"]
+
+    if ziel.exists():
+        if sha256(ziel) == MIXVPR_GEWICHTE["sha256"]:
+            print(f"  MixVPR-Gewichte: {ziel.name} (Pruefsumme stimmt)")
+        else:
+            print(
+                f"  MixVPR-Gewichte: {ziel.name} liegt vor, aber die Pruefsumme "
+                f"weicht ab.\n      Andere Variante als erwartet? Erwartet wird "
+                f"ResNet50 mit 4096 Dimensionen."
+            )
+        return []
+
+    try:
+        import gdown
+    except ImportError:
+        return [
+            "MixVPR-Gewichte fehlen und gdown ist nicht installiert.\n"
+            "      pip install gdown   und dieses Skript erneut starten,\n"
+            f"      oder von Hand nach {ziel.relative_to(ROOT)}:\n"
+            f"      {MIXVPR_GEWICHTE['quelle']}"
+        ]
+
+    print(f"  MixVPR-Gewichte: lade von Google Drive ({MIXVPR_GEWICHTE['bytes'] / 1e6:.0f} MB) ...")
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    teil = ziel.with_suffix(ziel.suffix + ".part")
+    try:
+        gdown.download(id=MIXVPR_GEWICHTE["gdrive_id"], output=str(teil), quiet=False)
+    except Exception as e:
+        teil.unlink(missing_ok=True)
+        return [
+            f"MixVPR-Download fehlgeschlagen: {e}\n"
+            f"      Google Drive drosselt bei zu vielen Zugriffen. Von Hand:\n"
+            f"      {MIXVPR_GEWICHTE['quelle']}  ->  {ziel.relative_to(ROOT)}"
+        ]
+
+    if not teil.exists() or sha256(teil) != MIXVPR_GEWICHTE["sha256"]:
+        teil.unlink(missing_ok=True)
+        return [
+            "MixVPR-Download hat nicht die erwartete Datei geliefert "
+            "(Pruefsumme falsch).\n"
+            f"      Meist eine Drive-Fehlerseite. Von Hand: {MIXVPR_GEWICHTE['quelle']}"
+        ]
+
+    teil.replace(ziel)
+    print(f"      fertig: {ziel.relative_to(ROOT)}")
+    return []
+
+
+def pruefe_anyloc_vokabular():
     a = CFG["vpr"]["anyloc"]
     vok = (
         ROOT
@@ -97,15 +159,20 @@ def pruefe_zusatzdateien():
     )
     if vok.exists():
         print(f"  AnyLoc-Vokabular: {a['vocabulary_domain']}")
-    else:
-        offen.append(
-            f"AnyLoc-Vokabular fehlt: {vok}\n"
-            f"      Ohne das fittet AnyLoc die Cluster-Zentren selbst auf den\n"
-            f"      Trainingsbildern -- laeuft, ist dann aber nicht mehr mit den\n"
-            f"      Zahlen aus dem Paper vergleichbar. Offizielles Vokabular:\n"
-            f"      cache.zip aus den AnyLoc-Public-Data entpacken."
-        )
-    return offen
+        return []
+
+    # Die Public-Release-Daten liegen hinter einem SharePoint-Ordnerlink. Der
+    # gibt keine direkte Datei-URL her, ein Skript kommt da nicht dran.
+    return [
+        "AnyLoc-Vokabular fehlt. Der Download laesst sich nicht automatisieren\n"
+        "      (SharePoint-Ordnerlink ohne direkte Datei-URL):\n"
+        f"      {ANYLOC_VOKABULAR_QUELLE}\n"
+        "      Dort cache.zip herunterladen und entpacken, sodass entsteht:\n"
+        f"      {vok.relative_to(ROOT)}\n"
+        "      Ohne das fittet AnyLoc die Cluster-Zentren selbst auf den\n"
+        "      Trainingsbildern -- laeuft, ist dann aber nicht mehr mit den\n"
+        "      Zahlen aus dem Paper vergleichbar."
+    ]
 
 
 def main():
@@ -113,7 +180,7 @@ def main():
     ok = all([hole(name, spec) for name, spec in REPOS.items()])
 
     print("\nZusatzdateien:")
-    offen = pruefe_zusatzdateien()
+    offen = hole_mixvpr_gewichte() + pruefe_anyloc_vokabular()
 
     if offen:
         print("\nNoch zu beschaffen:")
