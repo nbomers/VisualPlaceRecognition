@@ -127,9 +127,8 @@ class BaseEmbedder:
             if checkpoint_path is not None and (i + 1) % checkpoint_every == 0:
                 self._save_checkpoint(checkpoint_path, out[: start + len(paths)])
 
-        # Bewusst noch nicht loeschen: zwischen hier und dem np.save im
-        # Notebook liegen ein paar Zellen, und der Checkpoint ist der einzige
-        # Wiedereinstieg, falls der Kernel dazwischen stirbt.
+        # Der Checkpoint bleibt liegen, bis 04 die Datei geschrieben hat --
+        # er ist der einzige Wiedereinstieg, wenn der Kernel dazwischen stirbt.
         if checkpoint_path is not None:
             self._save_checkpoint(checkpoint_path, out)
 
