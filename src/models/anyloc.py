@@ -208,7 +208,16 @@ class AnyLocEmbedder(BaseEmbedder):
         """Patch-Deskriptoren fuer einen Batch: [B, num_patches, desc_dim]."""
         batch = self._collate(self._load_batch(batch_paths)).to(self.device)
         with torch.no_grad():
-            return self.dino(batch)
+            # Ohne autocast liefe die PCA-Phase in fp32, waehrend der
+            # eigentliche Lauf ueber base.embed_images fp16 nutzt. Das waere
+            # nicht nur langsamer, die PCA wuerde auch auf anderen Zahlen
+            # fitten als denen, auf die sie spaeter angewendet wird.
+            if self.use_amp:
+                with torch.autocast(device_type=self.device_type, dtype=torch.float16):
+                    descs = self.dino(batch)
+            else:
+                descs = self.dino(batch)
+        return descs.float()
 
     def _forward(self, batch):
         """

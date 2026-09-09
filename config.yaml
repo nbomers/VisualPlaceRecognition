@@ -42,6 +42,10 @@ vpr:
     revision: "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
 
   anyloc:
+    # ViT-G mit 1,14 Mrd. Parametern passt auf 8 GB VRAM nur in kleinen
+    # Batches. Sticht vpr.embed_batch_size fuer dieses Verfahren.
+    batch_size: 4
+
     repo_path: "external/AnyLoc"
     vocabulary_domain: "urban"        # urban | indoor | aerial
     desc_layer: 31
