@@ -65,8 +65,7 @@ def embedding_fingerprint(cfg, method, adapter, metadata):
 
 
 # Abbruchkriterien bestimmen nur, wann das Training endet -- gespeichert wird
-# so oder so die beste Epoche. Sie gehoeren damit nicht zur Identitaet der
-# Gewichte.
+# ohnehin die beste Epoche.
 _ABBRUCHKRITERIEN = ("patience", "min_delta")
 
 
@@ -95,6 +94,23 @@ def short_hash(fingerprint):
     return hashlib.sha256(blob).hexdigest()[:10]
 
 
+# Welche Stufe erzeugt welches Artefakt -- fuer die Fehlermeldung.
+_ERZEUGER = (
+    ("_retrieval.npz", "06"),
+    ("_linear.pt", "05"),
+    ("_linear_embeddings.npy", "05"),
+    ("_embeddings.npy", "04"),
+)
+
+
+def _hinweis(artifact_path):
+    name = Path(artifact_path).name
+    for endung, stufe in _ERZEUGER:
+        if name.endswith(endung):
+            return f"-> python run.py --from {stufe}"
+    return "-> die erzeugende Stufe mit dieser config.yaml neu laufen lassen"
+
+
 def _sidecar(artifact_path):
     artifact_path = Path(artifact_path)
     return artifact_path.with_name(artifact_path.name + ".fingerprint.json")
@@ -116,15 +132,14 @@ def require_fingerprint(artifact_path, fingerprint, what="Artefakt"):
     if not artifact_path.exists():
         raise FileNotFoundError(
             f"{what} fehlt: {artifact_path}\n"
-            f"Die erzeugende Stufe mit der aktuellen config.yaml laufen lassen."
+            f"{_hinweis(artifact_path)}"
         )
 
     side = _sidecar(artifact_path)
     if not side.exists():
         raise FileNotFoundError(
             f"{what} hat keinen Fingerabdruck: {side.name} fehlt.\n"
-            f"Die Datei stammt aus einem Lauf vor Einfuehrung der Pruefung. "
-            f"Die erzeugende Stufe neu laufen lassen."
+            f"{_hinweis(artifact_path)}"
         )
 
     stored = json.loads(side.read_text())
@@ -138,7 +153,7 @@ def require_fingerprint(artifact_path, fingerprint, what="Artefakt"):
         f"  Datei:   {artifact_path.name}\n"
         f"  gespeichert {stored.get('hash')}  erwartet {want}\n"
         f"  Abweichungen:\n{diff}\n"
-        f"  -> Die erzeugende Stufe mit dieser config.yaml neu laufen lassen."
+        f"  {_hinweis(artifact_path)}"
     )
 
 
@@ -154,10 +169,7 @@ def _diff(stored, current, prefix=""):
 
 
 # ----------------------------------------------------------------------
-# Config-Pruefung
-#
-# Die Einzelpruefungen lagen ueber die Notebooks verteilt, teils erst hinter
-# stundenlangen Stufen. Hier laufen sie beim Laden der Config.
+# Config-Pruefung: laeuft beim Laden, nicht erst hinter stundenlangen Stufen.
 # ----------------------------------------------------------------------
 
 
@@ -216,3 +228,16 @@ def validate_config(cfg):
             "config.yaml ist widerspruechlich:\n"
             + "\n".join(f"  - {f}" for f in fehler)
         )
+
+
+def print_run_header(cfg, stage, device=None, run_hash=None):
+    """Einheitliche Kopfzeile, damit man sich in einem langen Log zurechtfindet."""
+    vpr = cfg["vpr"]
+    teile = [f"[{stage}]", f"method={vpr['method']}", f"adapter={vpr.get('adapter', 'none')}"]
+    if device:
+        teile.append(f"device={device}")
+    if run_hash:
+        teile.append(f"run={run_hash}")
+    zeile = "  ".join(teile)
+    print(zeile)
+    print("-" * len(zeile))

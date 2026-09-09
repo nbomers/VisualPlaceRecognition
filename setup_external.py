@@ -43,7 +43,7 @@ def git(*args, cwd=None):
     ).stdout.strip()
 
 
-def hole(name, spec):
+def fetch_repo(name, spec):
     ziel = ROOT / spec["pfad"]
 
     if (ziel / spec["pruefdatei"]).exists():
@@ -73,8 +73,8 @@ def hole(name, spec):
     return True
 
 
-# Ein Google-Drive-Download kann statt der Datei eine HTML-Fehlerseite
-# liefern. Die Pruefsumme faengt das ab, bevor die Datei an ihren Platz kommt.
+# Google Drive liefert bei Ueberlastung eine HTML-Fehlerseite mit Status 200.
+# Die Pruefsumme faengt das ab, bevor die Datei an ihren Platz kommt.
 MIXVPR_GEWICHTE = {
     "gdrive_id": "1vuz3PvnR7vxnDDLQrdHJaOA04SQrtk5L",
     "sha256": "97528606773e9920e93ca4d211daeabf1c7312480f38b45379ee5551a1b4dd24",
@@ -82,10 +82,8 @@ MIXVPR_GEWICHTE = {
     "quelle": "https://github.com/amaralibey/MixVPR#weights",
 }
 
-# Die OneDrive-Links in AnyLocs Repo sind tot (das Konto wurde migriert, der
-# Share gibt 404). Die HuggingFace-Space des Projekts haelt dieselben
-# Vokabulare als Einzeldateien -- kein Zip, kein Zusatzpaket, huggingface_hub
-# kommt ohnehin mit transformers.
+# AnyLocs eigene OneDrive-Links sind tot (Konto migriert, Share gibt 404).
+# Die HuggingFace-Space haelt dieselben Vokabulare als Einzeldateien.
 ANYLOC_HF_SPACE = "TheProjectsGuy/AnyLoc"
 
 
@@ -97,7 +95,7 @@ def sha256(pfad, block=1 << 20):
     return h.hexdigest()
 
 
-def hole_mixvpr_gewichte():
+def fetch_mixvpr_weights():
     ziel = ROOT / CFG["vpr"]["mixvpr"]["weights"]
 
     if ziel.exists():
@@ -147,7 +145,7 @@ def hole_mixvpr_gewichte():
     return []
 
 
-def anyloc_vokabular_pfad():
+def anyloc_vocabulary_path():
     a = CFG["vpr"]["anyloc"]
     ordner = (
         ROOT
@@ -162,8 +160,8 @@ def anyloc_vokabular_pfad():
     return ordner, vorhanden
 
 
-def hole_anyloc_vokabular():
-    ordner, vorhanden = anyloc_vokabular_pfad()
+def fetch_anyloc_vocabulary():
+    ordner, vorhanden = anyloc_vocabulary_path()
     a = CFG["vpr"]["anyloc"]
 
     if vorhanden:
@@ -205,10 +203,10 @@ def hole_anyloc_vokabular():
 
 def main():
     print("Fremd-Repos (EigenPlaces und MegaLoc kommen ueber torch.hub):")
-    ok = all([hole(name, spec) for name, spec in REPOS.items()])
+    ok = all([fetch_repo(name, spec) for name, spec in REPOS.items()])
 
     print("\nZusatzdateien:")
-    offen = hole_mixvpr_gewichte() + hole_anyloc_vokabular()
+    offen = fetch_mixvpr_weights() + fetch_anyloc_vocabulary()
 
     if offen:
         print("\nNoch zu beschaffen:")
