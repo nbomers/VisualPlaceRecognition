@@ -156,7 +156,8 @@ def anyloc_vocabulary_path():
         / f"l{a['desc_layer']}_{a['desc_facet']}_c{a['num_clusters']}"
         / a["vocabulary_domain"]
     )
-    vorhanden = [n for n in ("c_center.pt", "c_centers.pt") if (ordner / n).exists()]
+    # VLAD.can_use_cache_vlad() erkennt nur diesen Namen.
+    vorhanden = ["c_centers.pt"] if (ordner / "c_centers.pt").exists() else []
     return ordner, vorhanden
 
 
