@@ -26,9 +26,9 @@ def metadata_digest(metadata):
     return hashlib.sha256(h.to_numpy().tobytes()).hexdigest()[:16]
 
 
-# Rein lokale Angaben. Ein verschobener Repo-Klon aendert das Modell nicht,
-# darf also auch nicht die Embeddings entwerten.
-_LOKALE_SCHLUESSEL = ("repo_path",)
+# Aendert das Ergebnis nicht: ein verschobener Repo-Klon so wenig wie eine
+# andere Batchgroesse. Beides darf die Embeddings nicht entwerten.
+_LOKALE_SCHLUESSEL = ("repo_path", "batch_size")
 
 
 def _model_config(block):
