@@ -82,13 +82,23 @@ class AnyLocEmbedder(BaseEmbedder):
         self.dino = DinoV2ExtractFeatures(
             model_id, desc_layer, desc_facet, device=str(self.device)
         )
+
+        # autocast wuerde die fp32-Gewichte behalten und zusaetzlich fp16-
+        # Kopien anlegen -- bei 1,14 Mrd. Parametern 4,3 GB plus 2,2 GB, was
+        # auf 8 GB nicht neben die Aktivierungen passt. Das Modell selbst in
+        # fp16 zu halten braucht nur die 2,2 GB.
+        self.half_model = use_amp and self.device_type == "cuda"
+        if self.half_model:
+            self.dino.dino_model = self.dino.dino_model.half()
+            self.use_amp = False  # base.embed_images soll nicht zusaetzlich casten
+            print("DINOv2 in fp16 (spart rund die Haelfte des Modellspeichers)")
         # BaseEmbedder erwartet ein self.model; hier ist es der Extraktor.
         # _forward() ist ueberschrieben, _measure_dim() wird nicht benutzt.
         self.model = self.dino
 
         with torch.no_grad():
             probe = torch.zeros(1, 3, image_size, image_size, device=self.device)
-            self.desc_dim = int(self.dino(probe).shape[-1])
+            self.desc_dim = int(self._dino(probe).shape[-1])
         print(f"Patch-Deskriptor: {self.desc_dim} Dimensionen")
 
         self.vlad = VLAD(num_clusters=num_clusters, desc_dim=self.desc_dim)
@@ -204,20 +214,17 @@ class AnyLocEmbedder(BaseEmbedder):
     # Extraktion
     # ------------------------------------------------------------------
 
+    def _dino(self, batch):
+        """Eingabe an die Genauigkeit des Modells anpassen."""
+        if self.half_model:
+            batch = batch.half()
+        return self.dino(batch)
+
     def _descriptors(self, batch_paths):
         """Patch-Deskriptoren fuer einen Batch: [B, num_patches, desc_dim]."""
         batch = self._collate(self._load_batch(batch_paths)).to(self.device)
         with torch.no_grad():
-            # Ohne autocast liefe die PCA-Phase in fp32, waehrend der
-            # eigentliche Lauf ueber base.embed_images fp16 nutzt. Das waere
-            # nicht nur langsamer, die PCA wuerde auch auf anderen Zahlen
-            # fitten als denen, auf die sie spaeter angewendet wird.
-            if self.use_amp:
-                with torch.autocast(device_type=self.device_type, dtype=torch.float16):
-                    descs = self.dino(batch)
-            else:
-                descs = self.dino(batch)
-        return descs.float()
+            return self._dino(batch).float()
 
     def _forward(self, batch):
         """
@@ -228,7 +235,7 @@ class AnyLocEmbedder(BaseEmbedder):
         # VLAD.generate() legt seine Zwischenergebnisse auf der CPU an und
         # ruft labels.numpy() -- mit CUDA-Tensoren bricht es ab. AnyLocs
         # eigene Demo schiebt die Deskriptoren aus demselben Grund herunter.
-        descs = self.dino(batch).float().cpu()
+        descs = self._dino(batch).float().cpu()
         vecs = self.vlad.generate_multi(descs)
         if isinstance(vecs, list):
             vecs = torch.stack(vecs)
