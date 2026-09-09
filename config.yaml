@@ -19,7 +19,7 @@ vpr:
   #   eigenplaces
   #   mixvpr
 
-  method: "clip"
+  method: "anyloc"
 
   # Adapter:
   #   none
@@ -79,6 +79,10 @@ vpr:
   database_fraction: 0.15
   query_fraction: 0.15
 
+  # Anteil der train-Sequenzen, der in 05 als Validierung zurueckgehalten
+  # wird. Beeinflusst nur das Adaptertraining, nicht die Auswertung.
+  val_fraction: 0.10
+
 
   # ----------------------------------------------------------
   # Geografische Definition
@@ -111,6 +115,22 @@ vpr:
   # ----------------------------------------------------------
   # Adapter Training
   # ----------------------------------------------------------
+
+  # Ground-Truth-Radius der Validierungsmetrik in 05. Standardmaessig
+  # derselbe Wert wie uncertain_radius_m, damit val Recall@1 mit der
+  # entsprechenden Zeile in 07 vergleichbar bleibt.
+  val_radius_m: 25.0
+
+
+  # uncertain- und negative-Paare aus 01 werden von keiner Stufe gelesen und
+  # belegen zusammen 139 MB. true schreibt sie fuer eigene Analysen mit.
+  write_uncertain_negative_pairs: false
+
+
+  # Batchgroesse beim Encodieren in 04. Beeinflusst nur Tempo und
+  # Speicherbedarf, nicht das Ergebnis.
+  embed_batch_size: 64
+
 
   adapter_training:
 
@@ -153,9 +173,20 @@ retrieval:
   # Aktuelle Retrieval-Implementierung
   method: "faiss"
 
+  # Wieviele Nachbarn 06 je Query speichert. Begrenzt, was 07 auswerten
+  # kann, und was fuer eine spaetere GPS-Aggregation zur Verfuegung steht.
+  top_k: 50
+
   # Maximale geografische Distanz für Ground Truth
   # bei der Evaluation.
   thresholds: [5, 10, 25, 50, 100]
+
+  # Bei welchen k Recall berichtet wird. Muss <= top_k bleiben.
+  k_values: [1, 5, 10, 20]
+
+  # Fuer die strengere Auswertung: ein Datenbanktreffer zaehlt nur, wenn er
+  # von einem anderen Fotografen stammt oder so viele Tage entfernt liegt.
+  min_days_apart: 180
 
 
 # ============================================================
@@ -164,9 +195,16 @@ retrieval:
 
 zoom: 14
 
-max_workers: "auto"
+# Getrennt, weil die beiden Stufen unterschiedliche Arbeit machen:
+# Kachelverarbeitung ist CPU-gebunden, der Bilddownload wartet auf das Netz.
+#   "auto" = min(16, 2 x CPU-Kerne)
+tile_workers: "auto"
+#   "auto" = 96
+download_workers: "auto"
 
-image_size: 1024
+# Aufloesung der Mapillary-Thumbnails beim Download. Nicht zu verwechseln
+# mit vpr.<verfahren>.image_size, das die Modelleingabe bestimmt.
+download_image_size: 1024
 
 img_download_path: "~/Downloads/images"
 
