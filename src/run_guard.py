@@ -173,7 +173,57 @@ def _diff(stored, current, prefix=""):
 # ----------------------------------------------------------------------
 
 
+# Schluessel, ohne die eine Stufe nicht laufen kann. Fehlen sie, ist die
+# config.yaml aelter als der Code -- meist ein Rechner, der den Commit der
+# Config nicht mitbekommen hat.
+_PFLICHT = (
+    "tile_workers",
+    "download_workers",
+    "download_image_size",
+    "vpr.method",
+    "vpr.models",
+    "vpr.val_fraction",
+    "vpr.val_radius_m",
+    "vpr.embed_batch_size",
+    "vpr.train_fraction",
+    "vpr.database_fraction",
+    "vpr.query_fraction",
+    "vpr.positive_radius_m",
+    "vpr.uncertain_radius_m",
+    "vpr.hard_negative_min_m",
+    "vpr.hard_negative_max_m",
+    "vpr.max_heading_diff_deg",
+    "retrieval.method",
+    "retrieval.top_k",
+    "retrieval.k_values",
+    "retrieval.thresholds",
+    "retrieval.min_days_apart",
+)
+
+
+def _fehlende_schluessel(cfg):
+    fehlend = []
+    for pfad in _PFLICHT:
+        knoten = cfg
+        for teil in pfad.split("."):
+            if not isinstance(knoten, dict) or teil not in knoten:
+                fehlend.append(pfad)
+                break
+            knoten = knoten[teil]
+    return fehlend
+
+
 def validate_config(cfg):
+    fehlend = _fehlende_schluessel(cfg)
+    if fehlend:
+        raise ValueError(
+            "config.yaml passt nicht zum Code -- diese Schluessel fehlen:\n"
+            + "\n".join(f"  - {k}" for k in fehlend)
+            + "\n\nMeist steht auf diesem Rechner eine aeltere config.yaml. "
+            "Auf dem Rechner, auf dem sie aktuell ist, committen und hier "
+            "git pull."
+        )
+
     vpr = cfg["vpr"]
     ret = cfg["retrieval"]
     fehler = []
