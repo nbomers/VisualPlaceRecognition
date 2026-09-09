@@ -142,10 +142,26 @@ STAGES = [
 ]
 
 
+class DurchreichenderClient(NotebookClient):
+    """
+    NotebookClient sammelt Zellenausgaben nur ins Notebook-Objekt. Bei einem
+    Encoder-Lauf ueber Stunden sieht man dadurch gar nichts -- auch keinen
+    Fortschrittsbalken, weil tqdm nach stderr schreibt.
+    """
+
+    def output(self, outs, msg, display_id, cell_index):
+        if msg["msg_type"] == "stream":
+            text = msg["content"].get("text", "")
+            strom = sys.stderr if msg["content"].get("name") == "stderr" else sys.stdout
+            strom.write(text)
+            strom.flush()
+        return super().output(outs, msg, display_id, cell_index)
+
+
 def run_notebook(notebook):
     path = ROOT / "notebooks" / notebook
     nb = nbformat.read(path, as_version=4)
-    NotebookClient(nb, timeout=None, kernel_name="python3").execute()
+    DurchreichenderClient(nb, timeout=None, kernel_name="python3").execute()
 
 
 def main():
