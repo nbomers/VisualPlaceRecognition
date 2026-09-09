@@ -70,6 +70,7 @@ class AnyLocEmbedder(BaseEmbedder):
         super().__init__(device, image_size, num_workers, use_amp)
 
         VLAD, DinoV2ExtractFeatures = _import_anyloc(repo_path)
+        self._VLAD = VLAD
 
         self.num_clusters = num_clusters
         self.pca_dim = pca_dim
@@ -132,12 +133,16 @@ class AnyLocEmbedder(BaseEmbedder):
             / f"l{layer}_{facet}_c{self.num_clusters}"
             / domain
         )
-        # AnyLoc selbst ist bei der Benennung uneinheitlich: das demo-README
-        # nennt c_center.pt, anyloc_vlad_generate.py c_centers.pt.
-        cache = next(
-            (ordner / n for n in ("c_center.pt", "c_centers.pt") if (ordner / n).exists()),
-            ordner / "c_center.pt",
-        )
+        # VLAD.can_use_cache_vlad() erkennt ausschliesslich diesen Namen. Das
+        # demo-README von AnyLoc nennt c_center.pt, der Code liest c_centers.pt.
+        cache = ordner / "c_centers.pt"
+        einzahl = ordner / "c_center.pt"
+
+        if not cache.exists() and einzahl.exists():
+            raise FileNotFoundError(
+                f"Vokabular liegt als {einzahl.name} vor, VLAD liest aber nur "
+                f"{cache.name}. Umbenennen:\n  mv {einzahl} {cache}"
+            )
 
         if cache.exists():
             centers = torch.load(cache, map_location="cpu")
@@ -146,17 +151,25 @@ class AnyLocEmbedder(BaseEmbedder):
                     f"Vokabular {cache} hat Form {tuple(centers.shape)}, "
                     f"erwartet ({self.num_clusters}, {self.desc_dim})."
                 )
-            self.vlad.c_centers = centers
-            self.vlad.fit(None)  # nur laden, nicht clustern
+
+            # Ueber cache_dir laden statt c_centers von Hand zu setzen: fit()
+            # traegt dabei auch kmeans.centroids nach, die generate_multi braucht.
+            self.vlad = self._VLAD(
+                num_clusters=self.num_clusters,
+                desc_dim=self.desc_dim,
+                cache_dir=str(ordner),
+            )
+            self.vlad.fit(None)
             self.vocabulary_source = f"offiziell:{domain}"
             print(f"Vokabular geladen: {cache}")
             return
 
         if not fallback_paths:
             raise FileNotFoundError(
-                f"Kein Vokabular unter {cache}.\n"
-                "Entweder cache.zip aus der AnyLoc-Public-Data entpacken, oder "
-                "fit_fallback_paths mit TRAIN-Bildern uebergeben (niemals query!)."
+                f"Kein Vokabular unter {ordner}/c_centers.pt\n"
+                "python setup_external.py holt es, alternativ cache.zip aus den "
+                "AnyLoc-Public-Data entpacken oder fit_fallback_paths mit "
+                "TRAIN-Bildern uebergeben (niemals query!)."
             )
 
         print(
