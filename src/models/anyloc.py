@@ -216,7 +216,10 @@ class AnyLocEmbedder(BaseEmbedder):
         der Speicherbedarf bleibt konstant statt linear in der Bildzahl.
         VLAD selbst laeuft bewusst in float32, auch unter autocast.
         """
-        descs = self.dino(batch).float()
+        # VLAD.generate() legt seine Zwischenergebnisse auf der CPU an und
+        # ruft labels.numpy() -- mit CUDA-Tensoren bricht es ab. AnyLocs
+        # eigene Demo schiebt die Deskriptoren aus demselben Grund herunter.
+        descs = self.dino(batch).float().cpu()
         vecs = self.vlad.generate_multi(descs)
         if isinstance(vecs, list):
             vecs = torch.stack(vecs)
@@ -244,7 +247,7 @@ class AnyLocEmbedder(BaseEmbedder):
         chunks = []
         for start in tqdm(range(0, n, batch_size), desc="PCA-Sample"):
             descs = self._descriptors(sample[start : start + batch_size])
-            vecs = self.vlad.generate_multi(descs.float())
+            vecs = self.vlad.generate_multi(descs.float().cpu())
             if isinstance(vecs, list):
                 vecs = torch.stack(vecs)
             chunks.append(vecs.cpu())
