@@ -22,6 +22,10 @@ def load():
     if not EVAL_DIR.exists():
         return []
     laeufe = [json.loads(p.read_text()) for p in sorted(EVAL_DIR.glob("*.json"))]
+    # In die Recall-Tabelle gehoeren nur Auswertungen aus 07. Ueber den Inhalt
+    # filtern, nicht ueber den Dateinamen -- haelt auch fuer alles Weitere,
+    # was spaeter einmal in dem Verzeichnis landet.
+    laeufe = [r for r in laeufe if "auswertungen" in r]
     # Baseline vor Adapter, sonst alphabetisch nach Verfahren
     return sorted(laeufe, key=lambda r: (r["method"], r["adapter"] != "none"))
 

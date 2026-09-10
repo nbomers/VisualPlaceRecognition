@@ -180,8 +180,8 @@ def _durchlauf(cfg, method, adapter, args, erledigt):
         # neu zu rechnen.
         if notebook[:2] in ("07", "08") and not force:
             name = method if adapter in ("none", "None") else f"{method}_{adapter}"
-            anhang = "" if notebook.startswith("07") else "_localization"
-            ergebnis = ROOT / "results" / "evaluation" / f"{name}{anhang}.json"
+            unterordner = "evaluation" if notebook.startswith("07") else "localization"
+            ergebnis = ROOT / "results" / unterordner / f"{name}.json"
             treffer = ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz"
             if (ergebnis.exists() and treffer.exists()
                     and ergebnis.stat().st_mtime >= treffer.stat().st_mtime):
