@@ -123,7 +123,12 @@ $RECYCLE.BIN/
 
 # ---------- Ergebnisse ----------
 /results/*
-#!/results/figures/
+
+# Ausnahme: die Recall-Tabellen. Wenige KB Text, muessen zwischen den
+# Rechnern wandern, damit compare.py alle Verfahren nebeneinander sieht.
+!/results/evaluation/
+/results/evaluation/*
+!/results/evaluation/*.json
 
 # ---------- Sonstiges ----------
 .cache/
