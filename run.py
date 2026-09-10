@@ -104,6 +104,7 @@ def _stages(cfg, method, adapter):
          ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz",
          gate(name, adapter if adapter not in ("none", "None") else "none")),
         ("07_evaluation.ipynb", None, None),
+        ("08_localization.ipynb", None, None),
     ]
 
 
@@ -177,9 +178,10 @@ def _durchlauf(cfg, method, adapter, args, erledigt):
         # 07 hat keinen Fingerabdruck, seine Auswertung haengt aber allein an
         # der Retrieval-Datei. Ist sie aelter als das Ergebnis, gibt es nichts
         # neu zu rechnen.
-        if notebook.startswith("07") and not force:
+        if notebook[:2] in ("07", "08") and not force:
             name = method if adapter in ("none", "None") else f"{method}_{adapter}"
-            ergebnis = ROOT / "results" / "evaluation" / f"{name}.json"
+            anhang = "" if notebook.startswith("07") else "_localization"
+            ergebnis = ROOT / "results" / "evaluation" / f"{name}{anhang}.json"
             treffer = ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz"
             if (ergebnis.exists() and treffer.exists()
                     and ergebnis.stat().st_mtime >= treffer.stat().st_mtime):
