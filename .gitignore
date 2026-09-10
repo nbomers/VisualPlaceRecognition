@@ -129,6 +129,9 @@ $RECYCLE.BIN/
 !/results/evaluation/
 /results/evaluation/*
 !/results/evaluation/*.json
+!/results/localization/
+/results/localization/*
+!/results/localization/*.json
 
 # ---------- Sonstiges ----------
 .cache/
