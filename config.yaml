@@ -19,7 +19,7 @@ vpr:
   #   eigenplaces
   #   mixvpr
 
-  method: "anyloc"
+  method: "megaloc"
 
   # Adapter:
   #   none
@@ -191,6 +191,28 @@ retrieval:
   # Fuer die strengere Auswertung: ein Datenbanktreffer zaehlt nur, wenn er
   # von einem anderen Fotografen stammt oder so viele Tage entfernt liegt.
   min_days_apart: 180
+
+
+# ============================================================
+# Lokalisierung
+# ============================================================
+
+# Aus der Trefferliste von 06 eine Koordinate machen (08_localization).
+localization:
+
+  # Wieviele Treffer je Anfrage einfliessen. Muss <= retrieval.top_k sein.
+  top_k: 10
+
+  # DBSCAN: Nachbarschaftsradius und Mindestgroesse einer Gruppe.
+  # eps entspricht dem uncertain_radius_m, damit "dieselbe Stelle" hier und
+  # in der Auswertung dasselbe heisst.
+  eps_m: 25.0
+  min_samples: 2
+
+  # Cosinus-Werte liegen dicht beieinander (bei CLIP 0.89 bis 0.92), eine
+  # direkte Gewichtung waere praktisch ein ungewichteter Mittelwert. Die
+  # Temperatur spreizt sie: hoeher = staerker auf die besten Treffer.
+  softmax_temperature: 50.0
 
 
 # ============================================================
