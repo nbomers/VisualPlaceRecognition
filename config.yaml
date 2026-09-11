@@ -37,6 +37,14 @@ vpr:
     eigenplaces: "ResNet50"
     megaloc: "megaloc"
 
+    # Auf gemeinsame Deskriptorbreite reduzierte Varianten. Erzeugt von
+    # experiments/pca_reduce.py, danach ganz normale Encoder fuer 05 bis 08.
+    clip_pca512: "clip -> PCA 512"
+    anyloc_pca512: "anyloc -> PCA 512"
+    mixvpr_pca512: "mixvpr -> PCA 512"
+    eigenplaces_pca512: "eigenplaces -> PCA 512"
+    megaloc_pca512: "megaloc -> PCA 512"
+
 
   clip:
     revision: "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
@@ -71,6 +79,46 @@ vpr:
   eigenplaces:
     fc_output_dim: 2048          # 128 | 256 | 512 | 2048
     image_size: 512
+
+
+  # ----------------------------------------------------------
+  # PCA-Varianten
+  # ----------------------------------------------------------
+
+  # Gemeinsame Deskriptorbreite fuer den fairen Vergleich. source nennt den
+  # Encoder, aus dem reduziert wird; die PCA wird nur auf dem train-Split
+  # angepasst. Diese Werte gehen in den Fingerabdruck ein -- wer pca_dim
+  # aendert, entwertet die Datei korrekt.
+
+  clip_pca512:
+    source: "clip"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: false
+
+  anyloc_pca512:
+    source: "anyloc"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: false
+
+  mixvpr_pca512:
+    source: "mixvpr"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: false
+
+  eigenplaces_pca512:
+    source: "eigenplaces"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: false
+
+  megaloc_pca512:
+    source: "megaloc"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: false
 
 
   # ----------------------------------------------------------
