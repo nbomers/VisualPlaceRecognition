@@ -26,7 +26,7 @@ import argparse
 import collections
 import json
 import math
-import os
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -34,20 +34,24 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import requests
-import yaml
-from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
 
 # Liegt in experiments/, die Pipeline eine Ebene darueber.
 ROOT = Path(__file__).resolve().parent.parent
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.config import load_config  # noqa: E402
+from src.geo import haversine_distance  # noqa: E402
+from src.mapillary import get_session, load_token  # noqa: E402
+
+CFG = load_config(ROOT)
 CACHE_PATH = ROOT / "cache" / "detections.jsonl"
 
 # Klassen, die an der Tageszeit haengen und nicht am Ort. Werden in der
 # zweiten Variante ausgeblendet, um ihren Anteil am Ergebnis zu zeigen.
 TRANSIENT_PREFIXES = ("object--vehicle", "human--", "object--bicycle")
 
-thread_local = threading.local()
 
 
 def _args():
@@ -76,43 +80,6 @@ def _args():
 # ----------------------------------------------------------------------
 # Mapillary
 # ----------------------------------------------------------------------
-
-def load_token():
-    env_file = ROOT / ".env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip().strip("'\""))
-    token = os.environ.get("MAPILLARY_TOKEN", "")
-    assert token.startswith("MLY|"), (
-        "Kein Mapillary-Token. Datei .env anlegen:\n MAPILLARY_TOKEN=MLY|dein|token"
-    )
-    return token
-
-
-def make_session(workers):
-    session = requests.Session()
-    retry = Retry(
-        total=5, connect=5, read=5, status=5,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=frozenset(["GET"]),
-        raise_on_status=True,
-        respect_retry_after_header=True,
-    )
-    adapter = HTTPAdapter(max_retries=retry,
-                          pool_connections=workers, pool_maxsize=workers)
-    session.mount("https://", adapter)
-    return session
-
-
-def get_session(workers):
-    if not hasattr(thread_local, "session"):
-        thread_local.session = make_session(workers)
-    return thread_local.session
-
 
 def fetch_counts(image_id, token, workers):
     """Klassenzaehlung eines Bildes. None = Abruf fehlgeschlagen."""
@@ -220,14 +187,6 @@ def build_vectors(cache, image_ids, drop_transient):
 # Auswertung
 # ----------------------------------------------------------------------
 
-def haversine(lat1, lon1, lat2, lon2):
-    R = 6371000.0
-    p1, p2 = np.radians(lat1), np.radians(lat2)
-    a = (np.sin((p2 - p1) / 2) ** 2
-         + np.cos(p1) * np.cos(p2) * np.sin(np.radians(lon2 - lon1) / 2) ** 2)
-    return 2 * R * np.arcsin(np.sqrt(a))
-
-
 def paarweise_auc(scores, ist_richtig, gueltig=None):
     """
     Anteil der Paare (richtig, falsch) innerhalb einer Anfrage, bei denen der
@@ -290,7 +249,7 @@ def main():
     q_lat, q_lon = queries["lat"].to_numpy(), queries["lon"].to_numpy()
     db_lat, db_lon = database["lat"].to_numpy(), database["lon"].to_numpy()
 
-    abstand = haversine(q_lat[:, None], q_lon[:, None],
+    abstand = haversine_distance(q_lat[:, None], q_lon[:, None],
                         db_lat[indices], db_lon[indices])
     richtig = abstand <= args.radius
     brauchbar = np.flatnonzero(richtig.any(axis=1) & (~richtig).any(axis=1))
@@ -320,7 +279,7 @@ def main():
     cache = load_cache()
     print(f"Im Cache:             {len(cache):,}")
     if not args.no_fetch:
-        n_fehler = fetch_missing(alle_ids, cache, load_token(), args.workers)
+        n_fehler = fetch_missing(alle_ids, cache, load_token(ROOT), args.workers)
         if n_fehler:
             print(f"Fehlgeschlagene Abrufe: {n_fehler:,}")
 
