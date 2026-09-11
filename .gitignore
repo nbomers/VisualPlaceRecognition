@@ -141,6 +141,9 @@ $RECYCLE.BIN/
 !/results/figures/evaluation/
 /results/figures/evaluation/*
 !/results/figures/evaluation/*.png
+!/results/figures/localization/
+/results/figures/localization/*
+!/results/figures/localization/*.png
 
 # ---------- Sonstiges ----------
 .cache/
