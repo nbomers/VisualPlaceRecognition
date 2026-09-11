@@ -1,0 +1,62 @@
+# Conda-Umgebung fuer beide Rechner (Mac M1 Pro, CachyOS mit RTX 3070).
+#
+#   conda env create -f environment.yml
+#   conda activate pytorch
+#
+# Aufteilung nach Herkunft, nicht nach Belieben:
+#   conda  -- alles mit kompilierten Abhaengigkeiten (faiss, GDAL hinter
+#             geopandas, BLAS hinter numpy). Hier zickt pip am ehesten.
+#   pip    -- torch und alles, was darauf aufbaut. Die pip-Wheels waehlen
+#             CUDA auf Linux und MPS auf dem Mac von selbst; ueber conda
+#             muesste man das je Plattform getrennt pflegen.
+#
+# Versionen sind bewusst nicht festgenagelt, damit dieselbe Datei auf beiden
+# Plattformen aufloest. Fuer ein exaktes Abbild einer Maschine:
+#   conda env export --no-builds > environment.lock.yml
+
+name: pytorch
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.14
+
+  # Rechnen
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - pyarrow
+  - faiss-cpu
+
+  # Geodaten
+  - geopandas
+  - shapely
+  - osmnx
+  - utm
+  - folium
+
+  # Notebooks und Ablauf
+  - jupyterlab
+  - nbformat
+  - nbclient
+  - matplotlib
+  - tqdm
+  - pyyaml
+  - requests
+  - pillow
+  - einops
+  - umap-learn
+
+  - pip
+  - pip:
+      - torch
+      - torchvision
+      - transformers
+      - timm
+      - open_clip_torch
+      - pytorch-metric-learning
+      - fast_pytorch_kmeans
+      - mapbox-vector-tile
+      - qdown
