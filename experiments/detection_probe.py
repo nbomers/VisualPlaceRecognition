@@ -15,18 +15,22 @@ in detections_probe.json daneben; ein zweiter Aufruf gibt es nur aus.
 import argparse
 import collections
 import json
-import os
+import sys
 from pathlib import Path
 
 import pandas as pd
 import requests
-import yaml
-from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
 
 # Liegt in experiments/, die Pipeline eine Ebene darueber.
 ROOT = Path(__file__).resolve().parent.parent
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.config import load_config  # noqa: E402
+from src.mapillary import load_token, make_session  # noqa: E402
+
+CFG = load_config(ROOT)
 PROBE_PATH = Path(__file__).resolve().parent / "detections_probe.json"
 
 
@@ -39,35 +43,6 @@ def _args():
     ap.add_argument("--neu", action="store_true",
                     help="Neu messen, auch wenn ein Ergebnis vorliegt")
     return ap.parse_args()
-
-
-def load_token():
-    env_file = ROOT / ".env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip().strip("'\""))
-    token = os.environ.get("MAPILLARY_TOKEN", "")
-    assert token.startswith("MLY|"), (
-        "Kein Mapillary-Token. Datei .env anlegen:\n MAPILLARY_TOKEN=MLY|dein|token"
-    )
-    return token
-
-
-def make_session():
-    session = requests.Session()
-    retry = Retry(
-        total=5, connect=5, read=5, status=5,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=frozenset(["GET"]),
-        raise_on_status=True,
-        respect_retry_after_header=True,
-    )
-    session.mount("https://", HTTPAdapter(max_retries=retry))
-    return session
 
 
 def show_summary(befund):
@@ -141,7 +116,7 @@ def main():
         show_summary(befund)
         return
 
-    befund = messen(args, load_token())
+    befund = messen(args, load_token(ROOT))
     PROBE_PATH.write_text(json.dumps(befund, indent=2))
     show_summary(befund)
     print(f"\nGespeichert unter {PROBE_PATH}")
