@@ -28,3 +28,4 @@ nbclient
 timm
 fast_pytorch_kmeans
 qdown
+nbstripout
