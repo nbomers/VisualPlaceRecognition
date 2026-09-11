@@ -133,11 +133,26 @@ $RECYCLE.BIN/
 /results/localization/*
 !/results/localization/*.json
 
+# Ausnahme: die Auswertungsabbildungen, rund 67 KB je Bild. Muessen zwischen
+# den Rechnern wandern, sonst fehlen die Grafiken der Encoder, die nur auf
+# dem Linux-Rechner gerechnet wurden. figures/coverage bleibt draussen (5,3 MB).
+!/results/figures/
+/results/figures/*
+!/results/figures/evaluation/
+/results/figures/evaluation/*
+!/results/figures/evaluation/*.png
+
 # ---------- Sonstiges ----------
 .cache/
 
 # OSMnx-Cache (Overpass-Antworten)
 cache/
+
+# Ausnahme: die abgerufenen Mapillary-Detections. 6 MB fuer 11.942 Bilder,
+# rund zwei Minuten API-Zeit -- gehoert zum Messergebnis in experiments/.
+!cache/
+cache/*
+!cache/detections.jsonl
 
 .pytest_cache/
 .mypy_cache/
