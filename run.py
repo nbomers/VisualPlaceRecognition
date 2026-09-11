@@ -5,9 +5,10 @@ Eine Stufe wird uebersprungen, wenn ihr Ergebnis vorliegt UND laut
 Fingerabdruck zur aktuellen config.yaml passt. Aendert man etwas an der
 Config, laufen genau die betroffenen Stufen neu.
 
-01 ist davon ausgenommen und wird nur auf Existenz geprueft: es wuerfelt
-sonst den Split neu und entwertet damit alle vorhandenen Embeddings. 05
-entfaellt, solange vpr.adapter auf "none" steht.
+01 bis 03 werden nur auf Existenz ihres Ergebnisses geprueft: 01 wuerfelt
+sonst den Split neu und entwertet damit alle vorhandenen Embeddings, 02 und
+03 haengen nicht an der config. 05 entfaellt, solange vpr.adapter auf "none"
+steht. Welche Stufe woran erkannt wird, steht an einer Stelle: _stages().
 
 --method und --adapter nehmen auch Listen ("clip,mixvpr") oder "all" und
 rechnen dann eine Kombination nach der anderen.
@@ -112,11 +113,18 @@ def _stages(cfg, method, adapter):
             return embedding_fingerprint(cfg, method, variante, pd.read_parquet(datei))
         return fingerprint
 
+    # Je Stufe: Notebook, das Artefakt, an dem man erkennt, dass sie fertig
+    # ist, und optional ein Fingerabdruck, der prueft, ob es noch zur config
+    # passt. Ohne Fingerabdruck zaehlt nur die Existenz.
     return [
         ("01_mapillary_coverage.ipynb",
          ROOT / "data" / "processed" / "metadata.parquet", None),
-        ("02_dataset_audit.ipynb", None, None),
-        ("03_image_download.ipynb", None, None),
+        # 02 schreibt vier Abbildungen, die letzte davon ist das Kennzeichen.
+        ("02_dataset_audit.ipynb",
+         ROOT / "results" / "figures" / "dataset" / "sequence_sizes.png", None),
+        # 03 schreibt die Fehlerliste immer, auch wenn sie leer ist.
+        ("03_image_download.ipynb",
+         ROOT / "data" / "processed" / "failed_image_download.txt", None),
         ("04_embeddings.ipynb",
          emb / f"{method}_embeddings.npy", gate(method, "none")),
         ("05_adapter.ipynb",
