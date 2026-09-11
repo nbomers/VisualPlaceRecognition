@@ -34,7 +34,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import yaml
 from sklearn.decomposition import PCA
 
 # Liegt in experiments/, die Pipeline eine Ebene darueber.
@@ -42,9 +41,10 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.config import load_config  # noqa: E402
 from src.run_guard import embedding_fingerprint, write_fingerprint  # noqa: E402
 
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
+CFG = load_config(ROOT)
 EMBEDDING_ROOT = ROOT / "data" / "embeddings"
 
 # Blockweise transformieren: MegaLoc sind 332.867 x 8448 float32, also
