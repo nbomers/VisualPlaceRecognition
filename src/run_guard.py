@@ -95,19 +95,28 @@ def short_hash(fingerprint):
 
 
 # Welche Stufe erzeugt welches Artefakt -- fuer die Fehlermeldung.
+# Reihenfolge zaehlt: der speziellere Namensteil steht vorn.
 _ERZEUGER = (
-    ("_retrieval.npz", "06"),
-    ("_linear.pt", "05"),
-    ("_linear_embeddings.npy", "05"),
-    ("_embeddings.npy", "04"),
+    ("_retrieval.npz", "python run.py --from 06"),
+    ("_linear.pt", "python run.py --from 05"),
+    ("_linear_embeddings.npy", "python run.py --from 05"),
+    ("_embeddings.npy", "python run.py --from 04"),
 )
+
+# Abgeleitete Encoder entstehen nicht in 04, sondern aus einem anderen
+# Encoder. Am Namen erkannt -- Konvention, passend zu den source-Eintraegen
+# in config.yaml und zu experiments/pca_reduce.py.
+_ABGELEITET_MARKER = ("_pca",)
 
 
 def _hinweis(artifact_path):
     name = Path(artifact_path).name
-    for endung, stufe in _ERZEUGER:
-        if name.endswith(endung):
-            return f"-> python run.py --from {stufe}"
+    for endung, befehl in _ERZEUGER:
+        if not name.endswith(endung):
+            continue
+        if endung == "_embeddings.npy" and any(m in name for m in _ABGELEITET_MARKER):
+            return "-> python experiments/pca_reduce.py"
+        return f"-> {befehl}"
     return "-> die erzeugende Stufe mit dieser config.yaml neu laufen lassen"
 
 
