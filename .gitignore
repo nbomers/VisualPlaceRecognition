@@ -144,6 +144,9 @@ $RECYCLE.BIN/
 !/results/figures/localization/
 /results/figures/localization/*
 !/results/figures/localization/*.png
+!/results/figures/demo/
+/results/figures/demo/*
+!/results/figures/demo/*.png
 
 # ---------- Sonstiges ----------
 .cache/
