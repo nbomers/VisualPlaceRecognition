@@ -41,6 +41,9 @@ dependencies:
   - jupyterlab
   - nbformat
   - nbclient
+  # Entfernt Zellenausgaben beim Commit. Einmal je Rechner aktivieren:
+  #   nbstripout --install --attributes .gitattributes
+  - nbstripout
   - matplotlib
   - tqdm
   - pyyaml
