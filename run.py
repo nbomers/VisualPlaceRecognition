@@ -14,6 +14,7 @@ rechnen dann eine Kombination nach der anderen.
 """
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -50,6 +51,7 @@ def _args():
                "  python run.py --method mixvpr                anderer Encoder\n"
                "  python run.py --method clip --adapter linear\n"
                "  python run.py --method all                   jeden Encoder nacheinander\n"
+               "  python run.py --method derived               die PCA-Varianten\n"
                "  python run.py --method all --adapter all     dazu je Baseline und Adapter\n"
                "  python run.py --method clip,mixvpr           nur diese beiden\n"
                "  python run.py --from 06                      ab dem Retrieval, erzwungen\n"
@@ -63,19 +65,38 @@ def _args():
                          "alles ausgefuehrt, auch wenn es schon vorliegt.")
     ap.add_argument("--method", metavar="LISTE",
                     help='vpr.method ueberschreiben. Mehrere durch Komma, "all" '
-                         "nimmt jeden Eintrag aus vpr.models.")
+                         'nimmt die echten Encoder, "derived" die abgeleiteten '
+                         "PCA-Varianten aus experiments/pca_reduce.py.")
     ap.add_argument("--adapter", metavar="LISTE",
                     help='vpr.adapter ueberschreiben. Mehrere durch Komma, "all" '
                          "entspricht none,linear.")
     return ap.parse_args()
 
 
-def _liste(wert, alle, standard):
-    """Kommaliste, "all" oder None -> Liste der zu rechnenden Werte."""
+def _abgeleitet(cfg, name):
+    """Hat der Encoder einen source-Eintrag, ist er aus einem anderen
+    gerechnet -- die PCA-Varianten aus experiments/pca_reduce.py."""
+    block = cfg["vpr"].get(name)
+    return isinstance(block, dict) and "source" in block
+
+
+def _modelle(cfg, abgeleitet):
+    return [n for n in cfg["vpr"]["models"] if _abgeleitet(cfg, n) == abgeleitet]
+
+
+def _liste(wert, alle, standard, abgeleitet=()):
+    """Kommaliste, "all", "derived" oder None -> Liste der zu rechnenden Werte.
+
+    "all" nimmt bewusst nur die echten Encoder. Die abgeleiteten Varianten
+    entstehen nicht in 04, sondern in experiments/pca_reduce.py -- sie
+    stillschweigend mitzurechnen wuerde bei fehlender Quelle nur abbrechen.
+    """
     if wert is None:
         return [standard]
     if wert.strip() == "all":
         return list(alle)
+    if wert.strip() == "derived":
+        return list(abgeleitet)
     return [t.strip() for t in wert.split(",") if t.strip()]
 
 
@@ -217,7 +238,10 @@ def _durchlauf(cfg, method, adapter, args, erledigt):
 def main():
     args = _args()
 
-    methoden = _liste(args.method, BASIS_CFG["vpr"]["models"], BASIS_CFG["vpr"]["method"])
+    methoden = _liste(args.method,
+                      _modelle(BASIS_CFG, abgeleitet=False),
+                      BASIS_CFG["vpr"]["method"],
+                      _modelle(BASIS_CFG, abgeleitet=True))
     adapter = _liste(args.adapter, ("none", "linear"),
                      BASIS_CFG["vpr"].get("adapter", "none"))
     kombinationen = [(m, a) for m in methoden for a in adapter]
@@ -238,9 +262,12 @@ def main():
         cfg["vpr"]["adapter"] = adapterwert
         validate_config(cfg)
 
-        # Die Notebooks lesen config.yaml von der Platte -- der Wert muss also
-        # wirklich dorthin, nicht nur in dieses Skript.
-        CONFIG_PATH.write_text(yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False))
+        # Die Notebooks lesen Verfahren und Adapter aus der Umgebung, wenn
+        # sie gesetzt sind. Frueher wurde dafuer config.yaml ueberschrieben --
+        # eine versionierte Datei als Zustandsspeicher, die nach jedem Lauf
+        # als geaendert dastand und bei jedem git pull im Weg war.
+        os.environ["VPR_METHOD"] = method
+        os.environ["VPR_ADAPTER"] = adapterwert
 
         print("#" * 60)
         print(f"# {method}  /  adapter={adapterwert}")
@@ -273,9 +300,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    finally:
-        if CONFIG_PATH.read_text() != CONFIG_ORIGINAL:
-            CONFIG_PATH.write_text(CONFIG_ORIGINAL)
-            print("config.yaml zurueckgesetzt.")
+    main()
