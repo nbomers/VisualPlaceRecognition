@@ -78,3 +78,57 @@ python experiments/detection_probe.py --neu    # neu messen
 Ergebnis in `detections_probe.json`: 500 Datenbankbilder, 94 % mit
 Detections, Median 145 je Bild, 165 verschiedene Klassen. Die 94 % waren
 leicht optimistisch — die größere Stichprobe oben kam auf 85 bis 90 %.
+
+---
+
+## Gemeinsame Deskriptorbreite (PCA-512)
+
+**Frage:** Wieviel von MegaLocs Vorsprung ist Können, wieviel nur Breite?
+Und hängt der Adapterschaden an der Parameterzahl (d×d) oder am Encoder?
+
+### `pca_reduce.py`
+
+Schreibt `{method}_pca512` und `{method}_pcaw512` (mit Whitening) als
+eigene Encoder — Embeddings, Metadaten, Fingerabdruck — genau so, wie 04 es
+täte. Danach laufen 05 bis 08 unverändert darüber. PCA nur auf `train`
+angepasst, 50.000 Zeilen, randomisierte SVD.
+
+```bash
+python experiments/pca_reduce.py                    # alle konfigurierten Varianten
+python run.py --method derived --adapter all        # dann die Pipeline
+```
+
+Stand 2026-09-11, R@1 bei 25 m:
+
+| Encoder | voll | pca512 | Δ | erklärte Varianz |
+|---|---|---|---|---|
+| clip (512) | 0.073 | 0.074 | +0.001 | 100 % (Kontrolle) |
+| eigenplaces (2048) | 0.484 | 0.481 | −0.003 | 86 % |
+| mixvpr (4096) | 0.426 | 0.408 | −0.018 | 62 % |
+| anyloc (4096) | 0.204 | offen | | |
+| megaloc (8448) | 0.568 | offen | | |
+
+EigenPlaces verliert auf einem Viertel der Breite praktisch nichts;
+`eigenplaces_pca512` schlägt MixVPR mit vollen 4096 Dimensionen. Die
+Rangfolge hängt nicht an der Breite. Whitening- und Adapter-Zeilen auf 512
+stehen noch aus.
+
+---
+
+## Datenbankdichte
+
+**Frage:** Scheitert das System an Osnabrück oder an zu wenig
+Referenzmaterial? Die Datenbank sind 15 % der Sequenzen; 36 % der Anfragen
+haben darin kein Bild im Umkreis von 25 m.
+
+### `database_density.py`
+
+Nimmt `train` stufenweise zur Datenbank dazu (0 / 25 / 50 / 75 / 100 % der
+train-Sequenzen) und trägt Recall gegen die Dichte auf. Nur für Baselines —
+der Adapter wurde auf `train` trainiert, dort wäre es Leakage.
+
+```bash
+python experiments/database_density.py --method eigenplaces
+```
+
+Ergebnis in `results/database_density_{method}.json` und `.png`.
