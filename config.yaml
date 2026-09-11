@@ -45,6 +45,15 @@ vpr:
     eigenplaces_pca512: "eigenplaces -> PCA 512"
     megaloc_pca512: "megaloc -> PCA 512"
 
+    # Dieselben, zusaetzlich gewhitent: jede Hauptrichtung auf gleiche
+    # Streuung gebracht. Eine lineare Nachbearbeitung wie der Adapter, nur
+    # aus der Kovarianz geschaetzt statt aus Triplets gelernt.
+    clip_pcaw512: "clip -> PCA 512 + Whitening"
+    anyloc_pcaw512: "anyloc -> PCA 512 + Whitening"
+    mixvpr_pcaw512: "mixvpr -> PCA 512 + Whitening"
+    eigenplaces_pcaw512: "eigenplaces -> PCA 512 + Whitening"
+    megaloc_pcaw512: "megaloc -> PCA 512 + Whitening"
+
 
   clip:
     revision: "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
@@ -119,6 +128,40 @@ vpr:
     pca_dim: 512
     fit_images: 50000
     whiten: false
+
+  # Whitening bewusst nur auf 512 Komponenten, nicht auf allen: die kleinsten
+  # Eigenwerte sind bei 50.000 Stichproben Rauschen, und Whitening teilt
+  # durch sie -- es wuerde das Rauschen verstaerken statt den Ort.
+
+  clip_pcaw512:
+    source: "clip"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: true
+
+  anyloc_pcaw512:
+    source: "anyloc"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: true
+
+  mixvpr_pcaw512:
+    source: "mixvpr"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: true
+
+  eigenplaces_pcaw512:
+    source: "eigenplaces"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: true
+
+  megaloc_pcaw512:
+    source: "megaloc"
+    pca_dim: 512
+    fit_images: 50000
+    whiten: true
 
 
   # ----------------------------------------------------------
