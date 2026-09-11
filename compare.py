@@ -243,7 +243,10 @@ def main():
 
     loesbar = zeilen[0][1]["loesbar"]
     print(f'{args.split}  |  Schwelle {args.threshold} m  |  {loesbar:,} loesbare Queries\n')
-    kopf = f"{'Encoder':<14}{'Adapter':<10}{'Dim':>6}   " + "".join(f"{'R@'+k:>8}" for k in ks)
+    # Spaltenbreite am laengsten Namen ausrichten -- die PCA-Varianten sind
+    # laenger als die urspruenglichen Encoder.
+    breite = max(14, max(len(r["method"]) for r, _ in zeilen) + 2)
+    kopf = f"{'Encoder':<{breite}}{'Adapter':<10}{'Dim':>6}   " + "".join(f"{'R@'+k:>8}" for k in ks)
     print(kopf)
     print("-" * len(kopf))
     for r, eintrag in zeilen:
@@ -251,7 +254,19 @@ def main():
             f"{eintrag['recall'][k]:>8.3f}" if eintrag["recall"][k] is not None else f"{'-':>8}"
             for k in ks
         )
-        print(f"{r['method']:<14}{r['adapter']:<10}{r['dim']:>6}   {werte}")
+        print(f"{r['method']:<{breite}}{r['adapter']:<10}{r['dim']:>6}   {werte}")
+
+    # Zufallsbasis als Fussnote: was blindes Raten erreicht. Haengt nicht
+    # vom Encoder ab, steht deshalb in jeder JSON gleich -- die erste reicht.
+    # Fehlt sie, stammt die Auswertung von vor dieser Ergaenzung.
+    zufall = next((e.get("zufall") for _, e in zeilen if e.get("zufall")), None)
+    if zufall:
+        werte = "".join(
+            f"{zufall[k]:>8.4f}" if zufall.get(k) is not None else f"{'-':>8}"
+            for k in ks
+        )
+        print("-" * len(kopf))
+        print(f"{'Zufall':<{breite}}{'(Raten)':<10}{'':>6}   {werte}")
 
     if len({z[1]["loesbar"] for z in zeilen}) > 1:
         print("\nAchtung: unterschiedlich viele loesbare Queries -- die Laeufe "
