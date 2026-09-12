@@ -19,7 +19,7 @@ vpr:
   #   eigenplaces
   #   mixvpr
 
-  method: "megaloc"
+  method: "eigenplaces"
 
   # Adapter:
   #   none
@@ -53,6 +53,14 @@ vpr:
     mixvpr_pcaw512: "mixvpr -> PCA 512 + Whitening"
     eigenplaces_pcaw512: "eigenplaces -> PCA 512 + Whitening"
     megaloc_pcaw512: "megaloc -> PCA 512 + Whitening"
+
+    # Nur Whitening, keine Reduktion: trennt bei AnyLoc den Effekt des
+    # Whitenings von dem der Breite. VLAD-Deskriptoren sind stark anisotrop;
+    # ohne Whitening dominieren wenige Richtungen die Cosinus-Aehnlichkeit.
+    anyloc_pcaw4096: "anyloc -> Whitening auf 4096"
+    # Kontrolle dazu: derselbe Test an einem VPR-trainierten Encoder. Hilft
+    # Whitening hier NICHT und bei AnyLoc schon, ist es ein VLAD-Befund.
+    eigenplaces_pcaw2048: "eigenplaces -> Whitening auf 2048"
 
 
   clip:
@@ -160,6 +168,18 @@ vpr:
   megaloc_pcaw512:
     source: "megaloc"
     pca_dim: 512
+    fit_images: 50000
+    whiten: true
+
+  anyloc_pcaw4096:
+    source: "anyloc"
+    pca_dim: 4096
+    fit_images: 50000
+    whiten: true
+
+  eigenplaces_pcaw2048:
+    source: "eigenplaces"
+    pca_dim: 2048
     fit_images: 50000
     whiten: true
 
