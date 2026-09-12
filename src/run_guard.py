@@ -246,6 +246,22 @@ def validate_config(cfg):
     if vpr.get("adapter", "none") not in ("none", "None", "linear"):
         fehler.append(f"vpr.adapter={vpr['adapter']!r} ist unbekannt (none oder linear)")
 
+    # Abgeleitete Encoder (PCA-Varianten aus experiments/pca_reduce.py) zeigen
+    # ueber source auf einen echten. Ein Tippfehler dort soll hier auffallen,
+    # nicht erst beim Rechnen.
+    for name in vpr["models"]:
+        block = vpr.get(name)
+        if not (isinstance(block, dict) and "source" in block):
+            continue
+        quelle = block["source"]
+        quell_block = vpr.get(quelle)
+        if quelle not in vpr["models"]:
+            fehler.append(f"vpr.{name}.source={quelle!r} steht nicht unter vpr.models")
+        elif isinstance(quell_block, dict) and "source" in quell_block:
+            fehler.append(f"vpr.{name}.source={quelle!r} ist selbst abgeleitet")
+        if "pca_dim" not in block or int(block["pca_dim"]) <= 0:
+            fehler.append(f"vpr.{name}: pca_dim fehlt oder ist nicht positiv")
+
     anteile = sum(
         float(vpr[k]) for k in ("train_fraction", "database_fraction", "query_fraction")
     )

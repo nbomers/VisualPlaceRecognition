@@ -110,8 +110,15 @@ Stand 2026-09-11, R@1 bei 25 m:
 
 EigenPlaces verliert auf einem Viertel der Breite praktisch nichts;
 `eigenplaces_pca512` schlägt MixVPR mit vollen 4096 Dimensionen. Die
-Rangfolge hängt nicht an der Breite. Whitening- und Adapter-Zeilen auf 512
-stehen noch aus.
+Rangfolge hängt nicht an der Breite.
+
+**Whitening.** Kontrolle an EigenPlaces auf voller Breite
+(`eigenplaces_pcaw2048`): 0.484 → **0.459**, also −0.025. Bei einem
+VPR-trainierten Encoder schadet Whitening — vermutlich, weil die kleinsten
+Hauptrichtungen auf Varianz 1 hochskaliert werden und dabei Rauschen
+verstärken. Der eigentliche Test ist `anyloc_pcaw4096`: VLAD-Deskriptoren
+sind stark anisotrop, dort sollte Whitening helfen (Jégou & Chum 2012).
+Steht noch aus. Whitening-Zeilen auf 512 und Adapter auf 512 ebenfalls.
 
 ---
 
