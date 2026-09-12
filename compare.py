@@ -33,6 +33,14 @@ def load():
 FIGURE_DIR = ROOT / "results" / "figures" / "evaluation"
 
 
+def _abgeleitet(method):
+    """Hat der Encoder in der config einen source-Eintrag, ist er aus einem
+    anderen gerechnet -- die PCA- und Whitening-Varianten."""
+    from src.config import load_config
+    block = load_config(ROOT)["vpr"].get(method)
+    return isinstance(block, dict) and "source" in block
+
+
 def _reihen(laeufe, split, schwelle, k):
     """(name, dim, adapter, recall) fuer alle Laeufe, die das hergeben."""
     raus = []
@@ -54,6 +62,7 @@ def plot(laeufe, args):
     plt.rcParams["figure.dpi"] = 150
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     split, schwelle = args.split, args.threshold
+    suffix = "_derived" if args.derived else ""
     geschrieben = []
 
     # ------------------------------------------------------------------
@@ -110,7 +119,7 @@ def plot(laeufe, args):
         unten.set_axisbelow(True)
 
         plt.tight_layout()
-        ziel = FIGURE_DIR / f"vergleich_adapter_{schwelle}m.png"
+        ziel = FIGURE_DIR / f"vergleich_adapter_{schwelle}m{suffix}.png"
         fig.savefig(ziel, bbox_inches="tight")
         plt.close(fig)
         geschrieben.append(ziel)
@@ -145,7 +154,7 @@ def plot(laeufe, args):
         ax.legend(fontsize=7)
         ax.grid(alpha=0.3)
         plt.tight_layout()
-        ziel = FIGURE_DIR / f"vergleich_recall_k_{schwelle}m.png"
+        ziel = FIGURE_DIR / f"vergleich_recall_k_{schwelle}m{suffix}.png"
         fig.savefig(ziel, bbox_inches="tight")
         plt.close(fig)
         geschrieben.append(ziel)
@@ -180,7 +189,7 @@ def plot(laeufe, args):
         ax.legend(fontsize=7)
         ax.grid(alpha=0.3)
         plt.tight_layout()
-        ziel = FIGURE_DIR / "vergleich_schwellen.png"
+        ziel = FIGURE_DIR / f"vergleich_schwellen{suffix}.png"
         fig.savefig(ziel, bbox_inches="tight")
         plt.close(fig)
         geschrieben.append(ziel)
@@ -203,6 +212,10 @@ def main():
     ap.add_argument("--plot", action="store_true",
                     help="Vergleichsabbildungen nach results/figures/evaluation/ "
                          "schreiben, sonst nichts")
+    ap.add_argument("--derived", action="store_true",
+                    help="Auch die abgeleiteten Varianten (PCA, Whitening) in die "
+                         "Abbildungen -- standardmaessig nur die echten Encoder, "
+                         "sonst ist die Adapter-Abbildung nicht mehr lesbar")
     args = ap.parse_args()
 
     laeufe = load()
@@ -213,6 +226,8 @@ def main():
         )
 
     if args.plot:
+        if not args.derived:
+            laeufe = [r for r in laeufe if not _abgeleitet(r["method"])]
         plot(laeufe, args)
         return
 
