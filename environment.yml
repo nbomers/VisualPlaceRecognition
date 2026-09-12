@@ -62,4 +62,5 @@ dependencies:
       - pytorch-metric-learning
       - fast_pytorch_kmeans
       - mapbox-vector-tile
-      - qdown
+      - gdown
+      - huggingface_hub

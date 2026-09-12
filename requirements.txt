@@ -27,5 +27,6 @@ nbformat
 nbclient
 timm
 fast_pytorch_kmeans
-qdown
+gdown
+huggingface_hub
 nbstripout
