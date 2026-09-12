@@ -29,6 +29,7 @@ query fliessen nie in die Anpassung ein, sonst waere es Leakage.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -97,12 +98,11 @@ def reduce_one(name, force):
     if ziel_npy.exists() and not force:
         vorhanden = ziel_npy.with_name(ziel_npy.name + ".fingerprint.json")
         if vorhanden.exists():
-            import json
             gespeichert = json.loads(vorhanden.read_text()).get("fingerprint")
             if gespeichert == fingerprint:
                 print(f"  liegt vor und passt: {ziel_npy.name}")
                 return True
-        print(f"  vorhanden, passt aber nicht -- wird neu geschrieben")
+        print("  vorhanden, passt aber nicht -- wird neu geschrieben")
 
     # mmap: die Quelle wird nur der Reihe nach blockweise gelesen.
     quelle_emb = np.load(quelle_npy, mmap_mode="r")
@@ -185,7 +185,7 @@ def main():
         print(f"\n{name}")
         print("-" * len(name))
         if name not in CFG["vpr"].get("models", {}):
-            print(f"  uebersprungen: kein Eintrag unter vpr.models")
+            print("  uebersprungen: kein Eintrag unter vpr.models")
             continue
         if reduce_one(name, args.force):
             fertig.append(name)

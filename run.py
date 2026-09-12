@@ -32,7 +32,6 @@ BASIS_CFG = yaml.safe_load(CONFIG_ORIGINAL)
 
 sys.path.insert(0, str(ROOT))
 from src.run_guard import (  # noqa: E402
-    adapter_fingerprint,
     embedding_fingerprint,
     require_fingerprint,
     validate_config,
