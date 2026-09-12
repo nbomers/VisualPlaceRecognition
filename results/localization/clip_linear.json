@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-10",
+  "datum": "2026-09-12",
   "method": "clip",
   "adapter": "linear",
   "embedding_name": "clip_linear",
