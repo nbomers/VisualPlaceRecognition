@@ -5,6 +5,7 @@ Stellt die gespeicherten Auswertungen aller Verfahren nebeneinander.
 Skript liest sie und druckt die Vergleichstabelle.
 
     python compare.py                      # R@k bei 25 m
+    python compare.py --derived            # dazu PCA-, Whitening-, Verkettungs- und Sequenz-Zeilen
     python compare.py --threshold 5        # andere Schwelle
     python compare.py --split "Hard: anderer creator_id ODER > 180 Tage Abstand"
     python compare.py --localization       # 08: Koordinate statt Trefferliste
@@ -281,9 +282,9 @@ def main():
                     help="Statt Recall die Lokalisierung aus 08 vergleichen: "
                          "Anteil unter --threshold Metern und Median je Verfahren")
     ap.add_argument("--derived", action="store_true",
-                    help="Auch die abgeleiteten Varianten (PCA, Whitening) in die "
-                         "Abbildungen -- standardmaessig nur die echten Encoder, "
-                         "sonst ist die Adapter-Abbildung nicht mehr lesbar")
+                    help="Auch die abgeleiteten Varianten (PCA, Whitening, Verkettung, "
+                         "Sequenz) in Tabelle und Abbildungen -- standardmaessig nur "
+                         "die echten Encoder")
     ap.add_argument("--ci", action="store_true",
                     help="95-%%-Intervall des Sequenz-Bootstraps neben R@1, "
                          "wenn experiments/results/bootstrap_ci.json vorliegt")
@@ -305,9 +306,13 @@ def main():
                if args.reference == "full" else "") + "."
         )
 
+    # Standard: die echten Encoder und ihre Adapter. Die abgeleiteten
+    # Varianten (PCA, Whitening, Verkettung, Sequenz) verdreifachen die
+    # Tabelle -- --derived holt sie dazu.
+    if not args.derived:
+        laeufe = [r for r in laeufe if not _abgeleitet(r["method"])]
+
     if args.plot:
-        if not args.derived:
-            laeufe = [r for r in laeufe if not _abgeleitet(r["method"])]
         plot(laeufe, args)
         return
 
@@ -374,9 +379,6 @@ def main():
               "(experiments/bootstrap_ci.py). Fuer den Vergleich zweier Zeilen "
               "gilt die gepaarte Differenz dort, nicht die Ueberlappung.")
 
-    if len({z[1]["loesbar"] for z in zeilen}) > 1:
-        print("\nAchtung: unterschiedlich viele loesbare Queries -- die Laeufe "
-              "beruhen nicht auf demselben Split.")
 
 
 if __name__ == "__main__":

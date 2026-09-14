@@ -5,6 +5,7 @@ Koordinate des aehnlichsten Datenbankbildes ausgeben.
     python locate.py foto.jpg
     python locate.py foto.jpg --method eigenplaces_megaloc_concat --k 5
     python locate.py foto.jpg --json                # maschinenlesbar
+    python locate.py ~/Downloads/mapillary/test     # alle Bilder in einem Ordner
 
 Der Encoder kommt aus der Factory (auch PCA-, Whitening- und
 Verkettungsvarianten), die Datenbank aus data/embeddings/, die Suche aus
@@ -26,7 +27,7 @@ from src.locate import Locator  # noqa: E402
 
 def main():
     ap = argparse.ArgumentParser(description="Ein Foto in Osnabrueck verorten.")
-    ap.add_argument("bild", nargs="+", help="Bilddatei(en)")
+    ap.add_argument("bild", nargs="+", help="Bilddatei(en) oder ein Ordner voller Bilder")
     ap.add_argument("--method", help="Encoder aus vpr.models (Standard: config.yaml)")
     ap.add_argument("--adapter", help="none | linear (Standard: config.yaml)")
     ap.add_argument("--k", type=int, default=10)
@@ -34,9 +35,20 @@ def main():
     args = ap.parse_args()
 
     cfg = load_config(ROOT)
+    # Ein Ordner steht fuer alle Bilder darin -- der Testordner aus config.yaml.
+    bilder = []
+    for b in args.bild:
+        pfad = Path(b).expanduser()
+        if pfad.is_dir():
+            bilder += sorted(str(x) for x in pfad.iterdir()
+                             if x.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"))
+        else:
+            bilder.append(str(pfad))
+    if not bilder:
+        raise SystemExit(f"Keine Bilder in {args.bild} -- Standardordner: {cfg['own_images_path']}")
     locator = Locator(cfg, ROOT, args.method, args.adapter, verbose=not args.json)
     antworten = {}
-    for bild in args.bild:
+    for bild in bilder:
         a = locator.locate(bild, k=args.k)
         antworten[bild] = a
         if args.json:

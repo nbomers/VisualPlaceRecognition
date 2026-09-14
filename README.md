@@ -226,7 +226,8 @@ Pipeline rechnet genau diese neu.
 | `districts.py` | OSM-Stadtteile, dieselbe Gliederung für 01 und die Experimente |
 | `geo.py` | Haversine, Kompassdifferenz, UTM-Projektion |
 | `device.py` | cuda / mps / cpu |
-| `mapillary.py` | API-Token aus `.env`, Sessions mit Wiederholung |
+| `mapillary.py` | API-Token aus `.env`, Sessions mit Wiederholung, Vector-Tile-Dekodierung für 01 |
+| `adapter_training.py` | fit/val-Split, Triplet-Dataset mit Hard Negatives, Trainingsschleife, val-Metrik — 05 ist damit ein kurzes Notebook |
 | `models/` | ein Modul je Encoder, gemeinsame Basis (`base.py`), Adapter, `derived.py` für PCA-/Whitening-/Verkettungsvarianten, und `factory.py`, das aus einem Namen jeden Encoder baut |
 
 **`notebooks/01–08`** sind die Pipeline. Jedes Notebook beginnt mit
@@ -266,7 +267,7 @@ Adapter und Whitening reagieren.
 | **Aufnahmejahre** | 2014 bis 2026; 2022 allein 29 %, 2016 ein zweiter Schwerpunkt |
 | **Nähe zur Referenz** | 63,9 % der Anfragen haben ein Datenbankbild im Umkreis von 25 m (Median 22 Nachbarn, Median 107 Tage Abstand); 9,3 % davon eines vom selben Fotografen am selben Tag, 83,3 % eines von einem anderen Fotografen |
 | **Ground Truth** | ein Datenbankbild zählt als richtig, wenn es höchstens 25 m entfernt liegt (Standard); Varianten: anderer Fotograf oder > 180 Tage Abstand („Hard"), Kompassabweichung ≤ 90° („Blickrichtung") |
-| **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `img_download_path` (config, oder `VPR_IMAGE_PATH`). Metadaten und Split-Listen liegen im Git |
+| **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `img_download_path` (Standard `~/Downloads/mapillary/osnabrueck`, ein Ordner je Stadt; je Rechner per `VPR_IMAGE_PATH`) und legt daneben `test/` für eigene Fotos an. Metadaten und Split-Listen liegen im Git |
 | **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,3 GB je Encoder (alle Varianten zusammen 77 GB), Ergebnisse 1,1 GB |
 
 Der Split ist bewusst sparsam auf der Datenbankseite: 15 % der Sequenzen
@@ -349,105 +350,29 @@ gegen die `config.yaml` geprüft.
 
 ## Installation
 
-Empfohlen wird **conda**, alternativ **uv**.
-
-### 1. Conda installieren
-
-<details open>
-<summary><b>macOS</b></summary>
-
-```bash
-brew install --cask miniconda
-conda init "$(basename "$SHELL")"
-```
-
-Danach das Terminal einmal neu starten.
-
-</details>
-
-<details>
-<summary><b>Windows</b></summary>
-
-```powershell
-winget install Anaconda.Miniconda3
-```
-
-> [!IMPORTANT]
-> Nach der Installation ist `conda` in einer normalen PowerShell **nicht** verfügbar.
-> Es gibt zwei Wege:
->
-> **a)** Die **Anaconda Prompt** aus dem Startmenü benutzen — funktioniert sofort.
->
-> **b)** PowerShell einmalig einrichten:
->
-> ```powershell
-> conda init powershell
-> ```
->
-> Falls das Aktivieren danach mit einer Fehlermeldung zur Ausführungsrichtlinie
-> abbricht, einmalig freigeben und PowerShell neu starten:
->
-> ```powershell
-> Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-> ```
-
-</details>
-
-<details>
-<summary><b>Linux</b></summary>
-
-```bash
-curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh
-```
-
-</details>
-
-### 2. Umgebung anlegen und Abhängigkeiten installieren
+Empfohlen wird **conda** ([Miniconda](https://docs.conda.io/en/latest/miniconda.html)),
+alternativ **uv**.
 
 ```bash
 conda env create -f environment.yml
 conda activate pytorch
+nbstripout --install --attributes .gitattributes   # Zellenausgaben aus dem Git halten, einmal je Rechner
+pytest tests/                                       # Installation pruefen, ohne Torch-Laufzeit
 ```
 
 `environment.yml` holt alles mit kompilierten Abhängigkeiten (faiss, GDAL
 hinter geopandas) über conda-forge und den Rest — torch und was darauf
-aufbaut — über pip. Die pip-Wheels wählen CUDA auf Linux und MPS auf dem Mac
-von selbst.
-
-> [!NOTE]
-> `conda install --file requirements.txt` funktioniert **nicht**: mehrere
-> Pakete gibt es nur über pip. `requirements.txt` ist für die uv-Variante da.
-
-<details>
-<summary>Alternative mit uv</summary>
+aufbaut — über pip; die pip-Wheels wählen CUDA auf Linux und MPS auf dem
+Mac von selbst. `conda install --file requirements.txt` funktioniert
+**nicht**, mehrere Pakete gibt es nur über pip; `requirements.txt` ist für
+die uv-Variante da:
 
 ```bash
-uv venv --python 3.14
-source .venv/bin/activate     # Windows: .venv\Scripts\activate
-uv pip install -r requirements.txt
+uv venv --python 3.14 && source .venv/bin/activate && uv pip install -r requirements.txt
 ```
 
 Die passende PyTorch-Variante (CUDA, MPS, CPU) gibt der Konfigurator aus:
 https://pytorch.org/get-started/locally/
-
-</details>
-
-### 3. Notebook-Ausgaben aus dem Git halten
-
-Einmal je Rechner, damit Zellenausgaben beim Commit automatisch entfernt
-werden — sonst landen Karten und Bilder in der Historie:
-
-```bash
-nbstripout --install --attributes .gitattributes
-```
-
-### 4. Installation prüfen
-
-```bash
-python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-pytest tests/
-```
 
 ## Fremd-Repositories und Gewichte
 
@@ -511,7 +436,7 @@ Die Schlüssel, die man am ehesten anfasst:
 | `vpr.max_heading_diff_deg` | die 90° der Blickrichtungs-Auswertung |
 | `retrieval.top_k`, `k_values`, `thresholds` | wie viele Nachbarn 06 speichert, welche R@k und Schwellen 07 berichtet |
 | `localization.top_k`, `eps_m`, … | Top-k für 08 und die Aggregationsverfahren in `experiments/localization_aggregation.py` |
-| `img_download_path` | Bildordner; je Rechner per `VPR_IMAGE_PATH` überschreibbar, ohne die Datei zu ändern |
+| `img_download_path`, `own_images_path` | Bildordner der Stadt und der Ordner für eigene Fotos; je Rechner per `VPR_IMAGE_PATH` überschreibbar, ohne die Datei zu ändern |
 
 ## Nutzung
 
@@ -557,7 +482,8 @@ Jeder Durchlauf von 07 legt seine Recall-Tabellen unter
 Vergleichstabelle über alle Verfahren:
 
 ```bash
-python compare.py                 # R@k bei 25 m, mit Zufallsbasis als Fußnote
+python compare.py                 # R@k bei 25 m, die fünf Encoder mit und ohne Adapter
+python compare.py --derived       # dazu alle PCA-, Whitening-, Verkettungs- und Sequenz-Zeilen
 python compare.py --ci            # dazu das 95-%-Intervall neben R@1
 python compare.py --threshold 5   # strengere Schwelle
 python compare.py --split "Blickrichtung: Treffer nur bei <= 90 Grad Abweichung"
@@ -596,6 +522,7 @@ python experiments/detection_rerank.py      # Mapillary-Detections als Re-Rankin
 ```bash
 python locate.py foto.jpg                                  # Encoder aus config.yaml
 python locate.py foto.jpg --method eigenplaces_megaloc_concat --k 5
+python locate.py ~/Downloads/mapillary/test                # alle Fotos im Testordner
 python locate.py foto.jpg --json
 ```
 
@@ -687,93 +614,55 @@ eingetragen.
 ```
 Alle Queries  |  Schwelle 25 m  |  48,177 loesbare Queries  |  Referenz: 279,453 Bilder (database + train)
 
-Encoder                     Variante     Dim        R@1          95-%-KI     R@5    R@10    R@20
-------------------------------------------------------------------------------------------------
-anyloc                      none        4096      0.435  [0.343, 0.533]   0.512   0.549   0.588
-anyloc_pca512               none         512      0.401  [0.312, 0.503]   0.481   0.520   0.560
-anyloc_pcaw4096             none        4096      0.540  [0.456, 0.624]   0.637   0.676   0.718
-anyloc_pcaw512              none         512      0.488  [0.403, 0.581]   0.586   0.628   0.671
-clip                        none         512      0.232  [0.144, 0.349]   0.288   0.318   0.353
-clip_pca512                 none         512      0.236  [0.147, 0.354]   0.292   0.323   0.358
-clip_pcaw512                none         512      0.290  [0.202, 0.402]   0.359   0.394   0.432
-eigenplaces                 none        2048      0.701  [0.630, 0.765]   0.775   0.801   0.824
-eigenplaces_megaloc_concat  none        1024      0.778  [0.714, 0.832]   0.844   0.865   0.880
-eigenplaces_pca512          none         512      0.696  [0.624, 0.760]   0.773   0.799   0.823
-eigenplaces_pcaw2048        none        2048      0.684  [0.611, 0.752]   0.764   0.793   0.820
-eigenplaces_pcaw512         none         512      0.715  [0.646, 0.777]   0.794   0.820   0.843
-megaloc                     none        8448      0.798  [0.739, 0.848]   0.858   0.876   0.888
-megaloc_pca512              none         512      0.778  [0.717, 0.830]   0.844   0.862   0.875
-megaloc_pcaw512             none         512      0.778  [0.716, 0.831]   0.845   0.864   0.877
-mixvpr                      none        4096      0.653  [0.575, 0.724]   0.723   0.751   0.777
-mixvpr_pca512               none         512      0.636  [0.557, 0.708]   0.709   0.739   0.766
-mixvpr_pcaw512              none         512      0.647  [0.566, 0.720]   0.723   0.752   0.779
-------------------------------------------------------------------------------------------------
-Zufall                      (Raten)              0.0005                   0.0022  0.0043  0.0088
+Encoder       Variante     Dim        R@1          95-%-KI     R@5    R@10    R@20
+----------------------------------------------------------------------------------
+anyloc        none        4096      0.435  [0.343, 0.533]   0.512   0.549   0.588
+clip          none         512      0.232  [0.144, 0.349]   0.288   0.318   0.353
+eigenplaces   none        2048      0.701  [0.630, 0.765]   0.775   0.801   0.824
+megaloc       none        8448      0.798  [0.739, 0.848]   0.858   0.876   0.888
+mixvpr        none        4096      0.653  [0.575, 0.724]   0.723   0.751   0.777
+----------------------------------------------------------------------------------
+Zufall        (Raten)              0.0005                   0.0022  0.0043  0.0088
 
 Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.py). Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
 ```
 
 Nur Encoder ohne Adapter: der Adapter wurde auf `train` trainiert, `train`
-als Referenz wäre für ihn Leakage. Die Rangfolge ist dieselbe wie im
-Benchmark-Protokoll, jede Zahl liegt rund 0.2 höher. Dass MegaLoc auf 512
-gewhitent (0.778) und die Verkettung (0.778) hier gleichauf liegen und
-MegaLoc auf voller Breite 0.020 darüber, ist der Preis der Reduktion —
-bei einem Sechzehntel des Index.
+als Referenz wäre für ihn Leakage. Alle 18 Zeilen mit PCA-, Whitening- und
+Verkettungsvarianten: `--derived`. Die Rangfolge ist dieselbe wie im
+Benchmark-Protokoll, jede Zahl liegt rund 0.2 höher. MegaLoc auf 512
+gewhitent (0.778) und die Verkettung (0.778) liegen gleichauf, MegaLoc auf
+voller Breite 0.020 darüber — der Preis der Reduktion, bei einem
+Sechzehntel des Index.
 
 ### Recall, Benchmark-Protokoll — `python compare.py --ci`
 
 ```
-Alle Queries  |  Schwelle 25 m  |  34,112 loesbare Queries
+Alle Queries  |  Schwelle 25 m  |  34,112 loesbare Queries  |  Referenz: 48,321 Bilder (database)
 
-Encoder                     Variante     Dim        R@1          95-%-KI     R@5    R@10    R@20
-------------------------------------------------------------------------------------------------
-anyloc                      none        4096      0.204  [0.153, 0.265]   0.294   0.340   0.384
-anyloc                      linear      4096      0.335  [0.277, 0.400]   0.504   0.570   0.631
-anyloc_pca512               none         512      0.175  [0.129, 0.227]   0.259   0.301   0.348
-anyloc_pca512               linear       512      0.305  [0.253, 0.366]   0.486   0.568   0.643
-anyloc_pcaw4096             none        4096      0.321  [0.261, 0.395]   0.462   0.523   0.585
-anyloc_pcaw4096             linear      4096      0.292  [0.236, 0.352]   0.447   0.511   0.569
-anyloc_pcaw512              none         512      0.263  [0.211, 0.328]   0.396   0.456   0.515
-anyloc_pcaw512              linear       512      0.308  [0.255, 0.369]   0.484   0.564   0.638
-clip                        none         512      0.073  [0.044, 0.108]   0.106   0.129   0.158
-clip                        linear       512      0.123  [0.092, 0.161]   0.221   0.281   0.353
-clip_pca512                 none         512      0.074  [0.045, 0.110]   0.109   0.133   0.163
-clip_pca512                 linear       512      0.121  [0.090, 0.160]   0.220   0.279   0.348
-clip_pcaw512                none         512      0.105  [0.073, 0.147]   0.166   0.202   0.246
-clip_pcaw512                linear       512      0.113  [0.083, 0.151]   0.205   0.261   0.329
-eigenplaces                 none        2048      0.484  [0.405, 0.574]   0.608   0.650   0.695
-eigenplaces                 linear      2048      0.444  [0.372, 0.523]   0.593   0.648   0.696
-eigenplaces_megaloc_concat  none        1024      0.572  [0.482, 0.666]   0.692   0.730   0.770
-eigenplaces_pca512          none         512      0.481  [0.403, 0.569]   0.613   0.655   0.702
-eigenplaces_pca512          linear       512      0.438  [0.369, 0.516]   0.585   0.642   0.694
-eigenplaces_pcaw2048        none        2048      0.459  [0.382, 0.543]   0.595   0.644   0.692
-eigenplaces_pcaw2048        linear      2048      0.422  [0.357, 0.496]   0.565   0.614   0.659
-eigenplaces_pcaw512         none         512      0.507  [0.426, 0.595]   0.641   0.683   0.727
-eigenplaces_pcaw512         linear       512      0.437  [0.368, 0.515]   0.580   0.636   0.689
-eigenplaces_pcaw512         seq3         512      0.498  [0.417, 0.584]   0.645   0.691   0.736
-megaloc                     none        8448      0.568  [0.475, 0.666]   0.676   0.719   0.763
-megaloc                     linear      8448      0.442  [0.372, 0.517]   0.580   0.628   0.667
-megaloc_pca512              none         512      0.545  [0.454, 0.641]   0.657   0.698   0.741
-megaloc_pca512              linear       512      0.417  [0.342, 0.503]   0.550   0.604   0.659
-megaloc_pcaw512             none         512      0.541  [0.451, 0.636]   0.654   0.695   0.736
-megaloc_pcaw512             linear       512      0.416  [0.339, 0.502]   0.551   0.606   0.661
-mixvpr                      none        4096      0.426  [0.354, 0.509]   0.543   0.590   0.642
-mixvpr                      linear      4096      0.363  [0.302, 0.433]   0.508   0.568   0.624
-mixvpr_pca512               none         512      0.408  [0.337, 0.492]   0.530   0.581   0.633
-mixvpr_pca512               linear       512      0.371  [0.303, 0.447]   0.514   0.574   0.635
-mixvpr_pcaw512              none         512      0.424  [0.348, 0.510]   0.550   0.603   0.660
-mixvpr_pcaw512              linear       512      0.366  [0.297, 0.443]   0.513   0.573   0.633
-------------------------------------------------------------------------------------------------
-Zufall                      (Raten)              0.0006                   0.0028  0.0047  0.0098
+Encoder       Variante     Dim        R@1          95-%-KI     R@5    R@10    R@20
+----------------------------------------------------------------------------------
+anyloc        none        4096      0.204  [0.153, 0.265]   0.294   0.340   0.384
+anyloc        linear      4096      0.335  [0.277, 0.400]   0.504   0.570   0.631
+clip          none         512      0.073  [0.044, 0.108]   0.106   0.129   0.158
+clip          linear       512      0.123  [0.092, 0.161]   0.221   0.281   0.353
+eigenplaces   none        2048      0.484  [0.405, 0.574]   0.608   0.650   0.695
+eigenplaces   linear      2048      0.444  [0.372, 0.523]   0.593   0.648   0.696
+megaloc       none        8448      0.568  [0.475, 0.666]   0.676   0.719   0.763
+megaloc       linear      8448      0.442  [0.372, 0.517]   0.580   0.628   0.667
+mixvpr        none        4096      0.426  [0.354, 0.509]   0.543   0.590   0.642
+mixvpr        linear      4096      0.363  [0.302, 0.433]   0.508   0.568   0.624
+----------------------------------------------------------------------------------
+Zufall        (Raten)              0.0006                   0.0028  0.0047  0.0098
 
 Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.py). Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
 ```
 
 Spalte „Variante": `none` = Encoder wie veröffentlicht, `linear` = mit
-trainiertem linearem Adapter, `seq3` = Trefferlisten über ±3 Nachbarframes
-aufsummiert. Namen mit `_pca512` sind per PCA auf 512 reduziert, `_pcaw512`
-zusätzlich gewhitent, `_pcaw4096` / `_pcaw2048` gewhitent ohne Reduktion,
-`_concat` verkettet.
+trainiertem linearem Adapter. `--derived` zeigt alle 36 Zeilen: Namen mit
+`_pca512` sind per PCA auf 512 reduziert, `_pcaw512` zusätzlich gewhitent,
+`_pcaw4096` / `_pcaw2048` gewhitent ohne Reduktion, `_concat` verkettet,
+`seq3` = Trefferlisten über ±3 Nachbarframes aufsummiert.
 
 Weitere Sichten: `--threshold 5` bis `100`, `--split "Hard: …"` und
 `--split "Blickrichtung: …"` für die strengeren Ground Truths. Bei MegaLoc
@@ -809,30 +698,31 @@ Alle 35 Paare in `experiments/results/bootstrap_ci.json`.
 Lokalisierung  |  Anteil unter 25 m  |  53,414 Anfragen, Top-10 je Anfrage
 Median des Fehlers in Klammern.
 
-Encoder                         Top-1        Schwp roh         Schwerp.          Cluster
-----------------------------------------------------------------------------------------
-anyloc               0.130 ( 1,422 m) 0.055 ( 1,561 m) 0.083 ( 1,495 m) 0.124 ( 1,436 m)
-anyloc_linear        0.213 ( 1,340 m) 0.065 ( 1,611 m) 0.124 ( 1,382 m) 0.209 ( 1,403 m)
-clip                 0.046 ( 2,368 m)                -                -                -
-clip_linear          0.078 ( 1,857 m) 0.017 ( 1,862 m) 0.038 ( 1,826 m) 0.077 ( 1,777 m)
-eigenplaces          0.309 (   364 m) 0.166 (   922 m) 0.245 (   549 m) 0.265 (   656 m)
-eigenplaces_linear   0.283 (   760 m) 0.119 ( 1,378 m) 0.208 (   937 m) 0.258 (   967 m)
-megaloc              0.363 (    94 m) 0.206 (   961 m) 0.267 (   575 m) 0.318 (   444 m)
-megaloc_linear       0.282 ( 1,499 m) 0.105 ( 1,790 m) 0.178 ( 1,476 m) 0.271 ( 1,588 m)
-mixvpr               0.272 (   660 m)                -                -                -
-mixvpr_linear        0.232 ( 1,337 m) 0.083 ( 1,660 m) 0.146 ( 1,392 m) 0.215 ( 1,531 m)
-----------------------------------------------------------------------------------------
-Zufall (DB-Bild)     0.000 ( 4,230 m)
+Encoder                         Top-1
+-------------------------------------
+anyloc               0.130 ( 1,420 m)
+anyloc_linear        0.214 ( 1,338 m)
+clip                 0.046 ( 2,365 m)
+clip_linear          0.078 ( 1,853 m)
+eigenplaces          0.309 (   364 m)
+eigenplaces_linear   0.283 (   758 m)
+megaloc              0.363 (    94 m)
+megaloc_linear       0.283 ( 1,496 m)
+mixvpr               0.272 (   659 m)
+mixvpr_linear        0.232 ( 1,335 m)
+-------------------------------------
+Zufall (DB-Bild)     0.000 ( 4,223 m)
 
 Lesart: liegt Top-1 vorn, sind die Nachbartreffer zu oft falsch, als
 dass Mitteln oder Clustern helfen koennte.
 ```
 
 Bezogen auf alle 53.414 Anfragen, denn eine Koordinate wird immer
-geschätzt. MegaLoc trifft mit dem besten Treffer im Median auf 94 m. Die
-Aggregationsverfahren stehen nur in der Tabelle, wenn 08 mit
-`localization.compare_aggregations: true` lief — sie unterliegen Top-1 bei
-jedem Encoder.
+geschätzt. MegaLoc trifft mit dem besten Treffer im Median auf 94 m. Fünf
+Aggregationsverfahren (Schwerpunkt, Clustering, Snap, Gated) sind gemessen
+und unterliegen Top-1 bei jedem Encoder — MegaLoc: Clustering 0.318 bei
+444 m, Schwerpunkt 0.267 bei 575 m; siehe
+`experiments/localization_aggregation.py` und `experiments/README.md`.
 
 ### Referenzdichte — `experiments/database_density.py`
 
@@ -985,11 +875,11 @@ Zwischenergebnisse auf der CPU an und bricht mit CUDA-Tensoren ab.
 
 ## Team
 
-| GitHub | Name | Rolle |
-|---|---|---|
-| [@nbomers](https://github.com/nbomers) | *TODO* | *TODO* |
-| [@D4ne2kk](https://github.com/D4ne2kk) | *TODO* | *TODO* |
-| [@eknight04](https://github.com/eknight04) | *TODO* | *TODO* |
+| GitHub | Name |
+|---|---|
+| [@nbomers](https://github.com/nbomers) | Noah Bomers |
+| [@D4ne2kk](https://github.com/D4ne2kk) | Niels Dähne |
+| [@eknight04](https://github.com/eknight04) | Erasmus Ritter | 
 
 Entwickelt wird in Feature-Branches, `main` bleibt lauffähig; vor dem Push
 `git pull --rebase origin main`, damit die Historie linear bleibt.

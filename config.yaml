@@ -274,11 +274,9 @@ localization:
   eps_m: 25.0
   min_samples: 2
 
-  # Standard: nur die Position des besten Treffers. Die fuenf
-  # Aggregationsverfahren (Schwerpunkt, Clustering, Snap, Gated) sind gemessen
-  # und unterliegen Top-1 bei jedem Encoder -- true rechnet sie trotzdem mit,
-  # samt der beiden Abbildungen dazu. Kostet DBSCAN je Anfrage, also Minuten.
-  compare_aggregations: false
+  # Die Aggregationsverfahren (Schwerpunkt, Clustering, Snap, Gated) sind
+  # gemessen und unterliegen Top-1; sie stehen in
+  # experiments/localization_aggregation.py und lesen die Werte hier.
 
   # Fuer die Gated-Variante: Top-1 wird nur durch die staerkste Gruppe
   # ersetzt, wenn mindestens dieser Anteil der Treffer in ihr liegt.
@@ -307,9 +305,12 @@ download_workers: "auto"
 # mit vpr.<verfahren>.image_size, das die Modelleingabe bestimmt.
 download_image_size: 1024
 
-# Der einzige Pfad, der je Rechner anders liegt. Statt die versionierte
-# Datei zu aendern: VPR_IMAGE_PATH in der Umgebung setzen.
-img_download_path: "~/Downloads/images"
+# Bildordner, ausserhalb des Repos (50 GB). Ein Ordner je Stadt, damit eine
+# zweite Stadt nicht die erste ueberschreibt; daneben ein Ordner fuer eigene
+# Fotos (locate.py, Demo). Je Rechner anders: VPR_IMAGE_PATH in der
+# Umgebung setzen statt die versionierte Datei zu aendern.
+img_download_path: "~/Downloads/mapillary/osnabrueck"
+own_images_path: "~/Downloads/mapillary/test"
 
 
 

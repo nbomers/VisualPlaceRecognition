@@ -47,6 +47,7 @@ def load_config(root=None):
     # Der Bildordner ist der einzige Pfad, der je Rechner anders liegt --
     # ueber die Umgebung setzbar, statt die versionierte Datei zu aendern.
     cfg["img_download_path"] = os.environ.get("VPR_IMAGE_PATH", cfg["img_download_path"])
+    cfg.setdefault("own_images_path", str(Path(cfg["img_download_path"]).parent / "test"))
     return cfg
 
 
