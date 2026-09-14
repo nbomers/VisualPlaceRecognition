@@ -1,0 +1,29 @@
+# Lint-Regeln fuer Skripte, src/ und Notebooks.
+#
+#   ruff check .            alles pruefen
+#   ruff check --fix .      unbenutzte Importe und dergleichen entfernen
+#
+# Bewusst nur Fehlerklassen, kein Stil: Pyflakes (undefinierte Namen,
+# unbenutzte Importe), Bugbear (typische Fallen) und die Fehlerklassen aus
+# pycodestyle. Formatierung bleibt Sache des Autors.
+
+line-length = 100
+extend-exclude = ["external", "cache", "data", "results", "weights"]
+
+[lint]
+select = ["F", "B", "E7", "E9", "E402"]
+ignore = [
+    "B007",   # Schleifenvariable unbenutzt -- in Notebooks ueblich
+    "B008",   # Funktionsaufruf als Default-Argument
+    "B905",   # zip ohne strict=
+    "E701",   # mehrere Anweisungen je Zeile -- steht so in 01
+    "E702",
+]
+
+[lint.per-file-ignores]
+# Notebooks und Skripte in Unterordnern setzen sys.path, bevor sie aus src
+# importieren -- der Import kann dort nicht am Zellenanfang stehen.
+"*.ipynb" = ["E402"]
+"experiments/*.py" = ["E402"]
+"run.py" = ["E402"]
+"src/models/*.py" = ["E402"]
