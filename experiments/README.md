@@ -619,6 +619,47 @@ EigenPlaces (pcaw512) zeigt dieselben Muster auf niedrigerem Niveau
 
 ---
 
+## Stadtwahl — welche Stadt taugt als nächste?
+
+**Frage:** Bilder je km² sagt wenig; Bamberg hat 25.000/km², weil dort
+eine Kampagne die Hauptstraßen abgefahren hat. Was zählt, ist, ob *jede*
+Straße ein Bild hat — sonst sind Anfragen aus Wohnstraßen unlösbar, wie
+36 % in Osnabrück.
+
+### `city_coverage.py`
+
+Holt die Bildpunkte einer Stadt über dieselben Vector Tiles wie 01 und
+misst die **Straßenabdeckung**: Anteil des OSM-Fahrnetzes (nach Länge) mit
+einem Bild im Umkreis von 25 m, getrennt nach großen Straßen (bis
+secondary) und Wohnstraßen (tertiary, residential, living_street,
+unclassified). Dazu Sequenzen, Fotografen-Konzentration, Anteil seit 2022.
+
+```bash
+python experiments/city_coverage.py "Mainz, Germany" "Würzburg, Germany"
+```
+
+Gemessen 2026-09-14 (Mainz ausstehend — Overpass hatte die Verbindung
+verweigert):
+
+| Stadt | Bilder | /km² | Straßen km | gedeckt | große | Wohn | Seq. | Fotografen | größter | seit 2022 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Jena | 699.097 | 6.113 | 725 | **99%** | 100% | **99%** | 4.516 | 62 | 51% | 45% |
+| Würzburg | 428.847 | 4.895 | 915 | **98%** | 100% | **98%** | 2.004 | 92 | 51% | 28% |
+| Halle (Saale) | 919.790 | 6.787 | 1.305 | **92%** | 100% | **91%** | 3.931 | 72 | 30% | 87% |
+| Heidelberg | 530.614 | 4.879 | 822 | **87%** | 98% | **83%** | 3.307 | 113 | 33% | 36% |
+| Erlangen | 611.724 | 7.943 | 808 | **70%** | 100% | **63%** | 3.925 | 86 | 36% | 49% |
+| Osnabrück | 336.168 | 2.808 | 1.327 | **44%** | 94% | **38%** | 1.334 | 57 | 47% | 84% |
+
+**Befund.** Dichte und Abdeckung sind verschiedene Dinge: Erlangen hat die
+höchste Dichte und nur 63 % der Wohnstraßen, Würzburg und Jena haben
+praktisch jede Straße. Osnabrück mit 38 % Wohnstraßen erklärt seine 36 %
+unlösbaren Anfragen direkt. Für eine zweite Stadt: **Würzburg** (98 %,
+Osnabrücks Größe, aber nur 28 % der Bilder seit 2022 — großer Zeitabstand),
+**Jena** (99 %, 45 % frisch), **Halle** (91 %, 87 % frisch, kein Fotograf
+über 30 %, aber dreimal so viele Bilder wie Osnabrück).
+
+---
+
 ## Datenbankdichte
 
 **Frage:** Scheitert das System an Osnabrück oder an zu wenig
