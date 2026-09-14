@@ -44,6 +44,7 @@ dependencies:
   # Entfernt Zellenausgaben beim Commit. Einmal je Rechner aktivieren:
   #   nbstripout --install --attributes .gitattributes
   - nbstripout
+  - ruff
   - matplotlib
   - tqdm
   - pyyaml
@@ -64,3 +65,5 @@ dependencies:
       - mapbox-vector-tile
       - gdown
       - huggingface_hub
+      # fuer experiments/geometric_verification.py; bringt kornia und opencv mit
+      - git+https://github.com/cvg/LightGlue.git
