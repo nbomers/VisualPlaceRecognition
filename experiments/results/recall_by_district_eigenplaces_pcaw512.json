@@ -1,0 +1,399 @@
+{
+  "datum": "2026-09-14",
+  "embedding_name": "eigenplaces_pcaw512",
+  "threshold_m": 25.0,
+  "min_solvable": 100,
+  "n_districts": 23,
+  "spearman_r1_dichte": {
+    "rho": 0.2421052631578947,
+    "p": 0.31797476682653436,
+    "n": 19
+  },
+  "spearman_r1_anteil_loesbar": 0.27543859649122804,
+  "stadtteile": [
+    {
+      "stadtteil": "Darum-Gretesch-L\u00fcstringen",
+      "km2": 14.382183427677464,
+      "n_queries": 744,
+      "n_sequences": 3,
+      "n_loesbar": 614,
+      "anteil_loesbar": 0.8252688172043011,
+      "n_database": 1360,
+      "database_pro_km2": 94.56144171981418,
+      "recall": {
+        "1": 0.5879478827361564,
+        "5": 0.8387622149837134,
+        "10": 0.8908794788273615,
+        "20": 0.9071661237785016
+      }
+    },
+    {
+      "stadtteil": "Hellern",
+      "km2": 12.192687453480264,
+      "n_queries": 2184,
+      "n_sequences": 13,
+      "n_loesbar": 1526,
+      "anteil_loesbar": 0.6987179487179487,
+      "n_database": 1791,
+      "database_pro_km2": 146.8913237408361,
+      "recall": {
+        "1": 0.1834862385321101,
+        "5": 0.27522935779816515,
+        "10": 0.3211009174311927,
+        "20": 0.3872870249017038
+      }
+    },
+    {
+      "stadtteil": "Voxtrup",
+      "km2": 10.94359724535825,
+      "n_queries": 2967,
+      "n_sequences": 18,
+      "n_loesbar": 2740,
+      "anteil_loesbar": 0.9234917425008426,
+      "n_database": 2496,
+      "database_pro_km2": 228.07856905175157,
+      "recall": {
+        "1": 0.5302919708029197,
+        "5": 0.7200729927007299,
+        "10": 0.7664233576642335,
+        "20": 0.8087591240875912
+      }
+    },
+    {
+      "stadtteil": "Atter",
+      "km2": 10.715866873637633,
+      "n_queries": 2630,
+      "n_sequences": 14,
+      "n_loesbar": 2390,
+      "anteil_loesbar": 0.908745247148289,
+      "n_database": 2620,
+      "database_pro_km2": 244.49725168250515,
+      "recall": {
+        "1": 0.7707112970711297,
+        "5": 0.9171548117154812,
+        "10": 0.9464435146443515,
+        "20": 0.9686192468619247
+      }
+    },
+    {
+      "stadtteil": "Haste",
+      "km2": 7.7417589756753165,
+      "n_queries": 2404,
+      "n_sequences": 15,
+      "n_loesbar": 1214,
+      "anteil_loesbar": 0.5049916805324459,
+      "n_database": 1592,
+      "database_pro_km2": 205.63802166950427,
+      "recall": {
+        "1": 0.20757825370675453,
+        "5": 0.24464579901153213,
+        "10": 0.2677100494233937,
+        "20": 0.30642504118616143
+      }
+    },
+    {
+      "stadtteil": "Pye",
+      "km2": 7.560288998368456,
+      "n_queries": 6160,
+      "n_sequences": 24,
+      "n_loesbar": 6048,
+      "anteil_loesbar": 0.9818181818181818,
+      "n_database": 2169,
+      "database_pro_km2": 286.89379473034427,
+      "recall": {
+        "1": 0.5965608465608465,
+        "5": 0.8255621693121693,
+        "10": 0.8753306878306878,
+        "20": 0.9131944444444444
+      }
+    },
+    {
+      "stadtteil": "Westerberg",
+      "km2": 4.845705124880224,
+      "n_queries": 744,
+      "n_sequences": 14,
+      "n_loesbar": 192,
+      "anteil_loesbar": 0.25806451612903225,
+      "n_database": 1847,
+      "database_pro_km2": 381.16227719193995,
+      "recall": {
+        "1": 0.328125,
+        "5": 0.3489583333333333,
+        "10": 0.375,
+        "20": 0.3854166666666667
+      }
+    },
+    {
+      "stadtteil": "Nahne",
+      "km2": 4.662059874253287,
+      "n_queries": 4956,
+      "n_sequences": 16,
+      "n_loesbar": 4353,
+      "anteil_loesbar": 0.8783292978208233,
+      "n_database": 5204,
+      "database_pro_km2": 1116.2447802825602,
+      "recall": {
+        "1": 0.6505858028945555,
+        "5": 0.7746381805651275,
+        "10": 0.822880771881461,
+        "20": 0.8830691477142201
+      }
+    },
+    {
+      "stadtteil": "Dodesheide",
+      "km2": 4.634969058436661,
+      "n_queries": 2307,
+      "n_sequences": 14,
+      "n_loesbar": 1191,
+      "anteil_loesbar": 0.5162548764629389,
+      "n_database": 1910,
+      "database_pro_km2": 412.08473582436994,
+      "recall": {
+        "1": 0.32073887489504616,
+        "5": 0.3778337531486146,
+        "10": 0.41225860621326615,
+        "20": 0.4475230898404702
+      }
+    },
+    {
+      "stadtteil": "Sutthausen",
+      "km2": 4.428002982705957,
+      "n_queries": 414,
+      "n_sequences": 3,
+      "n_loesbar": 414,
+      "anteil_loesbar": 1.0,
+      "n_database": 1020,
+      "database_pro_km2": 230.35214835755983,
+      "recall": {
+        "1": 0.057971014492753624,
+        "5": 0.09903381642512077,
+        "10": 0.12318840579710146,
+        "20": 0.14009661835748793
+      }
+    },
+    {
+      "stadtteil": "Hafen",
+      "km2": 3.9923822094905117,
+      "n_queries": 2014,
+      "n_sequences": 20,
+      "n_loesbar": 1078,
+      "anteil_loesbar": 0.535253227408143,
+      "n_database": 2433,
+      "database_pro_km2": 609.4105905532746,
+      "recall": {
+        "1": 0.23562152133580705,
+        "5": 0.3014842300556586,
+        "10": 0.3172541743970315,
+        "20": 0.35714285714285715
+      }
+    },
+    {
+      "stadtteil": "Fledder",
+      "km2": 3.7146321168819156,
+      "n_queries": 1852,
+      "n_sequences": 13,
+      "n_loesbar": 1266,
+      "anteil_loesbar": 0.683585313174946,
+      "n_database": 2224,
+      "database_pro_km2": 598.713393418576,
+      "recall": {
+        "1": 0.6090047393364929,
+        "5": 0.6406003159557662,
+        "10": 0.6516587677725119,
+        "20": 0.6658767772511849
+      }
+    },
+    {
+      "stadtteil": "Sch\u00f6lerberg",
+      "km2": 3.674418898843528,
+      "n_queries": 829,
+      "n_sequences": 16,
+      "n_loesbar": 776,
+      "anteil_loesbar": 0.9360675512665863,
+      "n_database": 2076,
+      "database_pro_km2": 564.987296536438,
+      "recall": {
+        "1": 0.5734536082474226,
+        "5": 0.7345360824742269,
+        "10": 0.7757731958762887,
+        "20": 0.7976804123711341
+      }
+    },
+    {
+      "stadtteil": "Sonnenh\u00fcgel",
+      "km2": 3.2188071401760907,
+      "n_queries": 1634,
+      "n_sequences": 12,
+      "n_loesbar": 114,
+      "anteil_loesbar": 0.06976744186046512,
+      "n_database": 1296,
+      "database_pro_km2": 402.6336290310018,
+      "recall": {
+        "1": 0.14035087719298245,
+        "5": 0.17543859649122806,
+        "10": 0.17543859649122806,
+        "20": 0.19298245614035087
+      }
+    },
+    {
+      "stadtteil": "Weststadt",
+      "km2": 3.1164084263898606,
+      "n_queries": 2961,
+      "n_sequences": 18,
+      "n_loesbar": 1616,
+      "anteil_loesbar": 0.5457615670381628,
+      "n_database": 3022,
+      "database_pro_km2": 969.7060161978749,
+      "recall": {
+        "1": 0.327970297029703,
+        "5": 0.46967821782178215,
+        "10": 0.5371287128712872,
+        "20": 0.6163366336633663
+      }
+    },
+    {
+      "stadtteil": "Kalkh\u00fcgel",
+      "km2": 3.064222804126835,
+      "n_queries": 2853,
+      "n_sequences": 14,
+      "n_loesbar": 1801,
+      "anteil_loesbar": 0.6312653347353663,
+      "n_database": 2773,
+      "database_pro_km2": 904.9603038869687,
+      "recall": {
+        "1": 0.3553581343697946,
+        "5": 0.5208217656857301,
+        "10": 0.5974458634092171,
+        "20": 0.6973903387007219
+      }
+    },
+    {
+      "stadtteil": "Eversburg",
+      "km2": 2.965926692225477,
+      "n_queries": 734,
+      "n_sequences": 6,
+      "n_loesbar": 13,
+      "anteil_loesbar": 0.017711171662125342,
+      "n_database": 27,
+      "database_pro_km2": 9.103394251373288,
+      "recall": {
+        "1": 1.0,
+        "5": 1.0,
+        "10": 1.0,
+        "20": 1.0
+      }
+    },
+    {
+      "stadtteil": "Schinkel-Ost",
+      "km2": 2.8622763836438825,
+      "n_queries": 0,
+      "n_sequences": 0,
+      "n_loesbar": 0,
+      "anteil_loesbar": NaN,
+      "n_database": 119,
+      "database_pro_km2": 41.57530023306292,
+      "recall": {
+        "1": null,
+        "5": null,
+        "10": null,
+        "20": null
+      }
+    },
+    {
+      "stadtteil": "W\u00fcste",
+      "km2": 2.7487798823802296,
+      "n_queries": 6094,
+      "n_sequences": 36,
+      "n_loesbar": 3910,
+      "anteil_loesbar": 0.6416147029865441,
+      "n_database": 5264,
+      "database_pro_km2": 1915.0314776903072,
+      "recall": {
+        "1": 0.4892583120204604,
+        "5": 0.5797953964194373,
+        "10": 0.6255754475703325,
+        "20": 0.6654731457800511
+      }
+    },
+    {
+      "stadtteil": "Widukindland",
+      "km2": 2.734935372169069,
+      "n_queries": 1508,
+      "n_sequences": 8,
+      "n_loesbar": 73,
+      "anteil_loesbar": 0.04840848806366048,
+      "n_database": 700,
+      "database_pro_km2": 255.94754710596035,
+      "recall": {
+        "1": 0.0684931506849315,
+        "5": 0.0958904109589041,
+        "10": 0.1232876712328767,
+        "20": 0.1232876712328767
+      }
+    },
+    {
+      "stadtteil": "Schinkel",
+      "km2": 2.3594194527227867,
+      "n_queries": 311,
+      "n_sequences": 4,
+      "n_loesbar": 150,
+      "anteil_loesbar": 0.48231511254019294,
+      "n_database": 1652,
+      "database_pro_km2": 700.1722385960582,
+      "recall": {
+        "1": 0.76,
+        "5": 0.76,
+        "10": 0.76,
+        "20": 0.76
+      }
+    },
+    {
+      "stadtteil": "Innenstadt",
+      "km2": 1.7123332311295623,
+      "n_queries": 7001,
+      "n_sequences": 39,
+      "n_loesbar": 2632,
+      "anteil_loesbar": 0.375946293386659,
+      "n_database": 4491,
+      "database_pro_km2": 2622.737162577552,
+      "recall": {
+        "1": 0.5626899696048632,
+        "5": 0.6485562310030395,
+        "10": 0.6766717325227963,
+        "20": 0.7036474164133738
+      }
+    },
+    {
+      "stadtteil": "Gartlage",
+      "km2": 1.4420697322536706,
+      "n_queries": 113,
+      "n_sequences": 3,
+      "n_loesbar": 1,
+      "anteil_loesbar": 0.008849557522123894,
+      "n_database": 235,
+      "database_pro_km2": 162.96021942901564,
+      "recall": {
+        "1": 0.0,
+        "5": 0.0,
+        "10": 0.0,
+        "20": 0.0
+      }
+    },
+    {
+      "stadtteil": "(ohne Stadtteil)",
+      "km2": NaN,
+      "n_queries": 0,
+      "n_sequences": 0,
+      "n_loesbar": 0,
+      "anteil_loesbar": NaN,
+      "n_database": 0,
+      "database_pro_km2": NaN,
+      "recall": {
+        "1": null,
+        "5": null,
+        "10": null,
+        "20": null
+      }
+    }
+  ]
+}

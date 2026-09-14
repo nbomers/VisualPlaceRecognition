@@ -132,6 +132,8 @@ $RECYCLE.BIN/
 !/results/localization/
 /results/localization/*
 !/results/localization/*.json
+# Der Datensatz-Audit aus 02: eine kleine JSON, run.py erkennt daran, dass 02 lief.
+!/results/dataset_audit.json
 
 # Ausnahme: die Auswertungsabbildungen, rund 67 KB je Bild. Muessen zwischen
 # den Rechnern wandern, sonst fehlen die Grafiken der Encoder, die nur auf
@@ -179,3 +181,8 @@ data/processed/*
 !data/processed/train_sequences.txt
 !data/processed/database_sequences.txt
 !data/processed/query_sequences.txt
+
+# Die Metadaten selbst (9 MB): Zeilenreihenfolge und Mapillary-Schnappschuss
+# sind Teil jedes Fingerabdrucks. Nur so rechnet ein anderer Rechner dieselben
+# Artefakte; 01 laeuft nur noch fuer eine neue Stadt oder einen neuen Split.
+!data/processed/metadata.parquet

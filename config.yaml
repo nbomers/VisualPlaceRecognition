@@ -3,6 +3,13 @@
 city: "Osnabrück, Germany"
 
 
+# Vorlagen fuer die abgeleiteten Encoder unter vpr (YAML-Anker). Kein
+# Schalter -- wer eine Variante aendern will, aendert ihren Block dort.
+_vorlagen:
+  pca512:  &pca512  {pca_dim: 512, fit_images: 50000, whiten: false}
+  pcaw512: &pcaw512 {pca_dim: 512, fit_images: 50000, whiten: true}
+
+
 # ============================================================
 # VPR
 # ============================================================
@@ -13,19 +20,14 @@ vpr:
   # Verfahren
   # ----------------------------------------------------------
 
-  # Mögliche Methoden:
-  #   clip
-  #   anyloc
-  #   eigenplaces
-  #   mixvpr
+  # Welcher Encoder: ein Name aus vpr.models -- die fuenf echten (clip,
+  # anyloc, mixvpr, eigenplaces, megaloc) oder eine abgeleitete Variante.
+  # run.py --method ueberschreibt das je Lauf.
 
   method: "eigenplaces"
 
-  # Adapter:
-  #   none
-  #   linear
-  #
-  # Wird aktuell in 04_embeddings und 05_adapters verwendet.
+  # none = Encoder wie veroeffentlicht, linear = mit dem in 05 trainierten
+  # Adapter. Bestimmt, welche Embeddings 06 bis 08 auswerten.
 
   adapter: "none"
 
@@ -110,82 +112,30 @@ vpr:
   # Encoder, aus dem reduziert wird; die PCA wird nur auf dem train-Split
   # angepasst. Diese Werte gehen in den Fingerabdruck ein -- wer pca_dim
   # aendert, entwertet die Datei korrekt.
-
-  clip_pca512:
-    source: "clip"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: false
-
-  anyloc_pca512:
-    source: "anyloc"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: false
-
-  mixvpr_pca512:
-    source: "mixvpr"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: false
-
-  eigenplaces_pca512:
-    source: "eigenplaces"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: false
-
-  megaloc_pca512:
-    source: "megaloc"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: false
-
+  #
   # Whitening bewusst nur auf 512 Komponenten, nicht auf allen: die kleinsten
   # Eigenwerte sind bei 50.000 Stichproben Rauschen, und Whitening teilt
-  # durch sie -- es wuerde das Rauschen verstaerken statt den Ort.
+  # durch sie -- es wuerde das Rauschen verstaerken statt den Ort. Die zwei
+  # Ausnahmen (anyloc_pcaw4096, eigenplaces_pcaw2048) sind der Test genau
+  # dieser Aussage.
+  #
+  # Die Bloecke teilen sich ihre Werte ueber YAML-Anker (_vorlagen unten);
+  # <<: fuegt den Anker ein, source kommt je Variante dazu.
 
-  clip_pcaw512:
-    source: "clip"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: true
+  clip_pca512:        {source: "clip",        <<: *pca512}
+  anyloc_pca512:      {source: "anyloc",      <<: *pca512}
+  mixvpr_pca512:      {source: "mixvpr",      <<: *pca512}
+  eigenplaces_pca512: {source: "eigenplaces", <<: *pca512}
+  megaloc_pca512:     {source: "megaloc",     <<: *pca512}
 
-  anyloc_pcaw512:
-    source: "anyloc"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: true
+  clip_pcaw512:        {source: "clip",        <<: *pcaw512}
+  anyloc_pcaw512:      {source: "anyloc",      <<: *pcaw512}
+  mixvpr_pcaw512:      {source: "mixvpr",      <<: *pcaw512}
+  eigenplaces_pcaw512: {source: "eigenplaces", <<: *pcaw512}
+  megaloc_pcaw512:     {source: "megaloc",     <<: *pcaw512}
 
-  mixvpr_pcaw512:
-    source: "mixvpr"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: true
-
-  eigenplaces_pcaw512:
-    source: "eigenplaces"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: true
-
-  megaloc_pcaw512:
-    source: "megaloc"
-    pca_dim: 512
-    fit_images: 50000
-    whiten: true
-
-  anyloc_pcaw4096:
-    source: "anyloc"
-    pca_dim: 4096
-    fit_images: 50000
-    whiten: true
-
-  eigenplaces_pcaw2048:
-    source: "eigenplaces"
-    pca_dim: 2048
-    fit_images: 50000
-    whiten: true
+  anyloc_pcaw4096:      {source: "anyloc",      pca_dim: 4096, fit_images: 50000, whiten: true}
+  eigenplaces_pcaw2048: {source: "eigenplaces", pca_dim: 2048, fit_images: 50000, whiten: true}
 
   # Verkettung: die Quellen muessen denselben Split haben, das Skript prueft
   # den Metadaten-Hash. Die Reihenfolge bestimmt die Reihenfolge der Bloecke.
@@ -244,11 +194,6 @@ vpr:
   # derselbe Wert wie uncertain_radius_m, damit val Recall@1 mit der
   # entsprechenden Zeile in 07 vergleichbar bleibt.
   val_radius_m: 25.0
-
-
-  # uncertain- und negative-Paare aus 01 werden von keiner Stufe gelesen und
-  # belegen zusammen 139 MB. true schreibt sie fuer eigene Analysen mit.
-  write_uncertain_negative_pairs: false
 
 
   # Batchgroesse beim Encodieren in 04. Beeinflusst nur Tempo und
@@ -362,6 +307,8 @@ download_workers: "auto"
 # mit vpr.<verfahren>.image_size, das die Modelleingabe bestimmt.
 download_image_size: 1024
 
+# Der einzige Pfad, der je Rechner anders liegt. Statt die versionierte
+# Datei zu aendern: VPR_IMAGE_PATH in der Umgebung setzen.
 img_download_path: "~/Downloads/images"
 
 
@@ -391,15 +338,6 @@ districts:
   min_area_km2: 0.05
 
 
-  # Ab welchem Flächenanteil gilt ein Gebiet
-  # als in einem anderen enthalten?
-  #
-  # OSM führt häufig Stadtteil UND Ortsteil
-  # innerhalb derselben Fläche.
-
-  nesting_threshold: 0.7
-
-
   # Administrative Ebenen, die geprüft werden.
   # Bei gleichwertigen Kandidaten gilt die Reihenfolge
   # als Präferenz.
@@ -413,41 +351,3 @@ districts:
   # damit eine Ebene als brauchbar gilt.
 
   min_districts_required: 3
-
-
-# ============================================================
-# Verifikation gegen Mapillary
-# ============================================================
-
-verification:
-
-  # true  = konfigurierte Spots prüfen
-  # false = komplette Spot-Verifikation überspringen
-
-  enabled: true
-
-
-  # Radius um jeden Verifikationspunkt
-
-  radius_m: 400
-
-
-  # Verifikationsspots
-
-  spots:
-
-    "Markt / Dom":
-      - 52.2799
-      - 8.0442
-
-    "Neumarkt":
-      - 52.2740
-      - 8.0470
-
-    "Hauptbahnhof":
-      - 52.2726
-      - 8.0614
-
-    "Westerberg":
-      - 52.2830
-      - 8.0230

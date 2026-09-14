@@ -1,0 +1,17 @@
+# Linter und Tests bei jedem Push. Kein Torch, keine Bilder, keine Embeddings:
+# die Tests laufen auf synthetischen Daten und den versionierten JSONs.
+name: check
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install ruff pytest numpy pandas pyyaml tqdm scipy scikit-learn pyarrow shapely pyproj geopandas
+      - run: ruff check .
+      - run: pytest tests/ -q

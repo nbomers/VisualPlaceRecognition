@@ -34,7 +34,6 @@ dependencies:
   - geopandas
   - shapely
   - osmnx
-  - utm
   - folium
 
   # Notebooks und Ablauf
@@ -45,13 +44,13 @@ dependencies:
   #   nbstripout --install --attributes .gitattributes
   - nbstripout
   - ruff
+  - pytest
   - matplotlib
   - tqdm
   - pyyaml
   - requests
   - pillow
   - einops
-  - umap-learn
 
   - pip
   - pip:
@@ -59,8 +58,6 @@ dependencies:
       - torchvision
       - transformers
       - timm
-      - open_clip_torch
-      - pytorch-metric-learning
       - fast_pytorch_kmeans
       - mapbox-vector-tile
       - gdown

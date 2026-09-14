@@ -1,0 +1,104 @@
+{
+  "datum": "2026-09-14",
+  "embedding_name": "eigenplaces_pcaw512",
+  "threshold_m": 25.0,
+  "n_loesbar": 34112,
+  "recall_1": 0.5065372889305816,
+  "merkmale": [
+    {
+      "merkmal": "Nachbarn im Umkreis",
+      "klassen": [
+        {
+          "klasse": "1-2",
+          "n": 1709,
+          "recall_1": 0.4166179052077238
+        },
+        {
+          "klasse": "3-5",
+          "n": 3508,
+          "recall_1": 0.36402508551881413
+        },
+        {
+          "klasse": "6-10",
+          "n": 3880,
+          "recall_1": 0.4435567010309278
+        },
+        {
+          "klasse": "11-20",
+          "n": 6832,
+          "recall_1": 0.38978337236533955
+        },
+        {
+          "klasse": "21-50",
+          "n": 14056,
+          "recall_1": 0.5638161639157655
+        },
+        {
+          "klasse": "51+",
+          "n": 4120,
+          "recall_1": 0.7235436893203884
+        }
+      ]
+    },
+    {
+      "merkmal": "Tage zum naechsten Referenzbild",
+      "klassen": [
+        {
+          "klasse": "0-7",
+          "n": 4688,
+          "recall_1": 0.5403156996587031
+        },
+        {
+          "klasse": "8-30",
+          "n": 3675,
+          "recall_1": 0.7659863945578231
+        },
+        {
+          "klasse": "31-180",
+          "n": 10450,
+          "recall_1": 0.49119617224880385
+        },
+        {
+          "klasse": "181-365",
+          "n": 5769,
+          "recall_1": 0.5425550355347547
+        },
+        {
+          "klasse": "366+",
+          "n": 9366,
+          "recall_1": 0.3816997651078369
+        }
+      ]
+    },
+    {
+      "merkmal": "Nachbar mit passender Blickrichtung",
+      "klassen": [
+        {
+          "klasse": "ja",
+          "n": 29157,
+          "recall_1": 0.5833247590630037
+        },
+        {
+          "klasse": "nein",
+          "n": 4955,
+          "recall_1": 0.05469223007063572
+        }
+      ]
+    },
+    {
+      "merkmal": "Nachbar vom selben Fotografen am selben Tag",
+      "klassen": [
+        {
+          "klasse": "ja",
+          "n": 3164,
+          "recall_1": 0.6599241466498104
+        },
+        {
+          "klasse": "nein",
+          "n": 30948,
+          "recall_1": 0.4908556287966912
+        }
+      ]
+    }
+  ]
+}

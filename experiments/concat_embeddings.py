@@ -23,21 +23,12 @@ Konfiguriert wird er in config.yaml unter vpr.models plus einem Block mit
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-# Liegt in experiments/, die Pipeline eine Ebene darueber.
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from src.config import load_config  # noqa: E402
-from src.run_guard import embedding_fingerprint, metadata_digest, write_fingerprint  # noqa: E402
-
-CFG = load_config(ROOT)
+from _common import CFG, ROOT
+from src.run_guard import embedding_fingerprint, metadata_digest, write_fingerprint
 EMBEDDING_ROOT = ROOT / "data" / "embeddings"
 BLOCK = 8192
 

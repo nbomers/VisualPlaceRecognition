@@ -20,8 +20,6 @@ Split selbst. Ergebnis: eine Tabelle und eine Kurve unter experiments/results/.
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import faiss
 import numpy as np
@@ -29,16 +27,10 @@ import pandas as pd
 from scipy.spatial import cKDTree
 from tqdm import tqdm
 
-# Liegt in experiments/, die Pipeline eine Ebene darueber.
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from _common import CFG, RESULTS, ROOT
+from src.geo import haversine_distance
 
-from src.config import load_config  # noqa: E402
-from src.geo import haversine_distance  # noqa: E402
-
-CFG = load_config(ROOT)
-OUT_DIR = Path(__file__).resolve().parent / "results"
+OUT_DIR = RESULTS
 
 
 def _args():

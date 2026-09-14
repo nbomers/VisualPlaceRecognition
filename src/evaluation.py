@@ -18,12 +18,16 @@ Vier Auswertungen, jede eine andere Ground Truth:
 """
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
-from .geo import haversine_distance, heading_difference
+from scipy.spatial import cKDTree
+
+from .geo import haversine_distance, heading_difference, to_metric_xy
+from .run_guard import code_version, short_hash
 
 
 def evaluate_retrieval(
@@ -43,21 +47,26 @@ def evaluate_retrieval(
 
     retrieved_indices : (n_query, k_max) Zeilennummern in database_metadata
     query_filter      : bool-Array ueber Queries -- welche zaehlen mit
-    gt_filter         : Funktion(qi_block) -> bool-Matrix (len(block), n_database),
-                        zusaetzliche Bedingung dafuer, dass ein DB-Bild zaehlt
+    gt_filter         : Funktion(qi, di) -> bool-Array ueber Paare (Query-Zeile,
+                        DB-Zeile), zusaetzliche Bedingung dafuer, dass ein
+                        DB-Bild als Referenz zaehlt
     rng               : fuer die Zufallsbasis; wird geteilt, wenn mehrere
                         Auswertungen nacheinander laufen
 
-    Blockweise statt je Query: die Distanzmatrix eines Blocks entsteht in
-    einem numpy-Aufruf. Bei 256 Queries x 48k Datenbankbildern sind das rund
-    100 MB je Block.
+    Distanzen nur dort, wo sie zaehlen: Kandidaten innerhalb der groessten
+    Schwelle kommen aus einem KDTree in UTM-Metern (mit Sicherheitsaufschlag,
+    damit kein Haversine-Treffer verloren geht), die exakte Haversine-Distanz
+    dann nur fuer diese Paare und fuer die Trefferliste. Das Ergebnis ist
+    dasselbe wie mit der vollen Distanzmatrix, bei 279k Referenzbildern aber
+    Sekunden statt einer Viertelstunde.
     """
     thresholds = cfg["retrieval"]["thresholds"]
     k_values = cfg["retrieval"]["k_values"]
-    if max(k_values) > retrieved_indices.shape[1]:
+    k_max = max(k_values)
+    if k_max > retrieved_indices.shape[1]:
         raise ValueError(
             f"Nur {retrieved_indices.shape[1]} Treffer je Anfrage, "
-            f"Recall@{max(k_values)} unmoeglich"
+            f"Recall@{k_max} unmoeglich"
         )
     if rng is None:
         rng = np.random.default_rng(int(cfg["vpr"]["split_seed"]))
@@ -66,6 +75,14 @@ def evaluate_retrieval(
     db_lon = database_metadata["lon"].to_numpy()
     q_lat = query_metadata["lat"].to_numpy()
     q_lon = query_metadata["lon"].to_numpy()
+    n_db = len(database_metadata)
+
+    db_xy, crs = to_metric_xy(db_lat, db_lon)
+    q_xy, _ = to_metric_xy(q_lat, q_lon, crs=crs)
+    baum = cKDTree(db_xy)
+    # UTM und Haversine weichen hier um unter 0,3 % voneinander ab; der
+    # Aufschlag haelt jeden Haversine-Treffer unter der Schwelle im Kandidatenkreis.
+    radius = max(thresholds) * 1.01 + 2.0
 
     auswahl = (
         np.flatnonzero(query_filter)
@@ -77,26 +94,34 @@ def evaluate_retrieval(
     hits = {(t, k): 0 for t in thresholds for k in k_values}
     zufall = {(t, k): 0 for t in thresholds for k in k_values}
 
+    def distanz(qi_paare, di_paare):
+        d = haversine_distance(q_lat[qi_paare], q_lon[qi_paare], db_lat[di_paare], db_lon[di_paare])
+        if gt_filter is not None:
+            # Ausgeschlossene Referenzen auf unendlich: sie fallen aus jeder Schwelle.
+            d = np.where(gt_filter(qi_paare, di_paare), d, np.inf)
+        return d
+
     for start in tqdm(range(0, len(auswahl), block), desc=label,
                       leave=False, disable=not verbose):
         qi = auswahl[start : start + block]
 
-        d = haversine_distance(
-            q_lat[qi, None], q_lon[qi, None], db_lat[None, :], db_lon[None, :]
-        )
-        if gt_filter is not None:
-            # Ausgeschlossene Treffer auf unendlich setzen: sie fallen damit
-            # aus jeder Schwelle heraus, ohne dass eine zweite Maske noetig ist.
-            d = np.where(gt_filter(qi), d, np.inf)
+        # Naechste Referenz je Anfrage, exakt ueber die Kandidaten aus dem Baum.
+        listen = baum.query_ball_point(q_xy[qi], r=radius)
+        laengen = np.fromiter((len(n) for n in listen), dtype=np.int64, count=len(listen))
+        d_min = np.full(len(qi), np.inf)
+        if laengen.sum():
+            lokal = np.repeat(np.arange(len(qi)), laengen)
+            di = np.concatenate([np.asarray(n, dtype=np.int64) for n in listen if len(n)])
+            np.minimum.at(d_min, lokal, distanz(qi[lokal], di))
 
-        d_top = np.take_along_axis(d, retrieved_indices[qi], axis=1)
+        idx = retrieved_indices[qi, :k_max]
+        d_top = distanz(np.repeat(qi, k_max), idx.ravel()).reshape(len(qi), k_max)
         # Zufallsbasis: dieselbe Rechnung mit blind gezogenen Datenbankbildern.
-        d_zufall = np.take_along_axis(
-            d, rng.integers(0, d.shape[1], size=(len(qi), max(k_values))), axis=1
-        )
+        idx_z = rng.integers(0, n_db, size=(len(qi), k_max))
+        d_zufall = distanz(np.repeat(qi, k_max), idx_z.ravel()).reshape(len(qi), k_max)
 
         for t in thresholds:
-            loesbar = (d <= t).any(axis=1)
+            loesbar = d_min <= t
             n_localizable[t] += int(loesbar.sum())
             for k in k_values:
                 hits[(t, k)] += int(((d_top[:, :k] <= t).any(axis=1) & loesbar).sum())
@@ -167,16 +192,16 @@ def standard_evaluations(retrieved_indices, query_metadata, database_metadata, c
         return evaluate_retrieval(retrieved_indices, query_metadata, database_metadata,
                                   cfg, label=label, rng=rng, verbose=verbose, **kw)
 
-    def disjoint(qi):
-        dt_days = np.abs(q_time[qi][:, None] - db_time[None, :]) / 86_400_000.0
-        return (db_creator[None, :] != q_creator[qi][:, None]) | (dt_days > min_days_apart)
+    def disjoint(qi, di):
+        dt_days = np.abs(q_time[qi] - db_time[di]) / 86_400_000.0
+        return (db_creator[di] != q_creator[qi]) | (dt_days > min_days_apart)
 
     # Zwei Bilder 5 m auseinander, die in entgegengesetzte Richtungen schauen,
     # haben keinen gemeinsamen Bildinhalt -- geometrisch "richtig", visuell
     # unmoeglich. Faellt "loesbar" gegenueber der Standardauswertung, sind das
     # die Anfragen, die kein Encoder loesen kann.
-    def heading_ok(qi):
-        return heading_difference(q_heading[qi][:, None], db_heading[None, :]) <= max_heading_diff
+    def heading_ok(qi, di):
+        return heading_difference(q_heading[qi], db_heading[di]) <= max_heading_diff
 
     befunde = {}
     befunde["Alle Queries"] = run("Alle Queries")
@@ -193,16 +218,29 @@ def standard_evaluations(retrieved_indices, query_metadata, database_metadata, c
     return befunde
 
 
-def write_evaluation(path, cfg, embedding_name, dim, n_database, befunde, **extra):
-    """JSON im Format von 07 -- das, was compare.py liest."""
+def write_evaluation(path, cfg, embedding_name, dim, n_database, befunde,
+                     variant=None, fingerprint=None, root=None, **extra):
+    """
+    JSON im Format von 07 -- das, was compare.py liest.
+
+    variant      die Zeile in compare.py: "none", "linear", "seq3", ...;
+                 Standard ist der Adapter. Der Adapter selbst bleibt getrennt.
+    fingerprint  der Embedding-Fingerabdruck; sein Hash und die Code-Kennung
+                 sagen run.py, ob die JSON noch zur Trefferliste passt.
+    """
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    adapter = cfg["vpr"].get("adapter", "none")
     payload = {
         "datum": pd.Timestamp.now().strftime("%Y-%m-%d"),
         "method": cfg["vpr"]["method"],
-        "adapter": cfg["vpr"].get("adapter", "none"),
+        "adapter": adapter,
+        "variant": variant or adapter,
         "embedding_name": embedding_name,
         "dim": int(dim),
         "n_database": int(n_database),
+        "fingerprint_hash": short_hash(fingerprint) if fingerprint is not None else None,
+        "code_version": code_version(root) if root is not None else None,
         **extra,
         "auswertungen": befunde,
     }

@@ -7,8 +7,9 @@ Skript liest sie und druckt die Vergleichstabelle.
     python compare.py                      # R@k bei 25 m
     python compare.py --threshold 5        # andere Schwelle
     python compare.py --split "Hard: anderer creator_id ODER > 180 Tage Abstand"
-    python compare.py --list               # welche Auswertungen liegen vor
     python compare.py --localization       # 08: Koordinate statt Trefferliste
+    python compare.py --ci                 # 95-%-Intervall neben R@1 (experiments/bootstrap_ci.py)
+    python compare.py --reference full     # database + train als Referenz (experiments/full_reference.py)
 """
 
 import argparse
@@ -19,7 +20,7 @@ ROOT = Path(__file__).parent
 EVAL_DIR = ROOT / "results" / "evaluation"
 
 
-def load():
+def load(reference="database"):
     if not EVAL_DIR.exists():
         return []
     laeufe = [json.loads(p.read_text()) for p in sorted(EVAL_DIR.glob("*.json"))]
@@ -27,8 +28,15 @@ def load():
     # filtern, nicht ueber den Dateinamen -- haelt auch fuer alles Weitere,
     # was spaeter einmal in dem Verzeichnis landet.
     laeufe = [r for r in laeufe if "auswertungen" in r]
+    # Zwei Protokolle, die nicht in eine Tabelle gehoeren: die Benchmark-
+    # Referenz (database) und die volle (database + train, Variante fullref).
+    voll = [r for r in laeufe if r.get("variant") == "fullref"]
+    laeufe = voll if reference == "full" else [r for r in laeufe if r not in voll]
+    # Aeltere JSONs tragen die Variante im Adapter-Feld.
+    for r in laeufe:
+        r.setdefault("variant", r["adapter"])
     # Baseline vor Adapter, sonst alphabetisch nach Verfahren
-    return sorted(laeufe, key=lambda r: (r["method"], r["adapter"] != "none"))
+    return sorted(laeufe, key=lambda r: (r["method"], r["variant"] != "none"))
 
 
 FIGURE_DIR = ROOT / "results" / "figures" / "evaluation"
@@ -51,11 +59,32 @@ def _reihen(laeufe, split, schwelle, k):
             continue
         wert = a["schwellen"][str(schwelle)]["recall"].get(str(k))
         if wert is not None:
-            raus.append((r["method"], int(r["dim"]), r["adapter"], float(wert)))
+            raus.append((r["method"], int(r["dim"]), r["variant"], float(wert)))
     return raus
 
 
 LOC_DIR = ROOT / "results" / "localization"
+CI_DIR = ROOT / "experiments" / "results"
+
+
+def bootstrap_intervals(args, still=False):
+    """
+    95-%-Intervalle aus dem Sequenz-Bootstrap, je embedding_name das Intervall
+    fuer R@1. Leer, wenn die JSON fehlt oder zu einer anderen Schwelle gehoert.
+    """
+    ci_path = CI_DIR / ("bootstrap_ci_fullref.json" if args.reference == "full" else "bootstrap_ci.json")
+    if not ci_path.exists():
+        if not still:
+            print(f"Keine Intervalle: {ci_path.relative_to(ROOT)} fehlt "
+                  f"-> python experiments/bootstrap_ci.py --reference {args.reference}\n")
+        return {}
+    ci = json.loads(ci_path.read_text())
+    if int(ci["threshold_m"]) != args.threshold or ci["split"] != args.split:
+        if not still:
+            print(f"Keine Intervalle: {ci_path.relative_to(ROOT)} gilt fuer "
+                  f"\"{ci['split']}\" bei {ci['threshold_m']:g} m\n")
+        return {}
+    return {name: e["recall"]["1"]["ci"] for name, e in ci["encoder"].items()}
 
 
 def localization_table(args):
@@ -126,62 +155,38 @@ def plot(laeufe, args):
     geschrieben = []
 
     # ------------------------------------------------------------------
-    # 1. Der Kernbefund: Baseline gegen Adapter, nach Dimension sortiert.
-    #    Das Vorzeichen der Differenz ist die eigentliche Aussage, deshalb
-    #    steht es als eigene Achse darunter statt als Beschriftung daneben.
+    # 1. R@1 je Zeile mit dem Bootstrap-Intervall, nach Deskriptorbreite
+    #    sortiert. Der Adapter ist dabei eine Variante wie jede andere.
     # ------------------------------------------------------------------
     reihen = _reihen(laeufe, split, schwelle, 1)
-    basis = {n: (d, v) for n, d, a, v in reihen if a in ("none", "None")}
-    # Nur der trainierte Adapter ist der Partner in dieser Abbildung --
-    # Sequenz- und Verifikationsvarianten stehen in der Tabelle, nicht hier.
-    adapt = {n: v for n, d, a, v in reihen if a == "linear"}
-    encoder = sorted(basis, key=lambda n: (basis[n][0], n))
+    intervalle = bootstrap_intervals(args, still=True)
+    reihen.sort(key=lambda r: (r[1], r[0], r[2] != "none"))
+    encoder = [n for n, _, a, _ in reihen if a in ("none", "None")]
 
-    if encoder:
-        x = range(len(encoder))
-        b = [basis[n][1] for n in encoder]
-        a = [adapt.get(n) for n in encoder]
-        etiketten = [f"{n}\n{basis[n][0]}d" for n in encoder]
-
-        fig, (oben, unten) = plt.subplots(
-            2, 1, figsize=(1.7 * len(encoder) + 2, 7),
-            gridspec_kw={"height_ratios": [2.2, 1]}, sharex=True,
-        )
-        breite = 0.38
-        oben.bar([i - breite / 2 for i in x], b, breite,
-                 label="Baseline", color="#37474f")
-        oben.bar([i + breite / 2 for i in x],
-                 [v if v is not None else 0 for v in a], breite,
-                 label="+ linearer Adapter", color="#90a4ae")
-        for i, (bv, av) in enumerate(zip(b, a)):
-            oben.text(i - breite / 2, bv + 0.008, f"{bv:.3f}",
-                      ha="center", fontsize=7)
-            if av is not None:
-                oben.text(i + breite / 2, av + 0.008, f"{av:.3f}",
-                          ha="center", fontsize=7)
-        oben.set_ylabel(f"R@1 bei {schwelle} m")
-        oben.set_title(f"{split}  |  Schwelle {schwelle} m  |  "
-                       "nach Deskriptorbreite sortiert")
-        oben.legend(fontsize=8)
-        oben.grid(axis="y", alpha=0.3)
-        oben.set_axisbelow(True)
-
-        delta = [(av - bv) if av is not None else 0.0 for bv, av in zip(b, a)]
-        farben = ["#2e7d32" if d > 0 else "#c62828" for d in delta]
-        unten.bar(x, delta, 0.55, color=farben)
-        unten.axhline(0, color="0.3", linewidth=0.8)
-        for i, d in enumerate(delta):
-            if d:
-                unten.text(i, d + (0.004 if d > 0 else -0.010), f"{d:+.3f}",
-                           ha="center", fontsize=8)
-        unten.set_ylabel("Differenz durch\nden Adapter")
-        unten.set_xticks(list(x))
-        unten.set_xticklabels(etiketten, fontsize=8)
-        unten.grid(axis="y", alpha=0.3)
-        unten.set_axisbelow(True)
-
+    if reihen:
+        namen = [f"{n}" + ("" if a in ("none", "None") else f" +{a}") for n, _, a, _ in reihen]
+        werte = [v for _, _, _, v in reihen]
+        fehler = [
+            [v - intervalle[f"{n}{'' if a in ('none', 'None') else '_' + a}"][0],
+             intervalle[f"{n}{'' if a in ('none', 'None') else '_' + a}"][1] - v]
+            if f"{n}{'' if a in ('none', 'None') else '_' + a}" in intervalle else [0, 0]
+            for n, _, a, v in reihen
+        ]
+        farben = ["#37474f" if a in ("none", "None") else "#90a4ae" for _, _, a, _ in reihen]
+        fig, ax = plt.subplots(figsize=(max(7, 0.42 * len(reihen) + 2), 4.8))
+        x = range(len(reihen))
+        ax.bar(x, werte, 0.7, color=farben,
+               yerr=[[e[0] for e in fehler], [e[1] for e in fehler]] if intervalle else None,
+               capsize=2, error_kw={"linewidth": 0.8, "color": "0.3"})
+        ax.set_xticks(list(x))
+        ax.set_xticklabels(namen, rotation=60, ha="right", fontsize=7)
+        ax.set_ylabel(f"R@1 bei {schwelle} m")
+        ax.set_title(f"{split}  |  Schwelle {schwelle} m  |  nach Deskriptorbreite sortiert"
+                     + ("  |  95-%-Intervall aus dem Sequenz-Bootstrap" if intervalle else ""))
+        ax.grid(axis="y", alpha=0.3)
+        ax.set_axisbelow(True)
         plt.tight_layout()
-        ziel = FIGURE_DIR / f"vergleich_adapter_{schwelle}m{suffix}.png"
+        ziel = FIGURE_DIR / f"vergleich_r1_{schwelle}m{suffix}.png"
         fig.savefig(ziel, bbox_inches="tight")
         plt.close(fig)
         geschrieben.append(ziel)
@@ -204,7 +209,7 @@ def plot(laeufe, args):
             y = [recall.get(str(k)) for k in ks]
             if any(v is None for v in y):
                 continue
-            stil = "-" if r["adapter"] in ("none", "None") else "--"
+            stil = "-" if r["variant"] in ("none", "None") else "--"
             ax.plot(ks, y, stil, marker="o", markersize=3.5, linewidth=1.5,
                     label=f"{r['embedding_name']} ({r['dim']}d)")
         ax.set_xscale("log")
@@ -238,7 +243,7 @@ def plot(laeufe, args):
                  for s in schwellen]
             if any(v is None for v in y):
                 continue
-            stil = "-" if r["adapter"] in ("none", "None") else "--"
+            stil = "-" if r["variant"] in ("none", "None") else "--"
             ax.plot(schwellen, y, stil, marker="o", markersize=3.5,
                     linewidth=1.5, label=f"{r['embedding_name']}")
         ax.axvline(schwelle, color="0.8", linewidth=1.0, zorder=0)
@@ -269,8 +274,6 @@ def main():
                     help="Distanzschwelle in Metern (Standard: 25)")
     ap.add_argument("--split", default="Alle Queries",
                     help='Welche Auswertung (Standard: "Alle Queries")')
-    ap.add_argument("--list", action="store_true",
-                    help="Vorhandene Laeufe und Auswertungen anzeigen, sonst nichts")
     ap.add_argument("--plot", action="store_true",
                     help="Vergleichsabbildungen nach results/figures/evaluation/ "
                          "schreiben, sonst nichts")
@@ -281,30 +284,31 @@ def main():
                     help="Auch die abgeleiteten Varianten (PCA, Whitening) in die "
                          "Abbildungen -- standardmaessig nur die echten Encoder, "
                          "sonst ist die Adapter-Abbildung nicht mehr lesbar")
+    ap.add_argument("--ci", action="store_true",
+                    help="95-%%-Intervall des Sequenz-Bootstraps neben R@1, "
+                         "wenn experiments/results/bootstrap_ci.json vorliegt")
+    ap.add_argument("--reference", choices=("database", "full"), default="database",
+                    help="database = Benchmark-Protokoll (15 %% der Sequenzen als Referenz); "
+                         "full = database + train als Referenz (experiments/full_reference.py)")
     args = ap.parse_args()
 
     if args.localization:
         localization_table(args)
         return
 
-    laeufe = load()
+    laeufe = load(args.reference)
     if not laeufe:
         raise SystemExit(
             f"Keine Auswertungen in {EVAL_DIR.relative_to(ROOT)}.\n"
-            "07_evaluation je Verfahren einmal laufen lassen."
+            "07_evaluation je Verfahren einmal laufen lassen"
+            + (" -- fuer --reference full: python experiments/full_reference.py"
+               if args.reference == "full" else "") + "."
         )
 
     if args.plot:
         if not args.derived:
             laeufe = [r for r in laeufe if not _abgeleitet(r["method"])]
         plot(laeufe, args)
-        return
-
-    if args.list:
-        for r in laeufe:
-            print(f"{r['embedding_name']:24s} {r['datum']}  {r['dim']:>5}d")
-            for name, a in r["auswertungen"].items():
-                print(f"    {name}  ({a['n_queries']:,} Queries)")
         return
 
     t = str(args.threshold)
@@ -326,31 +330,49 @@ def main():
         )
 
     loesbar = zeilen[0][1]["loesbar"]
-    print(f'{args.split}  |  Schwelle {args.threshold} m  |  {loesbar:,} loesbare Queries\n')
+    referenz = zeilen[0][0]["n_database"]
+    print(f'{args.split}  |  Schwelle {args.threshold} m  |  {loesbar:,} loesbare Queries  |  '
+          f'Referenz: {referenz:,} Bilder'
+          + (' (database + train)' if args.reference == "full" else ' (database)') + '\n')
+    intervalle = bootstrap_intervals(args) if args.ci else {}
     # Spaltenbreite am laengsten Namen ausrichten -- die PCA-Varianten sind
     # laenger als die urspruenglichen Encoder.
     breite = max(14, max(len(r["method"]) for r, _ in zeilen) + 2)
-    kopf = f"{'Encoder':<{breite}}{'Variante':<10}{'Dim':>6}   " + "".join(f"{'R@'+k:>8}" for k in ks)
+    # Das Intervall steht direkt hinter R@1 -- der Spalte, um die es geht.
+    spalten = {k: f"{'R@'+k:>8}" for k in ks}
+    if intervalle:
+        spalten["1"] += f"{'95-%-KI':>17}"
+    kopf = f"{'Encoder':<{breite}}{'Variante':<10}{'Dim':>6}   " + "".join(spalten[k] for k in ks)
     print(kopf)
     print("-" * len(kopf))
     for r, eintrag in zeilen:
-        werte = "".join(
-            f"{eintrag['recall'][k]:>8.3f}" if eintrag["recall"][k] is not None else f"{'-':>8}"
-            for k in ks
-        )
-        print(f"{r['method']:<{breite}}{r['adapter']:<10}{r['dim']:>6}   {werte}")
+        werte = ""
+        for k in ks:
+            wert = eintrag["recall"][k]
+            werte += f"{wert:>8.3f}" if wert is not None else f"{'-':>8}"
+            if intervalle and k == "1":
+                ci = intervalle.get(r["embedding_name"])
+                werte += f"  [{ci[0]:.3f}, {ci[1]:.3f}]" if ci else f"{'-':>17}"
+        variante = "none" if r["variant"] == "fullref" else r["variant"]
+        print(f"{r['method']:<{breite}}{variante:<10}{r['dim']:>6}   {werte}")
 
     # Zufallsbasis als Fussnote: was blindes Raten erreicht. Haengt nicht
     # vom Encoder ab, steht deshalb in jeder JSON gleich -- die erste reicht.
     # Fehlt sie, stammt die Auswertung von vor dieser Ergaenzung.
     zufall = next((e.get("zufall") for _, e in zeilen if e.get("zufall")), None)
     if zufall:
-        werte = "".join(
-            f"{zufall[k]:>8.4f}" if zufall.get(k) is not None else f"{'-':>8}"
-            for k in ks
-        )
+        werte = ""
+        for k in ks:
+            werte += f"{zufall[k]:>8.4f}" if zufall.get(k) is not None else f"{'-':>8}"
+            if intervalle and k == "1":
+                werte += f"{'':>17}"
         print("-" * len(kopf))
         print(f"{'Zufall':<{breite}}{'(Raten)':<10}{'':>6}   {werte}")
+
+    if intervalle:
+        print("\nIntervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil "
+              "(experiments/bootstrap_ci.py). Fuer den Vergleich zweier Zeilen "
+              "gilt die gepaarte Differenz dort, nicht die Ueberlappung.")
 
     if len({z[1]["loesbar"] for z in zeilen}) > 1:
         print("\nAchtung: unterschiedlich viele loesbare Queries -- die Laeufe "

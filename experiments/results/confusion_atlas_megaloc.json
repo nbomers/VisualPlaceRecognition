@@ -1,0 +1,115 @@
+{
+  "datum": "2026-09-14",
+  "embedding_name": "megaloc",
+  "threshold_m": 25.0,
+  "n_loesbar": 34112,
+  "n_falsch": 14726,
+  "median_fehler_m": 389.021120193145,
+  "fehler_quantile_m": {
+    "25": 40.286217227477785,
+    "50": 389.021120193145,
+    "75": 3496.8935055076804,
+    "90": 6088.1314900676025
+  },
+  "fehler_anteile": {
+    "unter_100m": 0.4481868803476844,
+    "100m_bis_1km": 0.11258997691158495,
+    "ueber_1km": 0.43922314274073065
+  },
+  "anteil_innerhalb_stadtteil": 0.5285888903979357,
+  "nach_strassentyp": {
+    "autobahn": {
+      "n_loesbar": 11082,
+      "anteil_loesbar": 0.32487101313320826,
+      "recall_1": 0.5698429886302112,
+      "median_fehler_falsch_m": 55.59684539905648,
+      "anteil_an_fehlern_ueber_1km": 0.229282622139765
+    },
+    "hauptstrasse": {
+      "n_loesbar": 5725,
+      "anteil_loesbar": 0.1678295028142589,
+      "recall_1": 0.5764192139737991,
+      "median_fehler_falsch_m": 1400.652450691258,
+      "anteil_an_fehlern_ueber_1km": 0.20655534941249226
+    },
+    "sonstige": {
+      "n_loesbar": 17305,
+      "anteil_loesbar": 0.5072994840525328,
+      "recall_1": 0.5646344986997978,
+      "median_fehler_falsch_m": 775.7767203807996,
+      "anteil_an_fehlern_ueber_1km": 0.5641620284477428
+    }
+  },
+  "paare": [
+    {
+      "von": "Voxtrup",
+      "nach": "Nahne",
+      "n": 240,
+      "anteil": 0.016297704739915795,
+      "median_m": 540.0792271173264
+    },
+    {
+      "von": "Sutthausen",
+      "nach": "Hellern",
+      "n": 208,
+      "anteil": 0.014124677441260355,
+      "median_m": 4239.425589012197
+    },
+    {
+      "von": "Hellern",
+      "nach": "Nahne",
+      "n": 147,
+      "anteil": 0.009982344153198425,
+      "median_m": 6894.330127012273
+    },
+    {
+      "von": "W\u00fcste",
+      "nach": "Weststadt",
+      "n": 141,
+      "anteil": 0.009574901534700529,
+      "median_m": 63.07332905624478
+    },
+    {
+      "von": "Hellern",
+      "nach": "Kalkh\u00fcgel",
+      "n": 139,
+      "anteil": 0.009439087328534565,
+      "median_m": 3590.0725794918785
+    },
+    {
+      "von": "Hafen",
+      "nach": "Fledder",
+      "n": 120,
+      "anteil": 0.008148852369957897,
+      "median_m": 4446.305244736695
+    },
+    {
+      "von": "Haste",
+      "nach": "Nahne",
+      "n": 117,
+      "anteil": 0.00794513106070895,
+      "median_m": 7084.932793603277
+    },
+    {
+      "von": "Pye",
+      "nach": "Atter",
+      "n": 113,
+      "anteil": 0.00767350264837702,
+      "median_m": 4747.588910752483
+    },
+    {
+      "von": "W\u00fcste",
+      "nach": "Hellern",
+      "n": 110,
+      "anteil": 0.007469781339128073,
+      "median_m": 3071.3850861510623
+    },
+    {
+      "von": "Kalkh\u00fcgel",
+      "nach": "Hellern",
+      "n": 94,
+      "anteil": 0.006383267689800353,
+      "median_m": 3703.632978792978
+    }
+  ]
+}

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import pandas as pd
@@ -92,6 +93,27 @@ def adapter_fingerprint(cfg, method, base_fingerprint):
 def short_hash(fingerprint):
     blob = json.dumps(fingerprint, sort_keys=True, default=str).encode()
     return hashlib.sha256(blob).hexdigest()[:10]
+
+
+# Der Fingerabdruck deckt die Config ab, nicht den Code. Aendert sich die
+# Auswertung selbst, sagt erst diese Kennung, dass eine JSON veraltet ist.
+_CODE_DATEIEN = ("src/evaluation.py", "src/geo.py")
+
+
+def code_version(root):
+    """Git-Commit (falls vorhanden) und Hash der Auswertungsquellen."""
+    root = Path(root)
+    try:
+        commit = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        commit = None
+    h = hashlib.sha256()
+    for rel in _CODE_DATEIEN:
+        h.update((root / rel).read_bytes())
+    return {"commit": commit, "evaluation": h.hexdigest()[:10]}
 
 
 # Welche Stufe erzeugt welches Artefakt -- fuer die Fehlermeldung.
@@ -300,6 +322,24 @@ def validate_config(cfg):
             f"retrieval.k_values geht bis {max(ret['k_values'])}, "
             f"gespeichert werden aber nur top_k={ret['top_k']} Nachbarn"
         )
+
+    # 08 liest hoechstens so viele Treffer, wie 06 gespeichert hat.
+    loc = cfg.get("localization") or {}
+    if int(loc.get("top_k", 10)) > int(ret["top_k"]):
+        fehler.append(
+            f"localization.top_k={loc.get('top_k')} ist groesser als retrieval.top_k={ret['top_k']}"
+        )
+
+    training = vpr.get("adapter_training") or {}
+    for k in ("batch_size", "epochs"):
+        if int(training.get(k, 1)) <= 0:
+            fehler.append(f"vpr.adapter_training.{k} muss positiv sein")
+    if not 0.0 <= float(training.get("hard_negative_probability", 0.5)) <= 1.0:
+        fehler.append("vpr.adapter_training.hard_negative_probability muss in [0, 1] liegen")
+
+    bezirke = cfg.get("districts") or {}
+    if bezirke.get("enabled", True) and not bezirke.get("admin_levels"):
+        fehler.append("districts.admin_levels fehlt")
 
     if not ret["thresholds"] or min(ret["thresholds"]) <= 0:
         fehler.append("retrieval.thresholds muss positive Werte enthalten")

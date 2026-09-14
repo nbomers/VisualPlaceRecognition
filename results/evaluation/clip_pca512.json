@@ -1,10 +1,16 @@
 {
-  "datum": "2026-09-12",
+  "datum": "2026-09-14",
   "method": "clip_pca512",
   "adapter": "none",
+  "variant": "none",
   "embedding_name": "clip_pca512",
   "dim": 512,
   "n_database": 48321,
+  "fingerprint_hash": "26d59c862d",
+  "code_version": {
+    "commit": "940a0a4",
+    "evaluation": "88519dd711"
+  },
   "auswertungen": {
     "Alle Queries": {
       "n_queries": 53414,
