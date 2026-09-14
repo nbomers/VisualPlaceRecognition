@@ -66,7 +66,7 @@ def _args():
     ap.add_argument("--method", metavar="LISTE",
                     help='vpr.method ueberschreiben. Mehrere durch Komma, "all" '
                          'nimmt die echten Encoder, "derived" die abgeleiteten '
-                         "PCA-Varianten aus experiments/pca_reduce.py.")
+                         "(PCA, Whitening, Verkettung aus experiments/).")
     ap.add_argument("--adapter", metavar="LISTE",
                     help='vpr.adapter ueberschreiben. Mehrere durch Komma, "all" '
                          "entspricht none,linear.")
@@ -74,10 +74,11 @@ def _args():
 
 
 def _abgeleitet(cfg, name):
-    """Hat der Encoder einen source-Eintrag, ist er aus einem anderen
-    gerechnet -- die PCA-Varianten aus experiments/pca_reduce.py."""
+    """Hat der Encoder einen source- oder sources-Eintrag, ist er aus anderen
+    gerechnet -- PCA-Varianten aus experiments/pca_reduce.py, Verkettungen
+    aus experiments/concat_embeddings.py."""
     block = cfg["vpr"].get(name)
-    return isinstance(block, dict) and "source" in block
+    return isinstance(block, dict) and ("source" in block or "sources" in block)
 
 
 def _modelle(cfg, abgeleitet):
