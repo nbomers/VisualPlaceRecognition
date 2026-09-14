@@ -122,33 +122,31 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # ---------- Ergebnisse ----------
+# Je Stadt ein Zweig: results/<stadt>/... (src/paths.py). Versioniert sind
+# die Recall- und Lokalisierungs-JSONs (KB), der Datensatz-Audit und die
+# Auswertungsabbildungen (~67 KB je Bild); Trefferlisten und die grossen
+# Karten unter figures/coverage bleiben draussen.
 /results/*
-
-# Ausnahme: die Recall-Tabellen. Wenige KB Text, muessen zwischen den
-# Rechnern wandern, damit compare.py alle Verfahren nebeneinander sieht.
-!/results/evaluation/
-/results/evaluation/*
-!/results/evaluation/*.json
-!/results/localization/
-/results/localization/*
-!/results/localization/*.json
-# Der Datensatz-Audit aus 02: eine kleine JSON, run.py erkennt daran, dass 02 lief.
-!/results/dataset_audit.json
-
-# Ausnahme: die Auswertungsabbildungen, rund 67 KB je Bild. Muessen zwischen
-# den Rechnern wandern, sonst fehlen die Grafiken der Encoder, die nur auf
-# dem Linux-Rechner gerechnet wurden. figures/coverage bleibt draussen (5,3 MB).
-!/results/figures/
-/results/figures/*
-!/results/figures/evaluation/
-/results/figures/evaluation/*
-!/results/figures/evaluation/*.png
-!/results/figures/localization/
-/results/figures/localization/*
-!/results/figures/localization/*.png
-!/results/figures/demo/
-/results/figures/demo/*
-!/results/figures/demo/*.png
+!/results/*/
+/results/*/*
+!/results/*/dataset_audit.json
+!/results/*/evaluation/
+/results/*/evaluation/*
+!/results/*/evaluation/*.json
+!/results/*/localization/
+/results/*/localization/*
+!/results/*/localization/*.json
+!/results/*/figures/
+/results/*/figures/*
+!/results/*/figures/evaluation/
+/results/*/figures/evaluation/*
+!/results/*/figures/evaluation/*.png
+!/results/*/figures/localization/
+/results/*/figures/localization/*
+!/results/*/figures/localization/*.png
+!/results/*/figures/demo/
+/results/*/figures/demo/*
+!/results/*/figures/demo/*.png
 
 # ---------- Sonstiges ----------
 .cache/
@@ -174,15 +172,15 @@ external/
 # ---------- Modellgewichte ----------
 weights/
 
-!data/processed/
-data/processed/*
-
-# Sonst - Unterschiedliche Ergebnisse
-!data/processed/train_sequences.txt
-!data/processed/database_sequences.txt
-!data/processed/query_sequences.txt
-
-# Die Metadaten selbst (9 MB): Zeilenreihenfolge und Mapillary-Schnappschuss
-# sind Teil jedes Fingerabdrucks. Nur so rechnet ein anderer Rechner dieselben
-# Artefakte; 01 laeuft nur noch fuer eine neue Stadt oder einen neuen Split.
-!data/processed/metadata.parquet
+# Je Stadt ein Zweig: data/<stadt>/{raw,processed,embeddings}. Versioniert
+# sind nur Split-Listen und Metadaten (9 MB je Stadt) -- Zeilenreihenfolge
+# und Mapillary-Schnappschuss sind Teil jedes Fingerabdrucks, nur so rechnet
+# ein anderer Rechner dieselben Artefakte.
+!data/*/
+data/*/*
+!data/*/processed/
+data/*/processed/*
+!data/*/processed/train_sequences.txt
+!data/*/processed/database_sequences.txt
+!data/*/processed/query_sequences.txt
+!data/*/processed/metadata.parquet

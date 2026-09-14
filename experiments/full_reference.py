@@ -32,11 +32,11 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from _common import CFG, ROOT
+from _common import CFG, PATHS, ROOT
 from src.evaluation import standard_evaluations, write_evaluation
 from src.run_guard import embedding_fingerprint, require_fingerprint, write_fingerprint
 
-EMB_DIR = ROOT / "data" / "embeddings"
+EMB_DIR = PATHS.embeddings
 REFERENZ = ("database", "train")
 BLOCK_REF = 65_536
 BLOCK_Q = 2_048
@@ -84,8 +84,8 @@ def run_one(method, force):
     require_fingerprint(npy, fingerprint, "Embeddings")
     fp_voll = {**fingerprint, "reference_splits": list(REFERENZ)}
 
-    npz = ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz"
-    eval_json = ROOT / "results" / "evaluation" / f"{name}.json"
+    npz = PATHS.retrieval_file(name, method)
+    eval_json = PATHS.evaluation / f"{name}.json"
     npz_passt = False
     if npz.exists() and not force:
         try:

@@ -345,7 +345,7 @@ Encodieren, gemessen 2026-09-14 auf dem M1 Pro (MPS, 200 Bilder, Batch 64):
 | MixVPR | 320 px | 73 | 75 min |
 | EigenPlaces | 512 px | 33 | 2,8 h |
 | MegaLoc | 322 px | 21 | 4,4 h |
-| AnyLoc | 322 px | — | nur GPU-Rechner |
+| AnyLoc (RTX 3070, fp16, Batch 4) | 322 px | 15 | 6,3 h |
 
 Der Durchsatz hängt am Rückgrat und der Eingabegröße, nicht an der PCA:
 `eigenplaces_pcaw512` encodiert genau so schnell wie `eigenplaces`, die

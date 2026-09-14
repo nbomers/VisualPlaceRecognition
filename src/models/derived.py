@@ -13,8 +13,6 @@ AnyLoc-Varianten sind nicht vorfuehrbar, solange die AnyLoc-PCA aus 04
 nicht neben den Embeddings liegt -- build_embedder sagt das dann.
 """
 
-from pathlib import Path
-
 import numpy as np
 
 
@@ -43,8 +41,10 @@ class DerivedEmbedder:
     def __init__(self, name, cfg, device, project_root):
         from .factory import build_embedder
 
+        from ..paths import Paths
+
         block = cfg["vpr"][name]
-        emb_dir = Path(project_root) / "data" / "embeddings" / name
+        emb_dir = Paths(cfg, project_root).embedding_dir(name)
         self.name = name
         if "sources" in block:
             self.parts = [build_embedder(q, cfg, device, project_root) for q in block["sources"]]
@@ -53,8 +53,7 @@ class DerivedEmbedder:
             pfad = emb_dir / f"{name}_pca.npz"
             if not pfad.exists():
                 raise FileNotFoundError(
-                    f"{pfad.relative_to(project_root)} fehlt -- "
-                    "python experiments/pca_reduce.py --projection-only"
+                    f"{pfad} fehlt -- python experiments/pca_reduce.py --projection-only"
                 )
             self.parts = [build_embedder(block["source"], cfg, device, project_root)]
             self.projection = load_projection(pfad)

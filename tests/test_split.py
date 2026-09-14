@@ -7,8 +7,10 @@ import pytest
 
 from src.split import draw_split, read_split_lists, split_column, split_sequences, write_split_lists
 
+from src.config import load_config, paths  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
-PROCESSED = ROOT / "data" / "processed"
+PROCESSED = paths(load_config(ROOT), ROOT).processed
 
 
 def _cfg():

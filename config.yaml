@@ -1,5 +1,7 @@
 # Projektparameter — bewusst versioniert.
 
+# Die Stadt bestimmt auch die Ablage: data/<slug>, results/<slug>,
+# experiments/results/<slug>, weights/adapter/<slug> (src/paths.py).
 city: "Osnabrück, Germany"
 
 
@@ -305,12 +307,12 @@ download_workers: "auto"
 # mit vpr.<verfahren>.image_size, das die Modelleingabe bestimmt.
 download_image_size: 1024
 
-# Bildordner, ausserhalb des Repos (50 GB). Ein Ordner je Stadt, damit eine
-# zweite Stadt nicht die erste ueberschreibt; daneben ein Ordner fuer eigene
-# Fotos (locate.py, Demo). Je Rechner anders: VPR_IMAGE_PATH in der
+# Bilder liegen ausserhalb des Repos (50 GB je Stadt): image_root/<stadt>,
+# der Stadtname als Slug aus city (osnabrueck, wuerzburg, ...). Daneben
+# image_root/test fuer eigene Fotos (locate.py, Demo). Je Rechner anders:
+# VPR_IMAGE_ROOT (oder VPR_IMAGE_PATH fuer den Stadtordner direkt) in der
 # Umgebung setzen statt die versionierte Datei zu aendern.
-img_download_path: "~/Downloads/mapillary/osnabrueck"
-own_images_path: "~/Downloads/mapillary/test"
+image_root: "~/Downloads/mapillary"
 
 
 

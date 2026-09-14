@@ -27,9 +27,10 @@ import json
 import numpy as np
 import pandas as pd
 
-from _common import CFG, ROOT
+from _common import CFG, PATHS, ROOT
 from src.run_guard import embedding_fingerprint, metadata_digest, write_fingerprint
-EMBEDDING_ROOT = ROOT / "data" / "embeddings"
+
+EMBEDDING_ROOT = PATHS.embeddings
 BLOCK = 8192
 
 

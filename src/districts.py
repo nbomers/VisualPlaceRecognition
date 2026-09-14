@@ -7,7 +7,7 @@ die Abdeckungskarte und die Experimente fuer Recall je Stadtteil und den
 Verwechslungsatlas nutzen. Antworten kommen aus dem osmnx-Cache unter
 cache/; ohne Cache geht die Abfrage an Overpass.
 
-    districts, city_polygon, utm_crs = load_districts(cfg, ROOT / "cache")
+    districts, city_polygon, utm_crs = load_districts(cfg, PATHS.cache)
     zuordnung = assign_district(lat, lon, districts)
 """
 

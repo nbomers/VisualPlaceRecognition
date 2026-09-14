@@ -21,7 +21,7 @@ import pandas as pd
 import requests
 from tqdm import tqdm
 
-from _common import CFG, ROOT
+from _common import CFG, PATHS, ROOT
 from src.mapillary import load_token, make_session
 PROBE_PATH = Path(__file__).resolve().parent / "detections_probe.json"
 
@@ -55,7 +55,7 @@ def show_summary(befund):
 
 
 def messen(args, token):
-    metadata = pd.read_parquet(ROOT / "data" / "processed" / "metadata.parquet")
+    metadata = pd.read_parquet(PATHS.processed / "metadata.parquet")
     ids = metadata.loc[metadata["split"] == args.split, "image_id"].sample(
         args.n, random_state=int(CFG["vpr"]["split_seed"])
     )

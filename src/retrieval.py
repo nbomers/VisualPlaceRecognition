@@ -20,6 +20,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from .geo import haversine_distance
+from .paths import Paths
 from .run_guard import embedding_fingerprint, require_fingerprint
 
 
@@ -34,13 +35,13 @@ def load_retrieval(root, cfg, method, adapter="none", sequence_window=None,
     experiments/full_reference.py, und "database" meint alle Referenzzeilen.
     """
     name = method if adapter in ("none", "None") else f"{method}_{adapter}"
-    emb_dir = root / "data" / "embeddings" / method
-    meta = pd.read_parquet(emb_dir / f"{name}_metadata.parquet")
+    pfade = Paths(cfg, root)
+    meta = pd.read_parquet(pfade.metadata_file(name, method))
     fingerprint = embedding_fingerprint(cfg, method, adapter, meta)
     if reference_splits:
         name = f"{name}_fullref"
         fingerprint = {**fingerprint, "reference_splits": list(reference_splits)}
-    npz = root / "results" / "retrieval" / method / f"{name}_retrieval.npz"
+    npz = pfade.retrieval_file(name, method)
     require_fingerprint(npz, fingerprint, "Retrieval-Ergebnis")
     r = np.load(npz)
     indices, similarities = r["indices"], r["similarities"]
