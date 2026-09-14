@@ -62,6 +62,10 @@ vpr:
     # Whitening hier NICHT und bei AnyLoc schon, ist es ein VLAD-Befund.
     eigenplaces_pcaw2048: "eigenplaces -> Whitening auf 2048"
 
+    # Verkettung der beiden besten gewhitenten Deskriptoren, 1024 Dimensionen.
+    # Erzeugt von experiments/concat_embeddings.py.
+    eigenplaces_megaloc_concat: "eigenplaces_pcaw512 + megaloc_pcaw512"
+
 
   clip:
     revision: "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
@@ -182,6 +186,11 @@ vpr:
     pca_dim: 2048
     fit_images: 50000
     whiten: true
+
+  # Verkettung: die Quellen muessen denselben Split haben, das Skript prueft
+  # den Metadaten-Hash. Die Reihenfolge bestimmt die Reihenfolge der Bloecke.
+  eigenplaces_megaloc_concat:
+    sources: ["eigenplaces_pcaw512", "megaloc_pcaw512"]
 
 
   # ----------------------------------------------------------
@@ -319,6 +328,16 @@ localization:
   # in der Auswertung dasselbe heisst.
   eps_m: 25.0
   min_samples: 2
+
+  # Standard: nur die Position des besten Treffers. Die fuenf
+  # Aggregationsverfahren (Schwerpunkt, Clustering, Snap, Gated) sind gemessen
+  # und unterliegen Top-1 bei jedem Encoder -- true rechnet sie trotzdem mit,
+  # samt der beiden Abbildungen dazu. Kostet DBSCAN je Anfrage, also Minuten.
+  compare_aggregations: false
+
+  # Fuer die Gated-Variante: Top-1 wird nur durch die staerkste Gruppe
+  # ersetzt, wenn mindestens dieser Anteil der Treffer in ihr liegt.
+  gate_share: 0.7
 
   # Cosinus-Werte liegen dicht beieinander (bei CLIP 0.89 bis 0.92), eine
   # direkte Gewichtung waere praktisch ein ungewichteter Mittelwert. Die
