@@ -106,7 +106,7 @@ _ERZEUGER = (
 # Abgeleitete Encoder entstehen nicht in 04, sondern aus einem anderen
 # Encoder. Am Namen erkannt -- Konvention, passend zu den source-Eintraegen
 # in config.yaml und zu experiments/pca_reduce.py.
-_ABGELEITET_MARKER = ("_pca",)
+_ABGELEITET_MARKER = ("_pca", "_concat")
 
 
 def _hinweis(artifact_path):
@@ -115,7 +115,8 @@ def _hinweis(artifact_path):
         if not name.endswith(endung):
             continue
         if endung == "_embeddings.npy" and any(m in name for m in _ABGELEITET_MARKER):
-            return "-> python experiments/pca_reduce.py"
+            skript = "concat_embeddings.py" if "_concat" in name else "pca_reduce.py"
+            return f"-> python experiments/{skript}"
         return f"-> {befehl}"
     return "-> die erzeugende Stufe mit dieser config.yaml neu laufen lassen"
 
@@ -251,6 +252,14 @@ def validate_config(cfg):
     # nicht erst beim Rechnen.
     for name in vpr["models"]:
         block = vpr.get(name)
+        if isinstance(block, dict) and "sources" in block:
+            # Verkettung: jede Quelle muss ein Modell sein, abgeleitete sind erlaubt.
+            if not isinstance(block["sources"], list) or len(block["sources"]) < 2:
+                fehler.append(f"vpr.{name}.sources braucht mindestens zwei Eintraege")
+            for q in block.get("sources", []) if isinstance(block.get("sources"), list) else []:
+                if q not in vpr["models"]:
+                    fehler.append(f"vpr.{name}.sources: {q!r} steht nicht unter vpr.models")
+            continue
         if not (isinstance(block, dict) and "source" in block):
             continue
         quelle = block["source"]
