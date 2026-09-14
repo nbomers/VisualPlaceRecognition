@@ -1,10 +1,16 @@
 {
-  "datum": "2026-09-12",
+  "datum": "2026-09-14",
   "method": "eigenplaces_pcaw512",
-  "adapter": "seq3",
+  "adapter": "none",
+  "variant": "seq3",
   "embedding_name": "eigenplaces_pcaw512_seq3",
   "dim": 512,
   "n_database": 48321,
+  "fingerprint_hash": null,
+  "code_version": {
+    "commit": "940a0a4",
+    "evaluation": "21c96771e7"
+  },
   "sequence_window": 3,
   "sequence_weighting": "dreieck",
   "auswertungen": {

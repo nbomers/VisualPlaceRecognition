@@ -26,7 +26,6 @@ als eigene Zeile nach results/evaluation/ (Variante "gv<k>").
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -35,17 +34,13 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-# Liegt in experiments/, die Pipeline eine Ebene darueber.
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from _common import CFG, RESULTS, ROOT
+from src.device import pick_device
+from src.evaluation import standard_evaluations, write_evaluation
+from src.retrieval import load_retrieval
+from src.run_guard import embedding_fingerprint
 
-from src.config import load_config  # noqa: E402
-from src.evaluation import standard_evaluations, write_evaluation  # noqa: E402
-from src.run_guard import embedding_fingerprint, require_fingerprint  # noqa: E402
-
-CFG = load_config(ROOT)
-OUT_DIR = Path(__file__).resolve().parent / "results"
+OUT_DIR = RESULTS
 
 
 def _args():
@@ -66,16 +61,6 @@ def _args():
                     help="Darunter gilt ein Paar als nicht verifiziert")
     ap.add_argument("--device", default=None, help="cuda | mps | cpu (Standard: automatisch)")
     return ap.parse_args()
-
-
-def pick_device(wunsch):
-    if wunsch:
-        return torch.device(wunsch)
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
 
 
 def load_gray(path, max_side):
@@ -114,16 +99,12 @@ def main():
     image_path = Path(CFG["img_download_path"]).expanduser()
 
     emb_dir = ROOT / "data" / "embeddings" / method
-    meta = pd.read_parquet(emb_dir / f"{name}_metadata.parquet")
-    npz = ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz"
-    require_fingerprint(npz, embedding_fingerprint(CFG, method, adapter, meta), "Retrieval-Ergebnis")
-    r = np.load(npz)
-    indices = r["indices"]
+    query, database, indices, _ = load_retrieval(ROOT, CFG, method, adapter)
     k = min(args.top_k, indices.shape[1])
     dim = int(np.load(emb_dir / f"{name}_embeddings.npy", mmap_mode="r").shape[1])
+    fingerprint = embedding_fingerprint(
+        CFG, method, adapter, pd.read_parquet(emb_dir / f"{name}_metadata.parquet"))
 
-    database = meta[meta.split == "database"].reset_index(drop=True)
-    query = meta[meta.split == "query"].reset_index(drop=True)
     db_ids = database["image_id"].to_numpy()
     q_ids = query["image_id"].to_numpy()
 
@@ -143,7 +124,7 @@ def main():
             "LightGlue fehlt:  pip install git+https://github.com/cvg/LightGlue.git"
         ) from e
 
-    device = pick_device(args.device)
+    device = torch.device(pick_device(args.device))
     extractor = SuperPoint(max_num_keypoints=args.max_keypoints).eval().to(device)
     matcher = LightGlue(features="superpoint").eval().to(device)
     print(f"{name}: {len(auswahl):,} von {len(query):,} Anfragen, Top-{k}, "
@@ -210,9 +191,10 @@ def main():
 
     if voll:
         befunde = standard_evaluations(neu_idx, query, database, CFG, verbose=False)
-        CFG["vpr"]["adapter"] = f"{adapter}+gv{k}" if adapter not in ("none", "None") else f"gv{k}"
+        variante = f"{adapter}+gv{k}" if adapter not in ("none", "None") else f"gv{k}"
         pfad = write_evaluation(ROOT / "results" / "evaluation" / f"{name}_gv{k}.json",
                                 CFG, f"{name}_gv{k}", dim, len(database), befunde,
+                                variant=variante, fingerprint=fingerprint, root=ROOT,
                                 verification_top_k=k, min_inliers=args.min_inliers)
     else:
         OUT_DIR.mkdir(parents=True, exist_ok=True)

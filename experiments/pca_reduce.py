@@ -26,26 +26,21 @@ query fliessen nie in die Anpassung ein, sonst waere es Leakage.
     python experiments/pca_reduce.py                       # alle konfigurierten
     python experiments/pca_reduce.py --methods eigenplaces_pca512
     python experiments/pca_reduce.py --force               # auch neu schreiben
+    python experiments/pca_reduce.py --projection-only     # nur {name}_pca.npz nachliefern
+
+Neben den Embeddings liegt {name}_pca.npz -- die Projektion, mit der
+src/models/derived.py ein neues Bild in denselben Raum bringt.
 """
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 
-# Liegt in experiments/, die Pipeline eine Ebene darueber.
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from src.config import load_config  # noqa: E402
-from src.run_guard import embedding_fingerprint, write_fingerprint  # noqa: E402
-
-CFG = load_config(ROOT)
+from _common import CFG, ROOT
+from src.run_guard import embedding_fingerprint, write_fingerprint
 EMBEDDING_ROOT = ROOT / "data" / "embeddings"
 
 # Blockweise transformieren: MegaLoc sind 332.867 x 8448 float32, also
@@ -63,6 +58,10 @@ def _args():
                          "die einen source-Eintrag haben.")
     ap.add_argument("--force", action="store_true",
                     help="Auch schreiben, wenn das Ergebnis schon passt")
+    ap.add_argument("--projection-only", action="store_true",
+                    help="Nur die PCA anpassen und als {name}_pca.npz ablegen, die "
+                         "Embeddings nicht neu schreiben -- fuer vorhandene Varianten, "
+                         "die vor dem Speichern der Projektion entstanden sind")
     return ap.parse_args()
 
 
@@ -73,7 +72,16 @@ def pca_methoden():
             if isinstance(vpr.get(name), dict) and "source" in vpr[name]]
 
 
-def reduce_one(name, force):
+def save_projection(path, pca, whiten):
+    """Mittelwert, Komponenten und Varianzen -- alles, was transform() braucht.
+    Ein neues Bild (Demo) landet damit im selben Unterraum wie die Datenbank."""
+    np.savez(path, mean=pca.mean_.astype(np.float32),
+             components=pca.components_.astype(np.float32),
+             explained_variance=pca.explained_variance_.astype(np.float32),
+             whiten=np.array(bool(whiten)))
+
+
+def reduce_one(name, force, projection_only=False):
     block = CFG["vpr"][name]
     quelle = block["source"]
     dim = int(block["pca_dim"])
@@ -94,8 +102,9 @@ def reduce_one(name, force):
 
     metadata = pd.read_parquet(quelle_meta)
     fingerprint = embedding_fingerprint(CFG, name, "none", metadata)
+    ziel_pca = ziel_dir / f"{name}_pca.npz"
 
-    if ziel_npy.exists() and not force:
+    if ziel_npy.exists() and not force and not projection_only:
         vorhanden = ziel_npy.with_name(ziel_npy.name + ".fingerprint.json")
         if vorhanden.exists():
             gespeichert = json.loads(vorhanden.read_text()).get("fingerprint")
@@ -136,11 +145,27 @@ def reduce_one(name, force):
     erklaert = float(pca.explained_variance_ratio_.sum())
     del fit_daten
     print(f"  erklaerte Varianz: {erklaert:.1%}")
+    ziel_dir.mkdir(parents=True, exist_ok=True)
+    save_projection(ziel_pca, pca, whiten)
+    if projection_only:
+        # Kontrolle: die gespeicherte Projektion muss die vorhandenen
+        # Embeddings reproduzieren, sonst passt sie nicht zu ihnen.
+        if ziel_npy.exists():
+            probe = np.ascontiguousarray(quelle_emb[:256], dtype=np.float32)
+            neu = pca.transform(probe).astype(np.float32)
+            neu /= np.linalg.norm(neu, axis=1, keepdims=True)
+            alt = np.asarray(np.load(ziel_npy, mmap_mode="r")[:256], dtype=np.float32)
+            cos = float((neu * alt).sum(axis=1).min())
+            print(f"  Projektion passt zu {ziel_npy.name}: min cos {cos:.6f}")
+            if cos < 0.999:
+                print("  WARNUNG: weicht ab -- Variante mit --force neu schreiben")
+                return False
+        print(f"  geschrieben: {ziel_pca.relative_to(ROOT)}")
+        return True
 
     # ------------------------------------------------------------------
     # Anwenden -- blockweise auf die Platte.
     # ------------------------------------------------------------------
-    ziel_dir.mkdir(parents=True, exist_ok=True)
     ziel = np.lib.format.open_memmap(
         ziel_npy, mode="w+", dtype=np.float32, shape=(n, dim)
     )
@@ -187,7 +212,7 @@ def main():
         if name not in CFG["vpr"].get("models", {}):
             print("  uebersprungen: kein Eintrag unter vpr.models")
             continue
-        if reduce_one(name, args.force):
+        if reduce_one(name, args.force, args.projection_only):
             fertig.append(name)
 
     print()

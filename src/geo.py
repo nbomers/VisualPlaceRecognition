@@ -28,17 +28,25 @@ def heading_difference(a, b):
     return np.minimum(diff, 360.0 - diff)
 
 
+def utm_crs_for(lat, lon):
+    """EPSG-Code der UTM-Zone, in der der Schwerpunkt der Punkte liegt."""
+    lat0, lon0 = float(np.mean(lat)), float(np.mean(lon))
+    zone = int((lon0 + 180) // 6) + 1
+    return f"EPSG:{32600 + zone if lat0 >= 0 else 32700 + zone}"
+
+
 def to_metric_xy(lat, lon, crs=None):
     """
-    Lat/Lon -> UTM-Meter. DBSCAN und Mittelwerte brauchen ein metrisches
-    System; in Grad waere ein Radius von 25 m je nach Breitengrad
-    unterschiedlich gross. Gibt (xy, crs) zurueck, damit ein zweiter Aufruf
-    dasselbe crs verwenden kann.
+    Lat/Lon -> UTM-Meter. DBSCAN, KDTree und Mittelwerte brauchen ein
+    metrisches System; in Grad waere ein Radius von 25 m je nach
+    Breitengrad unterschiedlich gross. Gibt (xy, crs) zurueck, damit ein
+    zweiter Aufruf dasselbe crs verwenden kann.
     """
-    import geopandas as gpd  # nur hier gebraucht, haelt das Modul leicht
+    from pyproj import Transformer  # nur hier gebraucht, haelt das Modul leicht
 
-    gs = gpd.GeoSeries(gpd.points_from_xy(lon, lat), crs="EPSG:4326")
     if crs is None:
-        crs = gs.estimate_utm_crs()
-    gs = gs.to_crs(crs)
-    return np.c_[gs.x.to_numpy(), gs.y.to_numpy()], crs
+        crs = utm_crs_for(lat, lon)
+    x, y = Transformer.from_crs("EPSG:4326", str(crs), always_xy=True).transform(
+        np.asarray(lon, dtype=float), np.asarray(lat, dtype=float)
+    )
+    return np.c_[x, y], str(crs)

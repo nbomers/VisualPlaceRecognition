@@ -245,16 +245,19 @@ class AnyLocEmbedder(BaseEmbedder):
     # PCA
     # ------------------------------------------------------------------
 
-    def fit_pca(self, image_paths, n_images=10_000, batch_size=4, seed=42):
+    def fit_pca(self, image_paths, n_images=10_000, batch_size=4, seed=42, save_path=None):
         """
         PCA auf einem Subsample fitten. 49.152 Dimensionen sind fuer 100k
-        Bilder nicht speicherbar; 4.096 sind es.
+        Bilder nicht speicherbar; 4.096 sind es. Mit save_path landet sie als
+        .npz neben den Embeddings, load_pca() holt sie fuer ein neues Bild.
 
         WICHTIG: nur mit train- oder database-Bildern aufrufen, nie mit query.
         """
         if self.pca_dim is None:
             return
         rng = np.random.default_rng(seed)
+        # pca_lowrank ist eine randomisierte SVD und zieht aus dem torch-RNG.
+        torch.manual_seed(seed)
         n = min(n_images, len(image_paths))
         sample = [
             image_paths[i] for i in rng.choice(len(image_paths), n, replace=False)
@@ -276,6 +279,14 @@ class AnyLocEmbedder(BaseEmbedder):
             f"PCA gefittet: {self.vlad_dim} -> {self._pca[1].shape[1]} Dimensionen "
             f"auf {n:,} Bildern"
         )
+        if save_path is not None:
+            np.savez(save_path, mean=mean.numpy(), components=self._pca[1].numpy())
+
+    def load_pca(self, path):
+        """Gespeicherte PCA aus fit_pca(save_path=...) uebernehmen."""
+        d = np.load(path)
+        self._pca = (torch.from_numpy(d["mean"]), torch.from_numpy(d["components"]))
+        self.embedding_dim = int(self._pca[1].shape[1])
 
     def _project(self, vecs):
         vecs = vecs.float().cpu()

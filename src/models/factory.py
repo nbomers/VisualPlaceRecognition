@@ -1,9 +1,10 @@
 """
 Ein Encoder je Name, gebaut aus der config.yaml.
 
-Vorher stand in 04 eine if/elif-Kette ueber alle Verfahren. Ein neuer
-Encoder heisst jetzt: eine Klasse in src/models/, eine Bauvorschrift hier,
-eine Zeile in _BAUER.
+Ein neuer Encoder heisst: eine Klasse in src/models/, eine Bauvorschrift
+hier, eine Zeile in _BAUER. Abgeleitete Encoder (PCA, Whitening,
+Verkettung) brauchen nichts davon -- sie entstehen aus ihrem source-Block
+in config.yaml ueber derived.py.
 
 Die Importe liegen in den Bauvorschriften, nicht am Dateianfang: jeder
 Encoder zieht sein eigenes Fremd-Repo nach, und wer CLIP rechnet, soll nicht
@@ -96,11 +97,21 @@ _BAUER = {
 
 
 def build_embedder(method, cfg, device, project_root):
+    """Basis-Encoder aus _BAUER; abgeleitete (source/sources) ueber derived.py."""
+    block = cfg["vpr"].get(method)
+    if method not in _BAUER and isinstance(block, dict) and ("source" in block or "sources" in block):
+        from .derived import DerivedEmbedder
+
+        quellen = block.get("sources", [block.get("source")])
+        if any(str(q).startswith("anyloc") for q in quellen):
+            raise ValueError(
+                f"{method!r} baut auf AnyLoc auf; dessen PCA aus 04 liegt nicht neben "
+                "den Embeddings -- fuer ein neues Bild nicht vorfuehrbar."
+            )
+        return DerivedEmbedder(method, cfg, device, project_root)
     if method not in _BAUER:
-        raise ValueError(
-            f"Unbekannter Encoder {method!r}. Bekannt: {sorted(_BAUER)}. "
-            "Abgeleitete Varianten mit source-Eintrag entstehen nicht hier, "
-            "sondern in experiments/pca_reduce.py."
-        )
+        raise ValueError(f"Unbekannter Encoder {method!r}. Bekannt: {sorted(_BAUER)}.")
     model_id = cfg["vpr"]["models"][method]
-    return _BAUER[method](cfg, model_id, device, project_root)
+    embedder = _BAUER[method](cfg, model_id, device, project_root)
+    embedder.name = method
+    return embedder

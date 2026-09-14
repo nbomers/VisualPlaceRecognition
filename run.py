@@ -15,6 +15,7 @@ rechnen dann eine Kombination nach der anderen.
 """
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -32,8 +33,10 @@ BASIS_CFG = yaml.safe_load(CONFIG_ORIGINAL)
 
 sys.path.insert(0, str(ROOT))
 from src.run_guard import (  # noqa: E402
+    code_version,
     embedding_fingerprint,
     require_fingerprint,
+    short_hash,
     validate_config,
 )
 
@@ -119,9 +122,8 @@ def _stages(cfg, method, adapter):
     return [
         ("01_mapillary_coverage.ipynb",
          ROOT / "data" / "processed" / "metadata.parquet", None),
-        # 02 schreibt vier Abbildungen, die letzte davon ist das Kennzeichen.
         ("02_dataset_audit.ipynb",
-         ROOT / "results" / "figures" / "dataset" / "sequence_sizes.png", None),
+         ROOT / "results" / "dataset_audit.json", None),
         # 03 schreibt die Fehlerliste immer, auch wenn sie leer ist.
         ("03_image_download.ipynb",
          ROOT / "data" / "processed" / "failed_image_download.txt", None),
@@ -137,6 +139,24 @@ def _stages(cfg, method, adapter):
     ]
 
 
+def _result_current(ergebnis, treffer, cfg, method, adapter):
+    """Passt eine 07-/08-JSON noch zu Trefferliste und Auswertungscode?"""
+    if not (ergebnis.exists() and treffer.exists()):
+        return False
+    try:
+        json_inhalt = json.loads(ergebnis.read_text())
+    except ValueError:
+        return False
+    if json_inhalt.get("fingerprint_hash") and json_inhalt.get("code_version"):
+        emb = ROOT / "data" / "embeddings" / method
+        name = method if adapter in ("none", "None") else f"{method}_{adapter}"
+        meta = pd.read_parquet(emb / f"{name}_metadata.parquet")
+        erwartet = short_hash(embedding_fingerprint(cfg, method, adapter, meta))
+        return (json_inhalt["fingerprint_hash"] == erwartet
+                and json_inhalt["code_version"].get("evaluation") == code_version(ROOT)["evaluation"])
+    return ergebnis.stat().st_mtime >= treffer.stat().st_mtime
+
+
 def _is_valid(pfad, fingerprint):
     """
     Ist das Artefakt vorhanden UND passt es zur aktuellen config.yaml?
@@ -150,7 +170,8 @@ def _is_valid(pfad, fingerprint):
     try:
         require_fingerprint(pfad, fingerprint(), "")
         return True
-    except Exception:
+    except Exception as e:
+        print(f"  ({pfad.name}: {type(e).__name__}: {str(e).splitlines()[0][:90]})")
         return False
 
 
@@ -204,16 +225,16 @@ def _durchlauf(cfg, method, adapter, args, erledigt):
             print(f"uebersprungen (kein Adapter): {notebook}")
             continue
 
-        # 07 hat keinen Fingerabdruck, seine Auswertung haengt aber allein an
-        # der Retrieval-Datei. Ist sie aelter als das Ergebnis, gibt es nichts
-        # neu zu rechnen.
+        # 07 und 08 schreiben JSONs ohne eigene Sidecar-Datei. Aktuell sind
+        # sie, wenn sie den Fingerabdruck der Trefferliste UND die Kennung
+        # des Auswertungscodes tragen. Aeltere JSONs ohne diese Felder werden
+        # ueber die Dateizeit beurteilt -- bis sie einmal neu gerechnet sind.
         if notebook[:2] in ("07", "08") and not force:
             name = method if adapter in ("none", "None") else f"{method}_{adapter}"
             unterordner = "evaluation" if notebook.startswith("07") else "localization"
             ergebnis = ROOT / "results" / unterordner / f"{name}.json"
             treffer = ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz"
-            if (ergebnis.exists() and treffer.exists()
-                    and ergebnis.stat().st_mtime >= treffer.stat().st_mtime):
+            if _result_current(ergebnis, treffer, cfg, method, adapter):
                 print(f"uebersprungen (aktuell):     {notebook}  ->  {ergebnis.name}")
                 continue
 

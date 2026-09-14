@@ -1,0 +1,104 @@
+{
+  "datum": "2026-09-14",
+  "embedding_name": "megaloc",
+  "threshold_m": 25.0,
+  "n_loesbar": 34112,
+  "recall_1": 0.5683044090056285,
+  "merkmale": [
+    {
+      "merkmal": "Nachbarn im Umkreis",
+      "klassen": [
+        {
+          "klasse": "1-2",
+          "n": 1709,
+          "recall_1": 0.5260386190754828
+        },
+        {
+          "klasse": "3-5",
+          "n": 3508,
+          "recall_1": 0.4814709236031927
+        },
+        {
+          "klasse": "6-10",
+          "n": 3880,
+          "recall_1": 0.5350515463917526
+        },
+        {
+          "klasse": "11-20",
+          "n": 6832,
+          "recall_1": 0.44833138173302106
+        },
+        {
+          "klasse": "21-50",
+          "n": 14056,
+          "recall_1": 0.600597609561753
+        },
+        {
+          "klasse": "51+",
+          "n": 4120,
+          "recall_1": 0.7805825242718447
+        }
+      ]
+    },
+    {
+      "merkmal": "Tage zum naechsten Referenzbild",
+      "klassen": [
+        {
+          "klasse": "0-7",
+          "n": 4688,
+          "recall_1": 0.5750853242320819
+        },
+        {
+          "klasse": "8-30",
+          "n": 3675,
+          "recall_1": 0.8187755102040817
+        },
+        {
+          "klasse": "31-180",
+          "n": 10450,
+          "recall_1": 0.5392344497607655
+        },
+        {
+          "klasse": "181-365",
+          "n": 5769,
+          "recall_1": 0.6117178020454151
+        },
+        {
+          "klasse": "366+",
+          "n": 9366,
+          "recall_1": 0.4725603245782618
+        }
+      ]
+    },
+    {
+      "merkmal": "Nachbar mit passender Blickrichtung",
+      "klassen": [
+        {
+          "klasse": "ja",
+          "n": 29157,
+          "recall_1": 0.6527420516514044
+        },
+        {
+          "klasse": "nein",
+          "n": 4955,
+          "recall_1": 0.07144298688193744
+        }
+      ]
+    },
+    {
+      "merkmal": "Nachbar vom selben Fotografen am selben Tag",
+      "klassen": [
+        {
+          "klasse": "ja",
+          "n": 3164,
+          "recall_1": 0.6902654867256637
+        },
+        {
+          "klasse": "nein",
+          "n": 30948,
+          "recall_1": 0.5558355951919348
+        }
+      ]
+    }
+  ]
+}

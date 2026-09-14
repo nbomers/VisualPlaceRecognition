@@ -6,12 +6,8 @@ torchvision
 jupyterlab
 matplotlib
 osmnx
-open_clip_torch
-faiss-cpu
-umap-learn
-pytorch-metric-learning
 folium
-utm
+faiss-cpu
 geopandas
 shapely
 requests
@@ -31,4 +27,5 @@ gdown
 huggingface_hub
 nbstripout
 ruff
+pytest
 lightglue @ git+https://github.com/cvg/LightGlue.git

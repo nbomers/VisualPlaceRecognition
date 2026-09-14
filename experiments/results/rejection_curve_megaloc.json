@@ -1,0 +1,52 @@
+{
+  "datum": "2026-09-14",
+  "embedding_name": "megaloc",
+  "threshold_m": 25.0,
+  "top_k": 10,
+  "sichten": {
+    "loesbar": {
+      "n": 34112,
+      "praezision_alle": 0.5683044090056285,
+      "aehnlichkeit": {
+        "auc": 0.7911918163054487,
+        "praezision_bei_20": 0.8872929796277297,
+        "praezision_bei_50": 0.7929760787992496,
+        "praezision_bei_80": 0.6890436057163797
+      },
+      "marge": {
+        "auc": 0.7405988744795796,
+        "praezision_bei_20": 0.8601788069764034,
+        "praezision_bei_50": 0.723968105065666,
+        "praezision_bei_80": 0.6176255038475632
+      },
+      "geschlossenheit": {
+        "auc": 0.7061723119383698,
+        "praezision_bei_20": 0.7978894914260589,
+        "praezision_bei_50": 0.7057926829268293,
+        "praezision_bei_80": 0.5965188713814584
+      }
+    },
+    "alle": {
+      "n": 53414,
+      "praezision_alle": 0.3629385554349047,
+      "aehnlichkeit": {
+        "auc": 0.6585262522161295,
+        "praezision_bei_20": 0.8280445567724422,
+        "praezision_bei_50": 0.6730070767963455,
+        "praezision_bei_80": 0.45083309931667137
+      },
+      "marge": {
+        "auc": 0.5802079593564023,
+        "praezision_bei_20": 0.7656089113544884,
+        "praezision_bei_50": 0.5263414086194631,
+        "praezision_bei_80": 0.40990358513526165
+      },
+      "geschlossenheit": {
+        "auc": 0.5561862277918667,
+        "praezision_bei_20": 0.7586820181596929,
+        "praezision_bei_50": 0.4997566181151009,
+        "praezision_bei_80": 0.3948563137695404
+      }
+    }
+  }
+}

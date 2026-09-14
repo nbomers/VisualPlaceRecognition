@@ -1,10 +1,16 @@
 {
-  "datum": "2026-09-12",
+  "datum": "2026-09-14",
   "method": "anyloc_pcaw4096",
   "adapter": "linear",
+  "variant": "linear",
   "embedding_name": "anyloc_pcaw4096_linear",
   "dim": 4096,
   "n_database": 48321,
+  "fingerprint_hash": "c1fcd9c7bf",
+  "code_version": {
+    "commit": "940a0a4",
+    "evaluation": "88519dd711"
+  },
   "auswertungen": {
     "Alle Queries": {
       "n_queries": 53414,

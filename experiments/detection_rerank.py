@@ -26,26 +26,17 @@ import argparse
 import collections
 import json
 import math
-import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import requests
 from tqdm import tqdm
 
-# Liegt in experiments/, die Pipeline eine Ebene darueber.
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from src.config import load_config  # noqa: E402
-from src.geo import haversine_distance  # noqa: E402
-from src.mapillary import get_session, load_token  # noqa: E402
-
-CFG = load_config(ROOT)
+from _common import CFG, ROOT
+from src.geo import haversine_distance
+from src.mapillary import get_session, load_token
 CACHE_PATH = ROOT / "cache" / "detections.jsonl"
 
 # Klassen, die an der Tageszeit haengen und nicht am Ort. Werden in der

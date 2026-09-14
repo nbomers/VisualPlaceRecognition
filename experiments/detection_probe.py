@@ -15,22 +15,14 @@ in detections_probe.json daneben; ein zweiter Aufruf gibt es nur aus.
 import argparse
 import collections
 import json
-import sys
 from pathlib import Path
 
 import pandas as pd
 import requests
 from tqdm import tqdm
 
-# Liegt in experiments/, die Pipeline eine Ebene darueber.
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from src.config import load_config  # noqa: E402
-from src.mapillary import load_token, make_session  # noqa: E402
-
-CFG = load_config(ROOT)
+from _common import CFG, ROOT
+from src.mapillary import load_token, make_session
 PROBE_PATH = Path(__file__).resolve().parent / "detections_probe.json"
 
 
