@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-11",
+  "datum": "2026-09-12",
   "method": "eigenplaces_pca512",
   "adapter": "none",
   "embedding_name": "eigenplaces_pca512",
@@ -68,5 +68,16 @@
       "unter_50m": 0.0,
       "unter_100m": 0.0006365372374283895
     }
+  },
+  "fehlstruktur_top1": {
+    "n_falsch": 37018,
+    "anteil_falsch": 0.693039278091886,
+    "median_m": 1432.0169735047195,
+    "unter_50m": 0.12312928845426549,
+    "unter_100m": 0.1900426819385164,
+    "unter_250m": 0.24566427143551786,
+    "unter_500m": 0.3223296774542115,
+    "unter_1000m": 0.44062348046896105,
+    "unter_2000m": 0.573018531525204
   }
 }
