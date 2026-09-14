@@ -98,27 +98,51 @@ python experiments/pca_reduce.py                    # alle konfigurierten Varian
 python run.py --method derived --adapter all        # dann die Pipeline
 ```
 
-Stand 2026-09-11, R@1 bei 25 m:
+Stand 2026-09-12, alle 34 Zeilen. R@1 bei 25 m, Baselines ohne Adapter:
 
-| Encoder | voll | pca512 | Δ | erklärte Varianz |
+| Encoder | voll | pca512 | pcaw512 | pcaw volle Breite |
 |---|---|---|---|---|
-| clip (512) | 0.073 | 0.074 | +0.001 | 100 % (Kontrolle) |
-| eigenplaces (2048) | 0.484 | 0.481 | −0.003 | 86 % |
-| mixvpr (4096) | 0.426 | 0.408 | −0.018 | 62 % |
-| anyloc (4096) | 0.204 | offen | | |
-| megaloc (8448) | 0.568 | offen | | |
+| clip (512) | 0.073 | 0.074 | **0.105** | — |
+| anyloc (4096) | 0.204 | 0.175 | 0.263 | **0.321** |
+| mixvpr (4096) | 0.426 | 0.408 | 0.424 | — |
+| eigenplaces (2048) | 0.484 | 0.481 | **0.507** | 0.459 |
+| megaloc (8448) | 0.568 | 0.545 | 0.541 | — |
 
-EigenPlaces verliert auf einem Viertel der Breite praktisch nichts;
-`eigenplaces_pca512` schlägt MixVPR mit vollen 4096 Dimensionen. Die
-Rangfolge hängt nicht an der Breite.
+Adapterschaden, also `linear` minus `none`:
 
-**Whitening.** Kontrolle an EigenPlaces auf voller Breite
-(`eigenplaces_pcaw2048`): 0.484 → **0.459**, also −0.025. Bei einem
-VPR-trainierten Encoder schadet Whitening — vermutlich, weil die kleinsten
-Hauptrichtungen auf Varianz 1 hochskaliert werden und dabei Rauschen
-verstärken. Der eigentliche Test ist `anyloc_pcaw4096`: VLAD-Deskriptoren
-sind stark anisotrop, dort sollte Whitening helfen (Jégou & Chum 2012).
-Steht noch aus. Whitening-Zeilen auf 512 und Adapter auf 512 ebenfalls.
+| Encoder | voll | pca512 | pcaw512 | pcaw volle Breite |
+|---|---|---|---|---|
+| clip | +0.050 | +0.047 | +0.009 | — |
+| anyloc | +0.130 | +0.130 | +0.045 | **−0.029** |
+| mixvpr | −0.063 | −0.038 | −0.058 | — |
+| eigenplaces | −0.040 | −0.043 | −0.069 | −0.037 |
+| megaloc | **−0.126** | **−0.127** | **−0.125** | — |
+
+**Drei Befunde.**
+
+1. **Die Rangfolge hängt nicht an der Breite.** Bei 512 gewhitent:
+   megaloc 0.541 > eigenplaces 0.507 > mixvpr 0.424 > anyloc 0.263 >
+   clip 0.105 — dieselbe Reihenfolge wie bei voller Breite. MegaLocs
+   Vorsprung ist Können, nicht Dimension; 8448 → 512 kostet 0.023.
+
+2. **Whitening rettet AnyLoc und hilft CLIP.** AnyLoc +57 % auf voller
+   Breite — VLAD-Deskriptoren sind stark anisotrop (Jégou & Chum 2012),
+   und die Pipeline hatte sie ohne Whitening verglichen. CLIP +44 %. Bei
+   den VPR-trainierten Encodern auf 512 neutral bis leicht positiv
+   (`eigenplaces_pcaw512` schlägt seine eigene 2048er-Baseline), auf voller
+   Breite negativ, weil die kleinsten Hauptrichtungen Rauschen verstärken.
+
+3. **Der Adapterschaden hängt nicht an der Parameterzahl — und der
+   Adaptergewinn war Whitening.** MegaLoc verliert bei 8448 und bei 512
+   dasselbe; die Vermutung „Schaden wächst mit der Dimension" war Zufall.
+   Und nach Whitening ist der Gewinn bei CLIP und AnyLoc fast weg: der
+   Adapter hatte per Gradientenabstieg gelernt, was die geschlossene Formel
+   besser kann. Kernsatz: **ein trainierter linearer Adapter fügt nichts
+   hinzu, was ein festes Whitening nicht schon liefert.**
+
+Konsequenz: Whitening gehört für AnyLoc in `04` (VLAD ohne Whitening ist
+unüblich), nicht als allgemeiner Adapter — bei EigenPlaces auf voller Breite
+schadet es.
 
 ---
 
@@ -139,3 +163,67 @@ python experiments/database_density.py --method eigenplaces
 ```
 
 Ergebnis in `results/database_density_{method}.json` und `.png`.
+
+Whitening **und** Dichte zusammen (`--method eigenplaces_pcaw512` bzw.
+`megaloc_pcaw512`, volle train-Referenz): EigenPlaces **0.715**, MegaLoc
+**0.778**, R@5 0.845. Das sind die höchsten Zahlen im Projekt — ohne ein
+einziges Modell zu ändern.
+
+---
+
+## Recall-Hebel: drei Wege, aus vorhandenen Trefferlisten mehr zu machen
+
+Alle drei bewerten mit `src/evaluation.py`, also exakt wie 07, und erscheinen
+in `compare.py` als eigene Zeilen. Gemessen 2026-09-12 auf `eigenplaces_pcaw512`
+bzw. der Verkettung.
+
+### `concat_embeddings.py` — Deskriptoren verketten
+
+Zwei Encoder aneinanderhängen, neu normalisieren, als abgeleiteter Encoder
+schreiben (`sources:` in der config). Richtet die Quellen über die `image_id`
+aus — auf zwei Rechnern gerechnete Encoder halten dieselben Bilder in
+verschiedener Reihenfolge.
+
+| | Dim | R@1 | R@5 |
+|---|---|---|---|
+| eigenplaces_pcaw512 | 512 | 0.507 | 0.641 |
+| megaloc_pcaw512 | 512 | 0.541 | 0.654 |
+| megaloc (voll) | 8448 | 0.568 | 0.676 |
+| **eigenplaces_megaloc_concat** | **1024** | **0.572** | **0.692** |
+
+Die Verkettung schlägt MegaLoc auf voller Breite bei einem Achtel der
+Dimensionen. **Das ist die Zeile „bestes System, Einzelbild".**
+
+### `sequence_retrieval.py` — Nachbarframes aufsummieren
+
+Trefferlisten der ±W Nachbarn einer Fahrt mit Dreiecksgewicht summieren.
+**Hilft nicht:**
+
+| Fenster | R@1 | R@5 | R@20 |
+|---|---|---|---|
+| einzeln | 0.507 | 0.641 | 0.727 |
+| ±1 | 0.507 | 0.644 | 0.731 |
+| ±3 | 0.498 | 0.645 | 0.736 |
+| ±5 | 0.488 | 0.641 | 0.739 |
+
+Benachbarte Frames sehen dieselbe Straße und machen denselben Fehler; ab ±5
+überspannt das Fenster 33 m, mehr als die 25-m-Schwelle. Sequenzlokalisierung
+setzt unabhängige Fehler voraus — die groben Verwechslungen hier sind
+kohärent. Derselbe Befund wie bei Clustering und Snap in 08.
+
+### `geometric_verification.py` — Top-k lokal nachprüfen
+
+SuperPoint + LightGlue auf die Top-20, RANSAC gegen eine Fundamentalmatrix,
+nach Inliern umsortieren. Der einzige Hebel, der die Fehlerart direkt
+angreift: global ähnliche, lokal verschiedene Orte. Braucht die Bilder und
+eine GPU — 53.414 × 20 Paare, auf der 3070 grob sechs Stunden, auf CPU
+nicht sinnvoll. **Noch nicht gemessen.** Aufruf auf dem GPU-Rechner:
+
+```bash
+python experiments/geometric_verification.py --method eigenplaces_megaloc_concat --n-queries 2000
+python experiments/geometric_verification.py --method eigenplaces_megaloc_concat --n-queries 0   # alle
+```
+
+Erwartung aus der Literatur: +0.05 bis +0.10 R@1. Abhängigkeit:
+`pip install git+https://github.com/cvg/LightGlue.git` (steht in
+`environment.yml`).
