@@ -18,7 +18,15 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-EVAL_DIR = ROOT / "results" / "evaluation"
+
+
+def _paths():
+    from src.config import load_config, paths
+    return paths(load_config(ROOT), ROOT)
+
+
+PATHS = _paths()
+EVAL_DIR = PATHS.evaluation
 
 
 def load(reference="database"):
@@ -40,7 +48,7 @@ def load(reference="database"):
     return sorted(laeufe, key=lambda r: (r["method"], r["variant"] != "none"))
 
 
-FIGURE_DIR = ROOT / "results" / "figures" / "evaluation"
+FIGURE_DIR = PATHS.figures / "evaluation"
 
 
 def _abgeleitet(method):
@@ -64,8 +72,8 @@ def _reihen(laeufe, split, schwelle, k):
     return raus
 
 
-LOC_DIR = ROOT / "results" / "localization"
-CI_DIR = ROOT / "experiments" / "results"
+LOC_DIR = PATHS.localization
+CI_DIR = PATHS.experiments
 
 
 def bootstrap_intervals(args, still=False):

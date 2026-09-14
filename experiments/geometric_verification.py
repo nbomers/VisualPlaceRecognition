@@ -27,14 +27,13 @@ als eigene Zeile nach results/evaluation/ (Variante "gv<k>").
 import argparse
 import json
 import time
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 
-from _common import CFG, RESULTS, ROOT
+from _common import CFG, PATHS, RESULTS, ROOT
 from src.device import pick_device
 from src.evaluation import standard_evaluations, write_evaluation
 from src.retrieval import load_retrieval
@@ -96,9 +95,9 @@ def main():
     method, adapter = args.method, args.adapter
     name = method if adapter in ("none", "None") else f"{method}_{adapter}"
     CFG["vpr"]["method"], CFG["vpr"]["adapter"] = method, adapter
-    image_path = Path(CFG["img_download_path"]).expanduser()
+    image_path = PATHS.images
 
-    emb_dir = ROOT / "data" / "embeddings" / method
+    emb_dir = PATHS.embedding_dir(method)
     query, database, indices, _ = load_retrieval(ROOT, CFG, method, adapter)
     k = min(args.top_k, indices.shape[1])
     dim = int(np.load(emb_dir / f"{name}_embeddings.npy", mmap_mode="r").shape[1])
@@ -192,7 +191,7 @@ def main():
     if voll:
         befunde = standard_evaluations(neu_idx, query, database, CFG, verbose=False)
         variante = f"{adapter}+gv{k}" if adapter not in ("none", "None") else f"gv{k}"
-        pfad = write_evaluation(ROOT / "results" / "evaluation" / f"{name}_gv{k}.json",
+        pfad = write_evaluation(PATHS.evaluation / f"{name}_gv{k}.json",
                                 CFG, f"{name}_gv{k}", dim, len(database), befunde,
                                 variant=variante, fingerprint=fingerprint, root=ROOT,
                                 verification_top_k=k, min_inliers=args.min_inliers)

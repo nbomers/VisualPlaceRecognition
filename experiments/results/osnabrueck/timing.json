@@ -43,6 +43,18 @@
       "dim": 8448,
       "sekunden": 9.580476500006625,
       "bilder_pro_s": 20.875788380657443
+    },
+    "anyloc": {
+      "datum": "2026-09-14",
+      "host": "linux",
+      "device": "cuda",
+      "batch_size": 4,
+      "n_images": 200,
+      "image_size": 322,
+      "hinweis": "ohne PCA-Projektion gemessen",
+      "dim": 49152,
+      "sekunden": 13.698630136986301,
+      "bilder_pro_s": 14.6
     }
   },
   "suche": {

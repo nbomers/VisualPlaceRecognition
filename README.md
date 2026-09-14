@@ -216,7 +216,8 @@ Pipeline rechnet genau diese neu.
 
 | Modul | Zuständigkeit |
 |---|---|
-| `config.py` | Projektwurzel finden, config lesen, `VPR_METHOD`/`VPR_ADAPTER`/`VPR_IMAGE_PATH` aus der Umgebung übernehmen, Embedding-Namen bilden |
+| `config.py` | Projektwurzel finden, config lesen, `VPR_METHOD`/`VPR_ADAPTER` aus der Umgebung übernehmen, Embedding-Namen bilden |
+| `paths.py` | alle Ablageorte für die konfigurierte Stadt — `data/<stadt>`, `results/<stadt>`, Bildordner (`VPR_IMAGE_ROOT`, `VPR_IMAGE_PATH`) |
 | `run_guard.py` | Fingerabdrücke schreiben und prüfen, `validate_config` beim Laden, Code-Kennung für Ergebnis-JSONs |
 | `split.py` | der Sequenz-Split: Listen übernehmen oder mit Seed würfeln |
 | `pairs.py` | Bildpaare aus den Metadaten — Anchor/Positive für 05, Query/Datenbank für 02 |
@@ -267,7 +268,7 @@ Adapter und Whitening reagieren.
 | **Aufnahmejahre** | 2014 bis 2026; 2022 allein 29 %, 2016 ein zweiter Schwerpunkt |
 | **Nähe zur Referenz** | 63,9 % der Anfragen haben ein Datenbankbild im Umkreis von 25 m (Median 22 Nachbarn, Median 107 Tage Abstand); 9,3 % davon eines vom selben Fotografen am selben Tag, 83,3 % eines von einem anderen Fotografen |
 | **Ground Truth** | ein Datenbankbild zählt als richtig, wenn es höchstens 25 m entfernt liegt (Standard); Varianten: anderer Fotograf oder > 180 Tage Abstand („Hard"), Kompassabweichung ≤ 90° („Blickrichtung") |
-| **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `img_download_path` (Standard `~/Downloads/mapillary/osnabrueck`, ein Ordner je Stadt; je Rechner per `VPR_IMAGE_PATH`) und legt daneben `test/` für eigene Fotos an. Metadaten und Split-Listen liegen im Git |
+| **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `image_root/<stadt>` (Standard `~/Downloads/mapillary/osnabrueck`; je Rechner per `VPR_IMAGE_ROOT`) und legt daneben `test/` für eigene Fotos an. Metadaten und Split-Listen liegen im Git |
 | **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,3 GB je Encoder (alle Varianten zusammen 77 GB), Ergebnisse 1,1 GB |
 
 Der Split ist bewusst sparsam auf der Datenbankseite: 15 % der Sequenzen
@@ -313,26 +314,35 @@ Referenz bringen würde. Alle Zahlen dieser Tabelle stehen in
 ├── src/                     # geteilter Code, siehe Konzeptioneller Aufbau
 ├── tests/                   # pytest, ohne Torch
 ├── docs/                    # Arbeitsstand und Auftragsliste
-├── data/
+├── data/<stadt>/            # eine Stadt je Zweig, Slug aus config.yaml -> city
 │   ├── raw/                 # Kachel-Rohdaten aus 01
 │   ├── processed/           # metadata.parquet und Split-Listen (im Git)
 │   └── embeddings/<name>/   # auch die abgeleiteten Varianten, mit <name>_pca.npz
-├── results/
+├── results/<stadt>/
 │   ├── dataset_audit.json   # aus 02                          (im Git)
 │   ├── evaluation/          # Recall-JSONs aus 07             (im Git)
 │   ├── localization/        # Lokalisierungs-JSONs aus 08     (im Git)
 │   ├── retrieval/<name>/    # Trefferlisten je Verfahren
 │   └── figures/             # coverage, dataset, evaluation, localization, demo
+├── experiments/results/<stadt>/   # JSONs und Abbildungen der Experimente (im Git)
 ├── weights/
-│   ├── adapter/             # trainierte Adapter je Encoder
+│   ├── adapter/<stadt>/     # trainierte Adapter je Encoder
 │   └── mixvpr/              # heruntergeladener MixVPR-Checkpoint
-├── cache/                   # OSMnx-Antworten; detections.jsonl im Git
+├── cache/                   # OSMnx-Antworten und detections.jsonl, für alle Städte
 └── external/                # geklonte Fremd-Repos, nicht im Git
 ```
 
+Alle Ablageorte kommen aus `src/paths.py`: `city` in der `config.yaml`
+bestimmt den Slug (`Osnabrück, Germany` → `osnabrueck`), und jede Stadt hat
+ihren eigenen Zweig unter `data/`, `results/`, `experiments/results/` und
+`weights/adapter/`. Eine zweite Stadt heißt: `city` umstellen, 01 und 03
+laufen lassen, dann wie gewohnt — nichts überschreibt die erste. Bilder
+liegen außerhalb des Repos unter `image_root/<stadt>`, eigene Fotos unter
+`image_root/test`.
+
 Im Git liegen neben dem Code die kleinen, versionswürdigen Ergebnisse:
-Metadaten und Split-Listen unter `data/processed/`, die JSONs unter
-`results/` und `experiments/results/`, die Auswertungsabbildungen und der
+Metadaten und Split-Listen, die JSONs unter `results/<stadt>/` und
+`experiments/results/<stadt>/`, die Auswertungsabbildungen und der
 Detection-Cache. Alles Große — Bilder, Embeddings, Trefferlisten, Gewichte,
 Fremd-Repos — entsteht beim Durchlauf neu und wird über Fingerabdrücke
 gegen die `config.yaml` geprüft.
@@ -436,7 +446,8 @@ Die Schlüssel, die man am ehesten anfasst:
 | `vpr.max_heading_diff_deg` | die 90° der Blickrichtungs-Auswertung |
 | `retrieval.top_k`, `k_values`, `thresholds` | wie viele Nachbarn 06 speichert, welche R@k und Schwellen 07 berichtet |
 | `localization.top_k`, `eps_m`, … | Top-k für 08 und die Aggregationsverfahren in `experiments/localization_aggregation.py` |
-| `img_download_path`, `own_images_path` | Bildordner der Stadt und der Ordner für eigene Fotos; je Rechner per `VPR_IMAGE_PATH` überschreibbar, ohne die Datei zu ändern |
+| `city` | Stadt für Kacheln, Stadtgrenze, Stadtteile — und der Slug für alle Ablageorte |
+| `image_root` | Wurzel der Bildordner (`<image_root>/<stadt>`, `<image_root>/test`); je Rechner per `VPR_IMAGE_ROOT` oder `VPR_IMAGE_PATH` überschreibbar |
 
 ## Nutzung
 
@@ -478,7 +489,7 @@ die übrigen nicht mit — am Ende steht, welche gescheitert sind.
 ### Ergebnisse vergleichen
 
 Jeder Durchlauf von 07 legt seine Recall-Tabellen unter
-`results/evaluation/<name>.json` ab. Daraus baut `compare.py` die
+`results/<stadt>/evaluation/<name>.json` ab. Daraus baut `compare.py` die
 Vergleichstabelle über alle Verfahren:
 
 ```bash
@@ -555,7 +566,7 @@ den Sequenz-Split in 01, die fit/val-Aufteilung und das Negative-Sampling
 im Adapter-Training, die Stichproben der PCA-Anpassung, die Zufallsbasis in
 07 und 08, den Bootstrap und die Stichproben aller Experimente.
 
-**Metadaten und Split im Git.** `data/processed/metadata.parquet` (9 MB)
+**Metadaten und Split im Git.** `data/<stadt>/processed/metadata.parquet` (9 MB)
 und die drei Split-Listen liegen versioniert; ein Test rechnet den Split
 aus den Metadaten und dem Seed nach und vergleicht ihn mit den Listen. 01
 läuft nur noch für eine neue Stadt oder einen neuen Split — Mapillary
@@ -690,7 +701,7 @@ Fahrten für beide schwer sind:
 | megaloc → megaloc_linear | −0.126 | [−0.179, −0.073] | ja |
 | clip_pcaw512 → clip_pcaw512_linear | +0.009 | [−0.002, +0.021] | nein |
 
-Alle 35 Paare in `experiments/results/bootstrap_ci.json`.
+Alle 35 Paare in `experiments/results/<stadt>/bootstrap_ci.json`.
 
 ### Lokalisierung — `python compare.py --localization`
 
@@ -756,7 +767,7 @@ Aufnahmen — Blickrichtung (Haste: nur 29 % der lösbaren Anfragen haben einen
 Nachbarn, der in dieselbe Richtung schaut), Jahre Abstand (Hellern), oder
 eine einzelne Fahrt, die ein Wohnviertel mit einem anderen verwechselt
 (Sutthausen: 208 von 414 Anfragen landen in Hellern, 4 km entfernt).
-Karten unter `experiments/results/recall_by_district_*.png`.
+Karten unter `experiments/results/<stadt>/recall_by_district_*.png`.
 
 ### Ablehnung — `experiments/rejection_curve.py`
 
@@ -824,11 +835,12 @@ Anfragen), bei einer Million wäre es eines.
 
 Encodieren (200 Bilder, M1 Pro auf MPS, inklusive Laden und Dekodieren):
 CLIP **145** Bilder/s (224 px), MixVPR **73** (320 px), EigenPlaces
-**33** (512 px), MegaLoc **21** (322 px); AnyLoc nur auf dem GPU-Rechner.
+**33** (512 px), MegaLoc **21** (322 px); AnyLoc **15** auf der RTX 3070
+(fp16, Batch 4 — auf dem Mac nicht praktikabel).
 Der Durchsatz hängt am Rückgrat und der Eingabegröße, nicht an der PCA —
 `eigenplaces_pcaw512` encodiert genauso schnell wie `eigenplaces`. Für
 332.868 Bilder heißt das auf dem Mac: CLIP 40 Minuten, MixVPR 75 Minuten,
-EigenPlaces 2,8 Stunden, MegaLoc 4,4 Stunden.
+EigenPlaces 2,8 Stunden, MegaLoc 4,4 Stunden; AnyLoc 6,3 Stunden auf der GPU.
 
 ### Abbildungen
 
@@ -848,13 +860,13 @@ Tabelle, in `04` eingebaut ist sie nicht, und für ein neues Bild ist
 AnyLoc nicht vorführbar, weil seine PCA aus 04 nicht neben den Embeddings
 liegt.
 
-**Eine zweite Stadt.** Die Pipeline kennt nur eine Stadt je Checkout
-(`data/processed/`, `data/embeddings/` ohne Stadt-Dimension). Für einen
-Generalisierungstest wäre ein zweiter Klon mit anderer `city` der
-schnellste Weg; ein Encoder auf einer Stadt von Osnabrücks Größe kostet auf
-dem M1 Pro eine Nacht (04) plus Minuten (06–08). Auf Mapillary dichter
-erschlossen als Osnabrück (2.808 Bilder/km²) sind etwa Erlangen (7.943),
-Mainz (6.593), Jena (6.113), Würzburg (4.895) und Heidelberg (4.879);
+**Eine zweite Stadt.** Seit `src/paths.py` hat jede Stadt ihren eigenen
+Zweig in `data/`, `results/` und `experiments/results/`: `city` umstellen,
+01 und 03 laufen lassen, dann die Pipeline wie gewohnt. Ein Encoder auf
+einer Stadt von Osnabrücks Größe kostet auf dem M1 Pro eine Nacht (04) plus
+Minuten (06–08). Auf Mapillary dichter erschlossen als Osnabrück (2.808
+Bilder/km²) sind etwa Erlangen (7.943), Mainz (6.593), Jena (6.113),
+Würzburg (4.895) und Heidelberg (4.879);
 Bamberg (25.248/km², 1,38 Mio. Bilder auf 55 km²) ist ein Sonderfall.
 
 **Nächster Schritt mit mehr Zeit.** Die geometrische Verifikation

@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
 
-from _common import CFG, RESULTS, ROOT
+from _common import CFG, PATHS, RESULTS, ROOT
 from src.districts import assign_district, load_districts
 from src.retrieval import hits_at_k, load_retrieval, localizable
 
@@ -131,7 +131,7 @@ def main():
     loesbar = localizable(query, database, args.threshold, 256)
     hits = hits_at_k(query, database, indices, loesbar, args.threshold, k_values)
 
-    districts, city_polygon, _ = load_districts(CFG, ROOT / "cache")
+    districts, city_polygon, _ = load_districts(CFG, PATHS.cache)
     zeilen = district_table(query, database, districts, loesbar, hits, k_values)
 
     # Haengt R@1 an der Dichte? Rangkorrelation ueber die Stadtteile mit

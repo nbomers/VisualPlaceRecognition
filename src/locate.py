@@ -27,6 +27,7 @@ import pandas as pd
 from .config import embedding_name
 from .device import pick_device
 from .geo import haversine_distance
+from .paths import Paths
 from .run_guard import embedding_fingerprint, require_fingerprint
 
 
@@ -41,6 +42,7 @@ class Locator:
         self.adapter = self.cfg["vpr"].get("adapter", "none")
         self.name = embedding_name(self.cfg)
         self.root = Path(project_root)
+        self.paths = Paths(self.cfg, self.root)
         self.device = pick_device(device)
         self.verbose = verbose
         self._embedder = None
@@ -53,9 +55,8 @@ class Locator:
     def _load_database(self):
         import faiss
 
-        emb_dir = self.root / "data" / "embeddings" / self.method
-        meta = pd.read_parquet(emb_dir / f"{self.name}_metadata.parquet")
-        npy = emb_dir / f"{self.name}_embeddings.npy"
+        meta = pd.read_parquet(self.paths.metadata_file(self.name, self.method))
+        npy = self.paths.embedding_file(self.name, self.method)
         require_fingerprint(npy, embedding_fingerprint(self.cfg, self.method, self.adapter, meta),
                             "Embeddings")
         zeilen = np.flatnonzero((meta["split"] == "database").to_numpy())
@@ -86,7 +87,7 @@ class Locator:
 
             from .models.adapter import LinearAdapter
 
-            pfad = self.root / "weights" / "adapter" / f"{self.method}_linear.pt"
+            pfad = self.paths.adapter_file(self.method)
             self._adapter = LinearAdapter(embedding_dim=self.dim).to(self.device).eval()
             self._adapter.load_state_dict(torch.load(pfad, map_location=self.device))
             if self.verbose:

@@ -1,5 +1,6 @@
 {
   "datum": "2026-09-14",
+  "reference": "database",
   "split": "Alle Queries",
   "threshold_m": 25.0,
   "n_bootstrap": 1000,
@@ -770,6 +771,51 @@
           ],
           "halbbreite": 0.07410551277869876,
           "halbbreite_naiv": 0.0044689667246112135
+        }
+      }
+    },
+    "eigenplaces_megaloc_concat_linear": {
+      "method": "eigenplaces_megaloc_concat",
+      "adapter": "linear",
+      "variant": "linear",
+      "dim": 1024,
+      "n_loesbar": 34112,
+      "recall": {
+        "1": {
+          "wert": 0.47886374296435275,
+          "ci": [
+            0.39984958564532525,
+            0.5632882625358878
+          ],
+          "halbbreite": 0.08171933844528129,
+          "halbbreite_naiv": 0.005301321005993496
+        },
+        "5": {
+          "wert": 0.6177298311444653,
+          "ci": [
+            0.5389619476556886,
+            0.7021494471573576
+          ],
+          "halbbreite": 0.0815937497508345,
+          "halbbreite_naiv": 0.005156879356486887
+        },
+        "10": {
+          "wert": 0.6652204502814258,
+          "ci": [
+            0.5881926931989154,
+            0.7374434807961814
+          ],
+          "halbbreite": 0.07462539379863298,
+          "halbbreite_naiv": 0.005008004797499634
+        },
+        "20": {
+          "wert": 0.7138543621013134,
+          "ci": [
+            0.6283766331908827,
+            0.7818590825642053
+          ],
+          "halbbreite": 0.07674122468666134,
+          "halbbreite_naiv": 0.004796239413054276
         }
       }
     },
@@ -2981,6 +3027,58 @@
         0.03757070393007689
       ],
       "schliesst_null_ein": true
+    },
+    {
+      "a": "eigenplaces_megaloc_concat",
+      "b": "eigenplaces_megaloc_concat_linear",
+      "k": 1,
+      "recall_a": 0.5724671669793621,
+      "recall_b": 0.47886374296435275,
+      "differenz": -0.09360342401500932,
+      "ci": [
+        -0.12084547606232282,
+        -0.07047896337794
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_megaloc_concat",
+      "b": "eigenplaces_megaloc_concat_linear",
+      "k": 5,
+      "recall_a": 0.6921318011257036,
+      "recall_b": 0.6177298311444653,
+      "differenz": -0.07440196998123827,
+      "ci": [
+        -0.10581711273930426,
+        -0.04243891441162192
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_megaloc_concat",
+      "b": "eigenplaces_megaloc_concat_linear",
+      "k": 10,
+      "recall_a": 0.7298311444652908,
+      "recall_b": 0.6652204502814258,
+      "differenz": -0.064610694183865,
+      "ci": [
+        -0.09428786329178046,
+        -0.036259299038603456
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_megaloc_concat",
+      "b": "eigenplaces_megaloc_concat_linear",
+      "k": 20,
+      "recall_a": 0.7695532363977486,
+      "recall_b": 0.7138543621013134,
+      "differenz": -0.055698874296435275,
+      "ci": [
+        -0.08237528349783688,
+        -0.029127488913028955
+      ],
+      "schliesst_null_ein": false
     },
     {
       "a": "eigenplaces_pca512",

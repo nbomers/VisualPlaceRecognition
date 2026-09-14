@@ -12,7 +12,9 @@ Bootstrap in einem Notebook -- vier Zeilen, mehr braucht es nicht:
     PROJECT_ROOT = next(d for d in (Path.cwd(), *Path.cwd().parents)
                         if (d / "config.yaml").exists())
     sys.path.insert(0, str(PROJECT_ROOT))
-    from src.config import load_config, embedding_name
+    from src.config import load_config, paths
+    CFG = load_config(PROJECT_ROOT)
+    PATHS = paths(CFG, PROJECT_ROOT)
 """
 
 import os
@@ -44,11 +46,14 @@ def load_config(root=None):
     cfg["vpr"]["adapter"] = os.environ.get(
         "VPR_ADAPTER", cfg["vpr"].get("adapter", "none")
     )
-    # Der Bildordner ist der einzige Pfad, der je Rechner anders liegt --
-    # ueber die Umgebung setzbar, statt die versionierte Datei zu aendern.
-    cfg["img_download_path"] = os.environ.get("VPR_IMAGE_PATH", cfg["img_download_path"])
-    cfg.setdefault("own_images_path", str(Path(cfg["img_download_path"]).parent / "test"))
     return cfg
+
+
+def paths(cfg, root=None):
+    """Alle Ablageorte fuer die konfigurierte Stadt -- siehe src/paths.py."""
+    from .paths import Paths
+
+    return Paths(cfg, Path(root) if root else find_project_root())
 
 
 def embedding_name(cfg):

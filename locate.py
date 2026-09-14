@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
-from src.config import load_config  # noqa: E402
+from src.config import load_config, paths  # noqa: E402
 from src.locate import Locator  # noqa: E402
 
 
@@ -45,7 +45,7 @@ def main():
         else:
             bilder.append(str(pfad))
     if not bilder:
-        raise SystemExit(f"Keine Bilder in {args.bild} -- Standardordner: {cfg['own_images_path']}")
+        raise SystemExit(f"Keine Bilder in {args.bild} -- Standardordner: {paths(cfg, ROOT).own_images}")
     locator = Locator(cfg, ROOT, args.method, args.adapter, verbose=not args.json)
     antworten = {}
     for bild in bilder:

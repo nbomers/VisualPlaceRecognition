@@ -32,6 +32,7 @@ CONFIG_ORIGINAL = CONFIG_PATH.read_text()
 BASIS_CFG = yaml.safe_load(CONFIG_ORIGINAL)
 
 sys.path.insert(0, str(ROOT))
+from src.config import paths  # noqa: E402
 from src.run_guard import (  # noqa: E402
     code_version,
     embedding_fingerprint,
@@ -105,7 +106,8 @@ def _liste(wert, alle, standard, abgeleitet=()):
 
 
 def _stages(cfg, method, adapter):
-    emb = ROOT / "data" / "embeddings" / method
+    p = paths(cfg, ROOT)
+    emb = p.embedding_dir(method)
     name = method if adapter in ("none", "None") else f"{method}_{adapter}"
 
     def gate(dateiname, variante):
@@ -121,18 +123,18 @@ def _stages(cfg, method, adapter):
     # passt. Ohne Fingerabdruck zaehlt nur die Existenz.
     return [
         ("01_mapillary_coverage.ipynb",
-         ROOT / "data" / "processed" / "metadata.parquet", None),
+         p.processed / "metadata.parquet", None),
         ("02_dataset_audit.ipynb",
-         ROOT / "results" / "dataset_audit.json", None),
+         p.dataset_audit, None),
         # 03 schreibt die Fehlerliste immer, auch wenn sie leer ist.
         ("03_image_download.ipynb",
-         ROOT / "data" / "processed" / "failed_image_download.txt", None),
+         p.processed / "failed_image_download.txt", None),
         ("04_embeddings.ipynb",
          emb / f"{method}_embeddings.npy", gate(method, "none")),
         ("05_adapter.ipynb",
          emb / f"{method}_linear_embeddings.npy", gate(f"{method}_linear", "linear")),
         ("06_retrieval.ipynb",
-         ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz",
+         p.retrieval_file(name, method),
          gate(name, adapter if adapter not in ("none", "None") else "none")),
         ("07_evaluation.ipynb", None, None),
         ("08_localization.ipynb", None, None),
@@ -148,9 +150,8 @@ def _result_current(ergebnis, treffer, cfg, method, adapter):
     except ValueError:
         return False
     if json_inhalt.get("fingerprint_hash") and json_inhalt.get("code_version"):
-        emb = ROOT / "data" / "embeddings" / method
         name = method if adapter in ("none", "None") else f"{method}_{adapter}"
-        meta = pd.read_parquet(emb / f"{name}_metadata.parquet")
+        meta = pd.read_parquet(paths(cfg, ROOT).metadata_file(name, method))
         erwartet = short_hash(embedding_fingerprint(cfg, method, adapter, meta))
         return (json_inhalt["fingerprint_hash"] == erwartet
                 and json_inhalt["code_version"].get("evaluation") == code_version(ROOT)["evaluation"])
@@ -231,9 +232,9 @@ def _durchlauf(cfg, method, adapter, args, erledigt):
         # ueber die Dateizeit beurteilt -- bis sie einmal neu gerechnet sind.
         if notebook[:2] in ("07", "08") and not force:
             name = method if adapter in ("none", "None") else f"{method}_{adapter}"
-            unterordner = "evaluation" if notebook.startswith("07") else "localization"
-            ergebnis = ROOT / "results" / unterordner / f"{name}.json"
-            treffer = ROOT / "results" / "retrieval" / method / f"{name}_retrieval.npz"
+            p = paths(cfg, ROOT)
+            ergebnis = (p.evaluation if notebook.startswith("07") else p.localization) / f"{name}.json"
+            treffer = p.retrieval_file(name, method)
             if _result_current(ergebnis, treffer, cfg, method, adapter):
                 print(f"uebersprungen (aktuell):     {notebook}  ->  {ergebnis.name}")
                 continue

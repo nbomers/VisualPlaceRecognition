@@ -6,10 +6,10 @@
   "embedding_name": "eigenplaces_pcaw512_seq3",
   "dim": 512,
   "n_database": 48321,
-  "fingerprint_hash": null,
+  "fingerprint_hash": "673193ff23",
   "code_version": {
-    "commit": "940a0a4",
-    "evaluation": "21c96771e7"
+    "commit": "eefc8a8",
+    "evaluation": "88519dd711"
   },
   "sequence_window": 3,
   "sequence_weighting": "dreieck",

@@ -30,7 +30,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
-from _common import CFG, ROOT
+from _common import CFG, PATHS, ROOT
 from src.evaluation import standard_evaluations, write_evaluation
 from src.retrieval import aggregate_sequence, load_retrieval, sequence_windows
 from src.run_guard import embedding_fingerprint
@@ -57,7 +57,7 @@ def main():
 
     query, database, indices, similarities = load_retrieval(ROOT, CFG, method, adapter)
     top_k = indices.shape[1]
-    emb_dir = ROOT / "data" / "embeddings" / method
+    emb_dir = PATHS.embedding_dir(method)
     dim = int(np.load(emb_dir / f"{name}_embeddings.npy", mmap_mode="r").shape[1])
     fingerprint = embedding_fingerprint(
         CFG, method, adapter, pd.read_parquet(emb_dir / f"{name}_metadata.parquet"))
@@ -82,7 +82,7 @@ def main():
         # der Spalte "Variante" neben none und linear.
         variante = f"{adapter}+seq{w}" if adapter not in ("none", "None") else f"seq{w}"
         pfad = write_evaluation(
-            ROOT / "results" / "evaluation" / f"{name}_seq{w}.json",
+            PATHS.evaluation / f"{name}_seq{w}.json",
             CFG, f"{name}_seq{w}", dim, len(database), befunde,
             variant=variante, fingerprint=fingerprint, root=ROOT,
             sequence_window=w, sequence_weighting="dreieck",

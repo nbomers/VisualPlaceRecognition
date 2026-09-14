@@ -34,10 +34,10 @@ import pandas as pd
 import requests
 from tqdm import tqdm
 
-from _common import CFG, ROOT
+from _common import CFG, PATHS, ROOT
 from src.geo import haversine_distance
 from src.mapillary import get_session, load_token
-CACHE_PATH = ROOT / "cache" / "detections.jsonl"
+CACHE_PATH = PATHS.cache / "detections.jsonl"
 
 # Klassen, die an der Tageszeit haengen und nicht am Ort. Werden in der
 # zweiten Variante ausgeblendet, um ihren Anteil am Ergebnis zu zeigen.
@@ -215,10 +215,8 @@ def main():
     name = args.method if args.adapter in ("none", "None") \
         else f"{args.method}_{args.adapter}"
 
-    metadata_path = (ROOT / "data" / "embeddings" / args.method
-                     / f"{name}_metadata.parquet")
-    retrieval_path = (ROOT / "results" / "retrieval" / args.method
-                      / f"{name}_retrieval.npz")
+    metadata_path = PATHS.metadata_file(name, args.method)
+    retrieval_path = PATHS.retrieval_file(name, args.method)
     for p in (metadata_path, retrieval_path):
         if not p.exists():
             raise SystemExit(f"Fehlt: {p.relative_to(ROOT)}")

@@ -32,10 +32,10 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from _common import CFG, RESULTS, ROOT
+from _common import CFG, PATHS, RESULTS, ROOT
 from src.retrieval import hits_at_k, load_retrieval, localizable
 
-EVAL_DIR = ROOT / "results" / "evaluation"
+EVAL_DIR = PATHS.evaluation
 OUT = RESULTS / "bootstrap_ci.json"
 SPLIT = "Alle Queries"
 

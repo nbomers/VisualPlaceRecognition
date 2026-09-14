@@ -39,9 +39,10 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 
-from _common import CFG, ROOT
+from _common import CFG, PATHS, ROOT
 from src.run_guard import embedding_fingerprint, write_fingerprint
-EMBEDDING_ROOT = ROOT / "data" / "embeddings"
+
+EMBEDDING_ROOT = PATHS.embeddings
 
 # Blockweise transformieren: MegaLoc sind 332.867 x 8448 float32, also
 # 11,2 GB. Vollstaendig laden waere auf 16 GB nicht drin.

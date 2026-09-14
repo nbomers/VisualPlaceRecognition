@@ -27,7 +27,7 @@ import pandas as pd
 from scipy.spatial import cKDTree
 from tqdm import tqdm
 
-from _common import CFG, RESULTS, ROOT
+from _common import CFG, PATHS, RESULTS, ROOT
 from src.geo import haversine_distance
 
 OUT_DIR = RESULTS
@@ -60,7 +60,7 @@ def main():
     if "_linear" in method:
         raise SystemExit("Nur Baselines: der Adapter wurde auf train trainiert.")
 
-    emb_dir = ROOT / "data" / "embeddings" / method
+    emb_dir = PATHS.embedding_dir(method)
     emb_path = emb_dir / f"{method}_embeddings.npy"
     meta_path = emb_dir / f"{method}_metadata.parquet"
     for p in (emb_path, meta_path):

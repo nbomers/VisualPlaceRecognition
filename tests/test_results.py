@@ -8,9 +8,12 @@ from pathlib import Path
 
 import pytest
 
+from src.config import load_config, paths  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
-EVAL = ROOT / "results" / "evaluation"
-BOOT = ROOT / "experiments" / "results" / "bootstrap_ci.json"
+PATHS = paths(load_config(ROOT), ROOT)
+EVAL = PATHS.evaluation
+BOOT = PATHS.experiments / "bootstrap_ci.json"
 
 
 def _laeufe():

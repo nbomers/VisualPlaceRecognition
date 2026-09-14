@@ -38,11 +38,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from _common import CFG, RESULTS, ROOT
+from _common import CFG, PATHS, RESULTS, ROOT
 from src.device import pick_device
 
 OUT = RESULTS / "timing.json"
-EMB_DIR = ROOT / "data" / "embeddings"
+EMB_DIR = PATHS.embeddings
 BASIS = ("clip", "anyloc", "mixvpr", "eigenplaces", "megaloc")
 
 
@@ -74,12 +74,11 @@ def _stamp():
 
 def sample_images(n_images, n_warmup):
     """Feste Bilder aus dem Query-Split -- auf jedem Rechner dieselben."""
-    meta = pd.read_parquet(ROOT / "data" / "processed" / "metadata.parquet")
+    meta = pd.read_parquet(PATHS.processed / "metadata.parquet")
     ids = np.sort(meta.loc[meta["split"] == "query", "image_id"].to_numpy())
     rng = np.random.default_rng(int(CFG["vpr"]["split_seed"]))
     gewaehlt = rng.choice(ids, size=n_images + n_warmup, replace=False)
-    ordner = Path(CFG["img_download_path"]).expanduser()
-    pfade = [ordner / f"{i}.jpg" for i in gewaehlt]
+    pfade = [PATHS.image_file(i) for i in gewaehlt]
     return pfade[:n_images], pfade[n_images:]
 
 

@@ -209,6 +209,8 @@ def _diff(stored, current, prefix=""):
 # config.yaml aelter als der Code -- meist ein Rechner, der den Commit der
 # Config nicht mitbekommen hat.
 _PFLICHT = (
+    "city",
+    "image_root",
     "tile_workers",
     "download_workers",
     "download_image_size",

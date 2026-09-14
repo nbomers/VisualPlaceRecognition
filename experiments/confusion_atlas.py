@@ -28,7 +28,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from _common import CFG, RESULTS, ROOT
+from _common import CFG, PATHS, RESULTS, ROOT
 from src.districts import assign_district, load_districts
 from src.geo import haversine_distance
 from src.retrieval import load_retrieval, localizable
@@ -172,7 +172,7 @@ def main():
     fehler = haversine_distance(q_lat, q_lon, t_lat, t_lon)
     falsch = np.flatnonzero(loesbar & (fehler > args.threshold))
 
-    districts, city_polygon, _ = load_districts(CFG, ROOT / "cache")
+    districts, city_polygon, _ = load_districts(CFG, PATHS.cache)
     von = assign_district(q_lat[falsch], q_lon[falsch], districts)
     nach = assign_district(t_lat[falsch], t_lon[falsch], districts)
     paare, df = confusion_pairs(von, nach, fehler[falsch], args.n_pairs)
