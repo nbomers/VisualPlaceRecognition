@@ -8,6 +8,7 @@ Skript liest sie und druckt die Vergleichstabelle.
     python compare.py --threshold 5        # andere Schwelle
     python compare.py --split "Hard: anderer creator_id ODER > 180 Tage Abstand"
     python compare.py --list               # welche Auswertungen liegen vor
+    python compare.py --localization       # 08: Koordinate statt Trefferliste
 """
 
 import argparse
@@ -38,7 +39,7 @@ def _abgeleitet(method):
     anderen gerechnet -- die PCA- und Whitening-Varianten."""
     from src.config import load_config
     block = load_config(ROOT)["vpr"].get(method)
-    return isinstance(block, dict) and "source" in block
+    return isinstance(block, dict) and ("source" in block or "sources" in block)
 
 
 def _reihen(laeufe, split, schwelle, k):
@@ -52,6 +53,65 @@ def _reihen(laeufe, split, schwelle, k):
         if wert is not None:
             raus.append((r["method"], int(r["dim"]), r["adapter"], float(wert)))
     return raus
+
+
+LOC_DIR = ROOT / "results" / "localization"
+
+
+def localization_table(args):
+    """
+    08 macht aus der Trefferliste eine Koordinate -- auf drei Wegen. Hier
+    steht je Encoder, welcher Weg wie oft unter der Schwelle landet und wie
+    weit der Median danebenliegt. Bezogen auf ALLE Anfragen, nicht nur die
+    loesbaren: eine Koordinate wird immer geschaetzt.
+    """
+    if not LOC_DIR.exists():
+        raise SystemExit(f"Keine Lokalisierung in {LOC_DIR.relative_to(ROOT)}. 08 laufen lassen.")
+    laeufe = [json.loads(p.read_text()) for p in sorted(LOC_DIR.glob("*.json"))]
+    laeufe = [r for r in laeufe if "verfahren" in r]
+    if not args.derived:
+        laeufe = [r for r in laeufe if not _abgeleitet(r["method"])]
+    laeufe.sort(key=lambda r: (r["method"], r["adapter"] != "none"))
+    if not laeufe:
+        raise SystemExit("Keine Lokalisierungsergebnisse.")
+
+    schluessel = f"unter_{args.threshold}m"
+    # Alle Verfahren, die 08 geschrieben hat -- die zwei Vergleichswerte
+    # (Zufall, Stadtmitte) kommen als Fussnote.
+    vergleich = ("Zufaelliges DB-Bild", "Stadtmittelpunkt")
+    wege = []
+    for r in laeufe:
+        for w in r["verfahren"]:
+            if w not in vergleich and w not in wege:
+                wege.append(w)
+    kurz = {"Top-1": "Top-1", "Schwerpunkt (roh)": "Schwp roh",
+            "Schwerpunkt (gespreizt)": "Schwerp.", "Clustering": "Cluster",
+            "Snap (bester Treffer der Gruppe)": "Snap",
+            "Gated (Gruppe nur bei Einigkeit)": "Gated"}
+    namen = [kurz.get(w, w[:9]) for w in wege]
+    breite = max(14, max(len(r["embedding_name"]) for r in laeufe) + 2)
+
+    print(f"Lokalisierung  |  Anteil unter {args.threshold} m  |  "
+          f"{laeufe[0]['n_queries']:,} Anfragen, Top-{laeufe[0]['top_k']} je Anfrage")
+    print("Median des Fehlers in Klammern.\n")
+    kopf = f"{'Encoder':<{breite}}" + "".join(f"{n:>17}" for n in namen)
+    print(kopf)
+    print("-" * len(kopf))
+    for r in laeufe:
+        v = r["verfahren"]
+        zellen = []
+        for w in wege:
+            e = v.get(w)
+            zellen.append(f"{e[schluessel]:>6.3f} ({e['median_m']:>6,.0f} m)"
+                          if e and schluessel in e else f"{'-':>17}")
+        print(f"{r['embedding_name']:<{breite}}" + "".join(f"{z:>17}" for z in zellen))
+    z = laeufe[0]["verfahren"].get("Zufaelliges DB-Bild")
+    if z and schluessel in z:
+        print("-" * len(kopf))
+        print(f"{'Zufall (DB-Bild)':<{breite}}{z[schluessel]:>6.3f} ({z['median_m']:>6,.0f} m)")
+    print()
+    print("Lesart: liegt Top-1 vorn, sind die Nachbartreffer zu oft falsch, als")
+    print("dass Mitteln oder Clustern helfen koennte.")
 
 
 def plot(laeufe, args):
@@ -72,7 +132,9 @@ def plot(laeufe, args):
     # ------------------------------------------------------------------
     reihen = _reihen(laeufe, split, schwelle, 1)
     basis = {n: (d, v) for n, d, a, v in reihen if a in ("none", "None")}
-    adapt = {n: v for n, d, a, v in reihen if a not in ("none", "None")}
+    # Nur der trainierte Adapter ist der Partner in dieser Abbildung --
+    # Sequenz- und Verifikationsvarianten stehen in der Tabelle, nicht hier.
+    adapt = {n: v for n, d, a, v in reihen if a == "linear"}
     encoder = sorted(basis, key=lambda n: (basis[n][0], n))
 
     if encoder:
@@ -212,11 +274,18 @@ def main():
     ap.add_argument("--plot", action="store_true",
                     help="Vergleichsabbildungen nach results/figures/evaluation/ "
                          "schreiben, sonst nichts")
+    ap.add_argument("--localization", action="store_true",
+                    help="Statt Recall die Lokalisierung aus 08 vergleichen: "
+                         "Anteil unter --threshold Metern und Median je Verfahren")
     ap.add_argument("--derived", action="store_true",
                     help="Auch die abgeleiteten Varianten (PCA, Whitening) in die "
                          "Abbildungen -- standardmaessig nur die echten Encoder, "
                          "sonst ist die Adapter-Abbildung nicht mehr lesbar")
     args = ap.parse_args()
+
+    if args.localization:
+        localization_table(args)
+        return
 
     laeufe = load()
     if not laeufe:
@@ -261,7 +330,7 @@ def main():
     # Spaltenbreite am laengsten Namen ausrichten -- die PCA-Varianten sind
     # laenger als die urspruenglichen Encoder.
     breite = max(14, max(len(r["method"]) for r, _ in zeilen) + 2)
-    kopf = f"{'Encoder':<{breite}}{'Adapter':<10}{'Dim':>6}   " + "".join(f"{'R@'+k:>8}" for k in ks)
+    kopf = f"{'Encoder':<{breite}}{'Variante':<10}{'Dim':>6}   " + "".join(f"{'R@'+k:>8}" for k in ks)
     print(kopf)
     print("-" * len(kopf))
     for r, eintrag in zeilen:
