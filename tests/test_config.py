@@ -46,3 +46,37 @@ def test_abgeleitete_bloecke_vollstaendig(cfg):
     for name, block in cfg["vpr"].items():
         if isinstance(block, dict) and "source" in block:
             assert {"source", "pca_dim", "fit_images", "whiten"} <= set(block), name
+
+
+# ----------------------------------------------------------------------
+# Umgebung sticht Datei
+#
+# Die Notebooks lesen config.yaml bei jeder Zellenausfuehrung neu. Die Datei
+# mittendrin umzustellen wuerde einem laufenden run.py die Stadt unter den
+# Fuessen wechseln -- deshalb geht eine zweite Stadt ueber die Umgebung.
+# ----------------------------------------------------------------------
+
+def test_vpr_city_sticht_die_datei(monkeypatch):
+    from src.config import paths
+
+    monkeypatch.setenv("VPR_CITY", "Würzburg, Germany")
+    cfg = load_config(ROOT)
+    assert cfg["city"] == "Würzburg, Germany"
+    assert paths(cfg, ROOT).city == "wuerzburg"
+    assert paths(cfg, ROOT).processed == ROOT / "data" / "wuerzburg" / "processed"
+
+
+def test_ohne_vpr_city_gilt_die_datei(monkeypatch):
+    from src.config import paths
+
+    monkeypatch.delenv("VPR_CITY", raising=False)
+    assert paths(load_config(ROOT), ROOT).city == "osnabrueck"
+
+
+def test_umgebung_aendert_die_datei_nicht(monkeypatch):
+    """Die versionierte Datei bleibt, wie sie ist -- das war der ganze Punkt."""
+    vorher = (ROOT / "config.yaml").read_text()
+    monkeypatch.setenv("VPR_CITY", "Jena, Germany")
+    monkeypatch.setenv("VPR_METHOD", "clip")
+    load_config(ROOT)
+    assert (ROOT / "config.yaml").read_text() == vorher
