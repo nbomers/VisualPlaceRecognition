@@ -107,11 +107,20 @@ def px2deg(tx, ty, px, py, extent, zoom):
 
 
 def load_tile(session, token, zoom, tx, ty):
-    """Alle Bildpunkte einer Kachel als Liste von dicts (lon, lat, Metadaten)."""
+    """
+    Alle Bildpunkte einer Kachel als Liste von dicts (lon, lat, Metadaten).
+
+    Eine Kachel ohne Inhalt ist kein Fehler: Mapillary antwortet darauf mal
+    mit einer leeren Kachel, mal mit 404. Beides ergibt hier [] -- sonst
+    zaehlt eine Stadt mit Wasser- oder Waldkacheln lauter "gescheiterte"
+    Kacheln, die in Wahrheit nur leer sind.
+    """
     import mapbox_vector_tile  # nur hier gebraucht
 
     r = session.get(TILE_URL.format(z=zoom, x=tx, y=ty),
                     params={"access_token": token}, timeout=60)
+    if r.status_code == 404:
+        return []
     r.raise_for_status()
     layer = mapbox_vector_tile.decode(r.content).get("image")
     if layer is None:

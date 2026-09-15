@@ -29,14 +29,18 @@ import pandas as pd
 from scipy.spatial import cKDTree
 from shapely.geometry import LineString, Point
 
-from _common import PATHS, ROOT
+from _common import CFG, PATHS, ROOT
 from src.districts import city_boundary
 from src.mapillary import load_tile, load_token, make_session, tiles_for_bounds
 
+# Stadtuebergreifend, deshalb bewusst NICHT unter experiments/results/<stadt>.
 OUT = ROOT / "experiments" / "results" / "city_coverage.json"
-ZOOM = 14
-RADIUS_M = 25.0
-SCHRITT_M = 25.0
+
+# Aus der config, damit hier nicht zum zweiten Mal steht, was 01 und die
+# Auswertung schon festlegen.
+ZOOM = int(CFG["zoom"])
+RADIUS_M = float(CFG["vpr"]["uncertain_radius_m"])
+SCHRITT_M = RADIUS_M
 GROSS = {"motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
          "secondary", "secondary_link"}
 KLEIN = {"tertiary", "tertiary_link", "residential", "living_street", "unclassified"}
@@ -59,11 +63,9 @@ def image_points(polygon, token):
     def eine(t):
         s = make_session(8)
         try:
+            # Leere Kacheln (auch die, die Mapillary mit 404 beantwortet)
+            # kommen als [] zurueck -- siehe src/mapillary.load_tile.
             return load_tile(s, token, ZOOM, *t)
-        except Exception as e:
-            if "404" in str(e):
-                return []                       # Kachel ohne Inhalt
-            raise
         finally:
             s.close()
 
@@ -112,6 +114,7 @@ def survey(name, token, tiles_only=False):
         "abdeckung_gesamt": round(sum(gedeckt.values()) / ges, 3) if ges else None,
         "abdeckung_grosse_strassen": round(gedeckt["gross"] / laenge["gross"], 3) if laenge["gross"] else None,
         "abdeckung_wohnstrassen": round(gedeckt["klein"] / laenge["klein"], 3) if laenge["klein"] else None,
+        "wohnstrassen_km": round(laenge["klein"] / 1000),
         "sequenzen": len(seqs), "median_sequenz": int(np.median(list(seqs.values()))) if seqs else 0,
         "fotografen": len(fot),
         "anteil_groesster_fotograf": round(fot.most_common(1)[0][1] / len(pts), 3) if fot else None,

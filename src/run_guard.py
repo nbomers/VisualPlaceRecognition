@@ -97,7 +97,9 @@ def short_hash(fingerprint):
 
 # Der Fingerabdruck deckt die Config ab, nicht den Code. Aendert sich die
 # Auswertung selbst, sagt erst diese Kennung, dass eine JSON veraltet ist.
-_CODE_DATEIEN = ("src/evaluation.py", "src/geo.py")
+# retrieval.py gehoert dazu: die Sequenz-Aggregation und "loesbar" gehen in
+# die seq-Zeilen und in jede Experiment-Zahl ein.
+_CODE_DATEIEN = ("src/evaluation.py", "src/geo.py", "src/retrieval.py")
 
 
 def code_version(root):
@@ -214,6 +216,7 @@ _PFLICHT = (
     "tile_workers",
     "download_workers",
     "download_image_size",
+    "max_missing_images_frac",
     "vpr.method",
     "vpr.models",
     "vpr.val_fraction",
@@ -338,6 +341,17 @@ def validate_config(cfg):
             fehler.append(f"vpr.adapter_training.{k} muss positiv sein")
     if not 0.0 <= float(training.get("hard_negative_probability", 0.5)) <= 1.0:
         fehler.append("vpr.adapter_training.hard_negative_probability muss in [0, 1] liegen")
+
+    fehlend_frac = float(cfg.get("max_missing_images_frac", 0.0))
+    if not 0.0 <= fehlend_frac < 1.0:
+        fehler.append(
+            f"max_missing_images_frac={fehlend_frac} muss in [0, 1) liegen "
+            "(0 = kein fehlendes Bild erlaubt)"
+        )
+
+    max_images = vpr.get("max_images")
+    if max_images is not None and int(max_images) <= 0:
+        fehler.append("vpr.max_images muss null oder positiv sein")
 
     bezirke = cfg.get("districts") or {}
     if bezirke.get("enabled", True) and not bezirke.get("admin_levels"):

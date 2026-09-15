@@ -1,7 +1,12 @@
 # Nebenuntersuchungen
 
 Einmalige Messungen, die **nicht** Teil der Pipeline sind. Sie beantworten je
-eine Frage, laufen nicht bei `run.py` mit und schreiben nichts nach `results/`.
+eine Frage, laufen nicht bei `run.py` mit und schreiben nichts nach
+`results/<stadt>/` der Pipeline.
+
+Ihre eigenen Ergebnisse liegen unter `experiments/results/<stadt>/` — der
+Stadt-Slug kommt wie überall aus `config.yaml → city` (`src/paths.py`). Die
+Pfadangaben unten kürzen das auf `results/…` ab.
 
 Hier liegen sie, damit die Zahlen auffindbar bleiben, ohne die Pipeline zu
 belasten. Wer sie für eine Ausarbeitung oder Präsentation braucht, kopiert
@@ -58,6 +63,11 @@ Die Messung selbst.
 python experiments/detection_rerank.py --n-queries 2000 --top-k 10
 python experiments/detection_rerank.py --no-fetch      # nur aus dem Cache
 ```
+
+Ergebnis in `results/detection_rerank_{verfahren}.json` — AUC beider Signale,
+Klassenzahl, auswertbare Paare und R@1 je Mischgewicht. Ein Negativergebnis
+ist auch eins: ohne versionierte Datei stünde die Zahl nur hier und ließe sich
+nicht nachrechnen.
 
 Zieht Anfragen, bei denen im Top-k richtige **und** falsche Kandidaten
 stehen — nur dort gibt es etwas zu unterscheiden. Holt die Detections, baut
@@ -262,7 +272,7 @@ schwer; in der gepaarten Differenz fällt das heraus. Halbbreiten von
 
 Alle Paare stehen in `results/bootstrap_ci.json`, auch für R@5/10/20.
 
-**Was die Intervalle überlebt — die sieben Befunde aus `docs/STAND.md`:**
+**Was die Intervalle überlebt — die sieben Befunde des Projekts (README, „Ergebnisse auf einen Blick"):**
 
 1. *Encoder-Wechsel ist der größte Hebel* — **belegt.** CLIP → MegaLoc
    +0.496 [+0.405, +0.590]; jedes Nachbarpaar der Rangfolge
@@ -296,7 +306,7 @@ Alle Paare stehen in `results/bootstrap_ci.json`, auch für R@5/10/20.
 7. *Blickrichtung 14,5 %* — eine Zählung, kein Vergleich; nicht Gegenstand.
 
 Ebenfalls bestätigt: 0.484 gegen 0.481 (eigenplaces vs pca512) ist
-Rauschen, wie in `docs/STAND.md` vermutet; +0.023 durch `pcaw512` ist es nicht.
+Rauschen, wie vorher vermutet; +0.023 durch `pcaw512` ist es nicht.
 
 ---
 
@@ -419,7 +429,7 @@ Schinkel-Ost 0 Anfragen.
    zählt, ist die Referenz *an der Straße der Anfrage*, nicht im Stadtteil.
    Der Dichte-Befund aus `database_density.py` (mehr Referenz → +0.22)
    bleibt; er ist auf Stadtteil-Ebene nur nicht sichtbar. Der direkte Test
-   ist Recall gegen Nachbarzahl je Anfrage (Punkt 7 in `docs/AUFTRAG.md`).
+   ist Recall gegen Nachbarzahl je Anfrage (`recall_by_difficulty.py`).
 3. **Die Karte zeigt die Daten, nicht den Encoder.** Die Rangfolge der
    Stadtteile ist bei MegaLoc und EigenPlaces praktisch dieselbe
    (Spearman 0.96). Was einen Stadtteil scheitern lässt, steckt in den
@@ -464,7 +474,7 @@ Gemessen 2026-09-14, MegaLoc: **14.726 Fehlgriffe unter 34.112 lösbaren.**
 40 / 389 / 3.497 m: 45 % liegen unter 100 m (dieselbe Straße, knapp
 jenseits der Schwelle), 44 % über 1 km, nur 11 % dazwischen. 53 % der
 Fehlgriffe bleiben im eigenen Stadtteil. Die Verteilung ist bimodal; ein
-Median (389 m hier, 1,5 km in `docs/STAND.md` für 08 über alle Anfragen)
+Median (389 m hier, 1,5 km in `08` über alle Anfragen)
 beschreibt sie schlecht — die Masse liegt an beiden Enden.
 
 Die häufigsten Paare zwischen Stadtteilen (echt → geschätzt):

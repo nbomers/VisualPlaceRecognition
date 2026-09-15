@@ -271,6 +271,20 @@ Adapter und Whitening reagieren.
 | **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `image_root/<stadt>` (Standard `~/Downloads/mapillary/osnabrueck`; je Rechner per `VPR_IMAGE_ROOT`) und legt daneben `test/` für eigene Fotos an. Metadaten und Split-Listen liegen im Git |
 | **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,3 GB je Encoder (alle Varianten zusammen 77 GB), Ergebnisse 1,1 GB |
 
+**Warum 25 Meter.** Die Schwelle muss über dem GPS-Rauschen der Aufnahmen
+liegen, sonst misst der Recall die Ortung der Kamera statt die Leistung des
+Encoders. Mapillary-Bilder kommen überwiegend von Smartphones und Dashcams;
+deren Einzelmessung streut im Stadtgebiet — Mehrwegeausbreitung an
+Hausfassaden, enge Straßenschluchten — typisch 5 bis 15 m, einzelne Punkte
+deutlich weiter. Bei 10 m zählte derselbe korrekt wiedererkannte Ort je nach
+Rauschen mal als Treffer und mal nicht; bei 50 m fängt die Schwelle schon die
+Nachbarstraße ein. 25 m liegt darüber und unter der typischen Blocklänge, und
+es ist die Größenordnung, die MSLS und Pittsburgh-30k ebenfalls verwenden.
+Weil das eine Setzung bleibt, berichtet `07` jede Zahl zusätzlich bei 5, 10,
+50 und 100 m (`python compare.py --threshold 5`) — die Wahl ist damit
+nachprüfbar, nicht nur begründet. Der Wert steht an genau einer Stelle:
+`vpr.uncertain_radius_m` in der `config.yaml`.
+
 Der Split ist bewusst sparsam auf der Datenbankseite: 15 % der Sequenzen
 als Referenz heißt, dass 36 % der Anfragen kein Referenzbild im Umkreis von
 25 m haben. Diese Anfragen zählen im Recall nicht mit („lösbar" = 34.112),
@@ -309,11 +323,12 @@ Referenz bringen würde. Alle Zahlen dieser Tabelle stehen in
 │   ├── recall_by_district.py, confusion_atlas.py   # Karten
 │   ├── localization_aggregation.py             # fünf Aggregationsverfahren gegen Top-1
 │   ├── sequence_retrieval.py, geometric_verification.py, detection_rerank.py
+│   ├── detection_probe.py                      # taugen Mapillarys Detections ueberhaupt?
+│   ├── city_coverage.py                        # Strassenabdeckung je Stadt -- welche Stadt als naechste
 │   ├── timing.py                               # Laufzeit und Speicher
 │   └── results/                                # JSONs und Abbildungen dazu
 ├── src/                     # geteilter Code, siehe Konzeptioneller Aufbau
 ├── tests/                   # pytest, ohne Torch
-├── docs/                    # Arbeitsstand und Auftragsliste
 ├── data/<stadt>/            # eine Stadt je Zweig, Slug aus config.yaml -> city
 │   ├── raw/                 # Kachel-Rohdaten aus 01
 │   ├── processed/           # metadata.parquet und Split-Listen (im Git)
@@ -442,11 +457,14 @@ Die Schlüssel, die man am ehesten anfasst:
 |---|---|
 | `vpr.method`, `vpr.adapter` | welcher Encoder, mit oder ohne linearen Adapter — `run.py --method/--adapter` überschreibt beides |
 | `vpr.models` | Namen aller Encoder; abgeleitete Varianten haben darunter einen Block mit `source` (PCA) oder `sources` (Verkettung), die PCA-Blöcke teilen sich ihre Werte über YAML-Anker |
-| `vpr.uncertain_radius_m` | die 25 m der Ground Truth |
+| `vpr.uncertain_radius_m` | die 25 m der Ground Truth — auch die Standardschwelle von `compare.py --threshold` |
 | `vpr.max_heading_diff_deg` | die 90° der Blickrichtungs-Auswertung |
 | `retrieval.top_k`, `k_values`, `thresholds` | wie viele Nachbarn 06 speichert, welche R@k und Schwellen 07 berichtet |
 | `localization.top_k`, `eps_m`, … | Top-k für 08 und die Aggregationsverfahren in `experiments/localization_aggregation.py` |
 | `city` | Stadt für Kacheln, Stadtgrenze, Stadtteile — und der Slug für alle Ablageorte |
+| `max_missing_images_frac` | wie viele Bilder fehlen dürfen, bevor 03 und 04 abbrechen (Standard 0,01 = 1 %) |
+| `verify_all_images` | `true` prüft in 03 den gesamten Bildbestand statt nur der neu geholten |
+| `vpr.max_images` | Obergrenze für 04, nur zum Ausprobieren — `null` = alle |
 | `image_root` | Wurzel der Bildordner (`<image_root>/<stadt>`, `<image_root>/test`); je Rechner per `VPR_IMAGE_ROOT` oder `VPR_IMAGE_PATH` überschreibbar |
 
 ## Nutzung
@@ -526,6 +544,8 @@ python experiments/localization_aggregation.py   # Schwerpunkt, Clustering, Snap
 python experiments/sequence_retrieval.py --method eigenplaces_pcaw512  # Nachbarframes aufsummieren
 python experiments/geometric_verification.py --method eigenplaces_megaloc_concat   # SuperPoint + LightGlue, GPU
 python experiments/detection_rerank.py      # Mapillary-Detections als Re-Ranking-Signal
+python experiments/detection_probe.py       # liefert Mapillary ueberhaupt brauchbare Detections?
+python experiments/city_coverage.py "Würzburg, Germany"   # Strassenabdeckung einer Stadt, nur Metadaten
 ```
 
 ### Ein eigenes Foto verorten
@@ -552,11 +572,14 @@ Anfragebild.
 pytest tests/
 ```
 
-Fünf Dateien, zwei Sekunden, kein Torch: die Recall-Auswertung gegen eine
+Acht Dateien, drei Sekunden, kein Torch: die Recall-Auswertung gegen eine
 handgerechnete Erwartung (Standard, Hard, Blickrichtung, Panorama), der Split gegen
 die versionierten Listen, die Paarbildung, `validate_config` gegen die
-echte `config.yaml` und gegen Tippfehler, und die versionierten
-Ergebnis-JSONs gegen den Bootstrap. Dieselben Tests laufen bei jedem Push
+echte `config.yaml` und gegen Tippfehler, die PCA-Projektion gegen sklearn,
+`localizable` gegen die volle Distanzmatrix, und die versionierten
+Ergebnis-JSONs gegen beide Bootstraps. Ein Test prüft außerdem, dass der in
+jeder Ergebnis-JSON vermerkte Commit im Repository auffindbar ist — sonst ist
+die Kennung wertlos. Dieselben Tests laufen bei jedem Push
 (`.github/workflows/check.yml`).
 
 ## Reproduzierbarkeit
@@ -844,9 +867,13 @@ EigenPlaces 2,8 Stunden, MegaLoc 4,4 Stunden; AnyLoc 6,3 Stunden auf der GPU.
 
 ### Abbildungen
 
-`results/figures/evaluation/` — `vergleich_adapter_25m.png` (Baseline gegen
-Adapter je Encoder), `vergleich_recall_k_25m.png`, `vergleich_schwellen.png`,
-je auch als `_derived` mit den Varianten. `results/figures/localization/` —
+`results/figures/evaluation/` — `vergleich_r1_25m.png` (R@1 je Zeile mit
+Bootstrap-Intervall, liegende Balken nach Wert sortiert, Farbe = Encoder),
+`vergleich_recall_k_25m.png` und `vergleich_schwellen.png` (Kurven, Farbe =
+Encoder, gestrichelt = Adapter). Mit `--derived` heißen sie `_derived` und
+werden zu kleinen Vielfachen: ein Feld je Encoder, Farbe und Markerform =
+Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 37 Zeilen in eine
+Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde. `results/figures/localization/` —
 je Encoder die Fehlerverteilung. `results/figures/demo/` — Trefferreihen,
 Karten auf dem Straßennetz, Encoder-Vergleich. `experiments/results/` —
 Dichtekurven, Stadtteilkarten, Verwechslungsatlas.
@@ -874,10 +901,13 @@ Bamberg (25.248/km², 1,38 Mio. Bilder auf 55 km²) ist ein Sonderfall.
 nicht gemessen — sie braucht die Bilder und eine GPU, rund sechs Stunden
 für alle Anfragen. Sie ist der einzige Hebel, der die grobe Verwechslung
 direkt angreift: global ähnliche, lokal verschiedene Orte. Erwartung aus
-der Literatur +0.05 bis +0.10 R@1. Danach: Recall gegen Nachbarzahl und
-Zeitabstand je Anfrage (der direkte Test für Befund 2), eine
-Ablehnungskurve mit der Top-1-Ähnlichkeit als Konfidenz, und ein zweiter
-Seed.
+der Literatur +0.05 bis +0.10 R@1.
+
+Danach bleibt als einziger offener Punkt ein **zweiter Split-Seed**: alle
+Zahlen stehen auf `split_seed: 42`, und wie viel davon am Seed hängt, ist
+nicht gemessen. Recall gegen Nachbarzahl und Zeitabstand je Anfrage
+(`recall_by_difficulty.py`) und die Ablehnungskurve (`rejection_curve.py`)
+sind inzwischen gerechnet und stehen oben unter [Ergebnisse](#ergebnisse).
 
 **An den Fremd-Repositories.** MixVPR hat keine Lizenzdatei. AnyLocs
 Download-Links für das Vokabular sind tot; `setup_external.py` holt es aus
