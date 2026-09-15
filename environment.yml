@@ -1,7 +1,7 @@
 # Conda-Umgebung fuer beide Rechner (Mac M1 Pro, CachyOS mit RTX 3070).
 #
 #   conda env create -f environment.yml
-#   conda activate pytorch
+#   conda activate vpr
 #
 # Aufteilung nach Herkunft, nicht nach Belieben:
 #   conda  -- alles mit kompilierten Abhaengigkeiten (faiss, GDAL hinter
@@ -14,7 +14,7 @@
 # Plattformen aufloest. Fuer ein exaktes Abbild einer Maschine:
 #   conda env export --no-builds > environment.lock.yml
 
-name: pytorch
+name: vpr
 
 channels:
   - conda-forge

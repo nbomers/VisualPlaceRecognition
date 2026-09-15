@@ -380,7 +380,7 @@ alternativ **uv**.
 
 ```bash
 conda env create -f environment.yml
-conda activate pytorch
+conda activate vpr
 nbstripout --install --attributes .gitattributes   # Zellenausgaben aus dem Git halten, einmal je Rechner
 pytest tests/                                       # Installation pruefen, ohne Torch-Laufzeit
 ```
