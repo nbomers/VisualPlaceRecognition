@@ -144,7 +144,12 @@ Adapterschaden, also `linear` minus `none`:
    und die Pipeline hatte sie ohne Whitening verglichen. CLIP +44 %. Bei
    den VPR-trainierten Encodern auf 512 neutral bis leicht positiv
    (`eigenplaces_pcaw512` schlägt seine eigene 2048er-Baseline), auf voller
-   Breite negativ, weil die kleinsten Hauptrichtungen Rauschen verstärken.
+   Breite negativ. Die naheliegende Erklärung — Whitening teilt durch die
+   kleinsten Eigenwerte, und die sind bei 50.000 Stichproben Rauschen — ist
+   **plausibel, aber nicht gemessen**. Der direkte Test wäre Shrinkage: statt
+   durch √λ durch √(λ + ε·λ_max) teilen und sehen, ob
+   `eigenplaces_pcaw2048` dadurch über seine 0.459 steigt. Bis das gerechnet
+   ist, bleibt es eine Vermutung, die zum Vorzeichen passt.
 
 3. **Der Adapterschaden hängt nicht an der Parameterzahl — und der
    Adaptergewinn war Whitening.** MegaLoc verliert bei 8448 und bei 512

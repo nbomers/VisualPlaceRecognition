@@ -25,6 +25,26 @@ from .paths import Paths
 from .run_guard import embedding_fingerprint, require_fingerprint
 
 
+def retrieval_inputs(root, cfg, method, adapter="none", reference_splits=None):
+    """
+    Die beiden Dateien, die load_retrieval oeffnen wird: Metadaten und
+    Trefferliste.
+
+    Getrennt, damit ein Aufrufer vorab pruefen kann, ob ein Encoder lokal
+    vorliegt, ohne die Namensbildung nachzubauen. Genau daran ist die
+    Vorabpruefung in experiments/bootstrap_ci.py einmal gescheitert: die
+    fullref-Zeilen haben KEINE eigene Metadatendatei -- sie nutzen die des
+    Basis-Encoders, und nur die .npz traegt das _fullref-Suffix. Dasselbe
+    gilt fuer die seq-Varianten, die ueberhaupt keine eigene .npz haben.
+    """
+    name = method if adapter in ("none", "None") else f"{method}_{adapter}"
+    pfade = Paths(cfg, root)
+    meta_datei = pfade.metadata_file(name, method)
+    if reference_splits:
+        name = f"{name}_fullref"
+    return meta_datei, pfade.retrieval_file(name, method)
+
+
 def load_retrieval(root, cfg, method, adapter="none", sequence_window=None,
                    reference_splits=None):
     """
@@ -35,9 +55,9 @@ def load_retrieval(root, cfg, method, adapter="none", sequence_window=None,
     ["database", "train"]) kommt die Trefferliste aus
     experiments/full_reference.py, und "database" meint alle Referenzzeilen.
     """
+    meta_datei, npz = retrieval_inputs(root, cfg, method, adapter,
+                                       reference_splits=reference_splits)
     name = method if adapter in ("none", "None") else f"{method}_{adapter}"
-    pfade = Paths(cfg, root)
-    meta_datei = pfade.metadata_file(name, method)
     if not meta_datei.exists():
         # Embeddings sind gitignored und liegen je nach Rechner verteilt.
         # Die nackte FileNotFoundError von pandas sagt das nicht.
@@ -52,9 +72,7 @@ def load_retrieval(root, cfg, method, adapter="none", sequence_window=None,
     meta = pd.read_parquet(meta_datei)
     fingerprint = embedding_fingerprint(cfg, method, adapter, meta)
     if reference_splits:
-        name = f"{name}_fullref"
         fingerprint = {**fingerprint, "reference_splits": list(reference_splits)}
-    npz = pfade.retrieval_file(name, method)
     require_fingerprint(npz, fingerprint, "Retrieval-Ergebnis")
     r = np.load(npz)
     indices, similarities = r["indices"], r["similarities"]

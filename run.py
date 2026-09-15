@@ -179,7 +179,8 @@ def bestand(cfg):
     welche das sind, bevor die Haelfte der Kombinationen abbricht.
     """
     p = paths(cfg, ROOT)
-    kopf = f"{'Encoder / Variante':<40}{'Embeddings':<12}{'Treffer':<10}{'07':<5}{'08':<5}"
+    kopf = (f"{'Encoder / Variante':<40}{'Embeddings':<12}{'Treffer':<10}"
+            f"{'fullref':<9}{'07':<5}{'08':<5}")
     print(f"Bestand fuer {cfg['city']!r}  ->  {p.city}")
     print(f"  {p.root}\n")
     print(kopf)
@@ -192,13 +193,18 @@ def bestand(cfg):
             meta = p.metadata_file(name, method)
             hat_emb = emb.exists() and meta.exists()
             hat_ret = p.retrieval_file(name, method).exists()
+            # Die zweite Referenz (database + train) hat eine eigene .npz,
+            # aber KEINE eigenen Metadaten -- experiments/bootstrap_ci.py
+            # --reference full braucht sie fuer jeden Encoder zugleich.
+            hat_full = (p.retrieval_file(f"{name}_fullref", method).exists()
+                        if adapter == "none" else None)
             hat_07 = (p.evaluation / f"{name}.json").exists()
             hat_08 = (p.localization / f"{name}.json").exists()
             if not (hat_emb or hat_ret or hat_07 or hat_08):
                 continue
-            zeichen = {True: "ja", False: "--"}
+            zeichen = {True: "ja", False: "--", None: ""}
             print(f"{name:<40}{zeichen[hat_emb]:<12}{zeichen[hat_ret]:<10}"
-                  f"{zeichen[hat_07]:<5}{zeichen[hat_08]:<5}")
+                  f"{zeichen[hat_full]:<9}{zeichen[hat_07]:<5}{zeichen[hat_08]:<5}")
             (vollstaendig if hat_emb and hat_ret else unvollstaendig).append(name)
 
     print("-" * len(kopf))
