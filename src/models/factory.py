@@ -35,10 +35,11 @@ def _clip(cfg, model_id, device, root):
 
 
 def _anyloc(cfg, model_id, device, root):
+    from ..paths import Paths
     from .anyloc import AnyLocEmbedder
 
     a = cfg["vpr"]["anyloc"]
-    return AnyLocEmbedder(
+    embedder = AnyLocEmbedder(
         model_id=model_id,
         device=device,
         repo_path=_from_root(root, a["repo_path"]),
@@ -49,6 +50,20 @@ def _anyloc(cfg, model_id, device, root):
         image_size=a["image_size"],
         pca_dim=a.get("pca_dim"),
     )
+    # AnyLoc reduziert seine 49.152 VLAD-Dimensionen mit einer PCA, die 04 auf
+    # den train-Bildern anpasst und neben die Embeddings legt. Ohne sie liefert
+    # der Encoder den rohen Vektor -- andere Breite als die Datenbank, und der
+    # Fehler faellt erst beim Suchen auf. Deshalb hier laden oder abbrechen.
+    if a.get("pca_dim"):
+        pfad = Paths(cfg, root).embedding_dir("anyloc") / "anyloc_pca.npz"
+        if not pfad.exists():
+            raise FileNotFoundError(
+                f"AnyLocs PCA fehlt: {pfad}\n"
+                "Sie entsteht in 04 und liegt neben den Embeddings.\n"
+                "  python run.py --method anyloc --from 04"
+            )
+        embedder.load_pca(pfad)
+    return embedder
 
 
 def _eigenplaces(cfg, model_id, device, root):
@@ -102,12 +117,6 @@ def build_embedder(method, cfg, device, project_root):
     if method not in _BAUER and isinstance(block, dict) and ("source" in block or "sources" in block):
         from .derived import DerivedEmbedder
 
-        quellen = block.get("sources", [block.get("source")])
-        if any(str(q).startswith("anyloc") for q in quellen):
-            raise ValueError(
-                f"{method!r} baut auf AnyLoc auf; dessen PCA aus 04 liegt nicht neben "
-                "den Embeddings -- fuer ein neues Bild nicht vorfuehrbar."
-            )
         return DerivedEmbedder(method, cfg, device, project_root)
     if method not in _BAUER:
         raise ValueError(f"Unbekannter Encoder {method!r}. Bekannt: {sorted(_BAUER)}.")
