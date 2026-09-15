@@ -8,7 +8,7 @@ Koordinate des aehnlichsten Datenbankbildes ausgeben.
     python locate.py ~/Downloads/mapillary/test     # alle Bilder in einem Ordner
 
 Der Encoder kommt aus der Factory (auch PCA-, Whitening- und
-Verkettungsvarianten), die Datenbank aus data/embeddings/, die Suche aus
+Verkettungsvarianten), die Datenbank aus data/<stadt>/embeddings/, die Suche aus
 FAISS -- derselbe Weg wie 04 bis 06, fuer ein Bild. AnyLoc-Varianten sind
 nicht vorfuehrbar (PCA aus 04 liegt nicht neben den Embeddings).
 """
