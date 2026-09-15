@@ -1,12 +1,12 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-15",
   "method": "mixvpr_pca512",
   "adapter": "none",
   "embedding_name": "mixvpr_pca512",
   "fingerprint_hash": "a2fae98ac2",
   "code_version": {
-    "commit": "940a0a4",
-    "evaluation": "88519dd711"
+    "commit": "4df06dc",
+    "evaluation": "f5dbec3675"
   },
   "top_k": 10,
   "n_queries": 53414,

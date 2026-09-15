@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-15",
   "method": "eigenplaces_pca512",
   "adapter": "linear",
   "variant": "linear",
@@ -8,8 +8,8 @@
   "n_database": 48321,
   "fingerprint_hash": "046d2eac60",
   "code_version": {
-    "commit": "940a0a4",
-    "evaluation": "88519dd711"
+    "commit": "4df06dc",
+    "evaluation": "f5dbec3675"
   },
   "auswertungen": {
     "Alle Queries": {

@@ -1,12 +1,12 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-15",
   "method": "clip",
   "adapter": "linear",
   "embedding_name": "clip_linear",
   "fingerprint_hash": "d16b4aa51e",
   "code_version": {
-    "commit": "940a0a4",
-    "evaluation": "88519dd711"
+    "commit": "4df06dc",
+    "evaluation": "f5dbec3675"
   },
   "top_k": 10,
   "n_queries": 53414,

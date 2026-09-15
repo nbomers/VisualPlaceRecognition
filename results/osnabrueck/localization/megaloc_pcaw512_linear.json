@@ -1,12 +1,12 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-15",
   "method": "megaloc_pcaw512",
   "adapter": "linear",
   "embedding_name": "megaloc_pcaw512_linear",
   "fingerprint_hash": "17b2adf682",
   "code_version": {
-    "commit": "940a0a4",
-    "evaluation": "88519dd711"
+    "commit": "4df06dc",
+    "evaluation": "f5dbec3675"
   },
   "top_k": 10,
   "n_queries": 53414,
