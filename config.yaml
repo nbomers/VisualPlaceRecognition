@@ -354,6 +354,47 @@ image_root: "~/Downloads/mapillary"
 
 
 # ============================================================
+# OpenStreetMap / Overpass
+# ============================================================
+
+# Woher 01 Stadtgrenze, Strassennetz und Stadtteile holt. Nominatim
+# (Geocoder) und Overpass (alles andere) sind oeffentliche, geteilte
+# Dienste: Zeitueberschreitung, 429 und 504 sind dort Normalbetrieb, kein
+# Programmfehler. 01 bricht deshalb an keiner dieser Stellen mehr ab -- der
+# Datensatz (metadata.parquet, die Split-Listen) steht vorher fest, die
+# Karten und die Stadtteiltabelle danach fallen im Zweifel aus.
+
+osm:
+
+  # Antworten landen unter cache/ und werden bei einer Wiederholung nicht
+  # erneut geholt. cache/ ist gitignored -- ein frischer Klon faengt leer an
+  # und stellt jede Abfrage genau einmal wirklich.
+
+  # Endpunkt ohne /interpreter. Der Standard ist haeufig ausgelastet;
+  # Spiegel mit meist kuerzeren Wartezeiten:
+  #   https://overpass.kumi.systems/api
+  #   https://overpass.private.coffee/api
+  # Je Rechner ohne Aenderung an dieser Datei: VPR_OVERPASS_URL setzen.
+
+  overpass_url: "https://overpass-api.de/api"
+
+
+  # Zeitlimit je Abfrage, in Sekunden. Gilt fuer die HTTP-Anfrage und fuer
+  # das [timeout:...], das osmnx in das Overpass-Skript schreibt.
+  # osmnx-Standard ist 180; das Strassennetz einer ganzen Stadt liegt an
+  # einem ausgelasteten Endpunkt darueber.
+
+  timeout_s: 300
+
+
+  # Vor jeder Abfrage den Serverstatus lesen und warten, bis ein Slot frei
+  # ist. Langsamer, aber ohne die 429-Sperren, die sonst mitten im Lauf
+  # kommen. Nur auf einem eigenen Overpass-Server abschaltbar.
+
+  rate_limit: true
+
+
+# ============================================================
 # Stadtteil-Auswertung
 # ============================================================
 

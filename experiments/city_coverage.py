@@ -30,7 +30,7 @@ from scipy.spatial import cKDTree
 from shapely.geometry import LineString, Point
 
 from _common import CFG, PATHS, ROOT
-from src.districts import city_boundary
+from src.districts import city_boundary, configure_osmnx
 from src.mapillary import load_tile, load_token, make_session, tiles_for_bounds
 
 # Stadtuebergreifend, deshalb bewusst NICHT unter experiments/results/<stadt>.
@@ -125,8 +125,9 @@ def survey(name, token, tiles_only=False):
 
 def main():
     args = _args()
-    ox.settings.cache_folder = PATHS.cache
-    ox.settings.use_cache = True
+    # Endpunkt, Zeitlimit und Ratenbremse aus config.yaml -> osm -- dieselben
+    # Einstellungen, mit denen 01 Strassennetz und Stadtteile holt.
+    configure_osmnx(CFG, PATHS.cache)
     token = load_token(ROOT)
     done = json.loads(OUT.read_text()) if OUT.exists() else {}
     for i, name in enumerate(args.staedte):
