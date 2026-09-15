@@ -461,7 +461,7 @@ Die Schlüssel, die man am ehesten anfasst:
 | `vpr.max_heading_diff_deg` | die 90° der Blickrichtungs-Auswertung |
 | `retrieval.top_k`, `k_values`, `thresholds` | wie viele Nachbarn 06 speichert, welche R@k und Schwellen 07 berichtet |
 | `localization.top_k`, `eps_m`, … | Top-k für 08 und die Aggregationsverfahren in `experiments/localization_aggregation.py` |
-| `city` | Stadt für Kacheln, Stadtgrenze, Stadtteile — und der Slug für alle Ablageorte |
+| `city` | Stadt für Kacheln, Stadtgrenze, Stadtteile — und der Slug für alle Ablageorte; je Prozess per `VPR_CITY` überschreibbar |
 | `max_missing_images_frac` | wie viele Bilder fehlen dürfen, bevor 03 und 04 abbrechen (Standard 0,01 = 1 %) |
 | `verify_all_images` | `true` prüft in 03 den gesamten Bildbestand statt nur der neu geholten |
 | `vpr.max_images` | Obergrenze für 04, nur zum Ausprobieren — `null` = alle |
@@ -498,6 +498,20 @@ entwerten; 02 und 03 hängen nicht am Verfahren), und 05 entfällt, solange
 Umgebungsvariablen `VPR_METHOD` und `VPR_ADAPTER`; die `config.yaml` wird
 nicht angefasst. Wer ein Notebook direkt in Jupyter öffnet, bekommt den
 Wert aus der Datei.
+
+Dasselbe gilt für die Stadt: **`VPR_CITY`** sticht `city` aus der Datei.
+
+```bash
+VPR_CITY="Würzburg, Germany" jupyter lab notebooks/01_mapillary_coverage.ipynb
+VPR_CITY="Würzburg, Germany" python run.py --bestand
+```
+
+Das ist nicht nur Bequemlichkeit: die Notebooks lesen `config.yaml` bei
+**jeder** Zellenausführung neu. Die Datei umzustellen, während ein `run.py`
+läuft, würde dem laufenden Durchgang die Stadt unter den Füßen wechseln —
+die nächste Stufe schriebe nach `results/<andere stadt>/` und fände ihre
+Eingaben nicht. Über die Umgebung bleiben beide Läufe getrennt, und die
+versionierte Datei bleibt unangetastet.
 
 `--method` und `--adapter` nehmen auch Kommalisten oder `all`. Dann rechnet
 `run.py` eine Kombination nach der anderen: 01 bis 03 laufen dabei nur einmal,

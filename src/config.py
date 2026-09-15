@@ -32,21 +32,34 @@ def find_project_root(start=None):
     raise FileNotFoundError("Projektroot nicht gefunden (keine config.yaml aufwaerts)")
 
 
-def load_config(root=None):
+def apply_env(cfg):
     """
-    config.yaml lesen.
+    Umgebungsvariablen stechen die Datei: VPR_CITY, VPR_METHOD, VPR_ADAPTER.
 
-    run.py setzt Verfahren und Adapter ueber VPR_METHOD und VPR_ADAPTER --
-    frueher wurde dafuer die config.yaml ueberschrieben, eine versionierte
-    Datei als Zustandsspeicher. Ohne gesetzte Variablen gilt die Datei.
+    Frueher wurde dafuer die config.yaml ueberschrieben -- eine versionierte
+    Datei als Zustandsspeicher, die nach jedem Lauf als geaendert dastand.
+    Fuer Verfahren und Adapter macht run.py das laengst so; `city` fehlte,
+    obwohl src/paths.py jede Stadt ohnehin in ihren eigenen Zweig legt.
+
+    Praktischer Nutzen: eine zweite Stadt laeuft neben einem laufenden
+    Durchgang im selben Klon. Die Notebooks lesen config.yaml bei JEDER
+    Zellenausfuehrung neu -- die Datei mittendrin umzustellen wuerde einem
+    laufenden run.py unter den Fuessen die Stadt wechseln.
+
+        VPR_CITY="Würzburg, Germany" jupyter lab notebooks/01_mapillary_coverage.ipynb
     """
-    root = Path(root) if root else find_project_root()
-    cfg = yaml.safe_load((root / "config.yaml").read_text())
+    cfg["city"] = os.environ.get("VPR_CITY", cfg["city"])
     cfg["vpr"]["method"] = os.environ.get("VPR_METHOD", cfg["vpr"]["method"])
     cfg["vpr"]["adapter"] = os.environ.get(
         "VPR_ADAPTER", cfg["vpr"].get("adapter", "none")
     )
     return cfg
+
+
+def load_config(root=None):
+    """config.yaml lesen, dann die Umgebung darueberlegen (siehe apply_env)."""
+    root = Path(root) if root else find_project_root()
+    return apply_env(yaml.safe_load((root / "config.yaml").read_text()))
 
 
 def paths(cfg, root=None):

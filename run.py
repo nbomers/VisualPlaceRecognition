@@ -30,10 +30,15 @@ from nbclient import NotebookClient
 ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "config.yaml"
 CONFIG_ORIGINAL = CONFIG_PATH.read_text()
-BASIS_CFG = yaml.safe_load(CONFIG_ORIGINAL)
 
 sys.path.insert(0, str(ROOT))
-from src.config import paths  # noqa: E402
+from src.config import apply_env, paths  # noqa: E402
+
+# Dieselbe Sicht wie die Notebooks: die lesen config.yaml bei jeder
+# Zellenausfuehrung neu und legen VPR_CITY/VPR_METHOD/VPR_ADAPTER darueber.
+# Wuerde run.py hier die rohe Datei nehmen, entschiede es ueber eine andere
+# Stadt, als die Notebooks dann rechnen.
+BASIS_CFG = apply_env(yaml.safe_load(CONFIG_ORIGINAL))
 from src.run_guard import (  # noqa: E402
     code_version,
     embedding_fingerprint,
@@ -175,7 +180,8 @@ def bestand(cfg):
     """
     p = paths(cfg, ROOT)
     kopf = f"{'Encoder / Variante':<40}{'Embeddings':<12}{'Treffer':<10}{'07':<5}{'08':<5}"
-    print(f"Bestand in {p.root}\n")
+    print(f"Bestand fuer {cfg['city']!r}  ->  {p.city}")
+    print(f"  {p.root}\n")
     print(kopf)
     print("-" * len(kopf))
     vollstaendig, unvollstaendig = [], []
@@ -413,7 +419,7 @@ def main():
     gesamt = time.time()
 
     for method, adapterwert in kombinationen:
-        cfg = yaml.safe_load(CONFIG_ORIGINAL)
+        cfg = apply_env(yaml.safe_load(CONFIG_ORIGINAL))
         cfg["vpr"]["method"] = method
         cfg["vpr"]["adapter"] = adapterwert
         validate_config(cfg)
