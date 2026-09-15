@@ -20,8 +20,8 @@ Index ueber alles 9,4 GB.
     python experiments/full_reference.py                      # alle Encoder mit .npy
     python experiments/full_reference.py --methods megaloc,eigenplaces_pcaw512
 
-Ergebnis: results/retrieval/<method>/<name>_fullref_retrieval.npz und
-results/evaluation/<name>_fullref.json (Variante "fullref").
+Ergebnis: results/<stadt>/retrieval/<method>/<name>_fullref_retrieval.npz und
+results/<stadt>/evaluation/<name>_fullref.json (Variante "fullref").
 """
 
 import argparse

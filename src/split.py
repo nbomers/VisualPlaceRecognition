@@ -4,7 +4,7 @@ Funktion statt als Notebook-Zelle, damit ein Test sie festnageln kann.
 
 Die Split-Einheit ist die Sequenz (eine Fahrt), nie das Einzelbild:
 aufeinanderfolgende Frames derselben Fahrt in database UND query waeren
-Leakage. Liegen die drei Listen unter data/processed/ schon vor, werden sie
+Leakage. Liegen die drei Listen unter data/<stadt>/processed/ schon vor, werden sie
 uebernommen statt neu gewuerfelt -- Mapillary aendert sich ueber die Zeit,
 derselbe Seed ergaebe sonst einen anderen Split und alle Embeddings waeren
 wertlos.

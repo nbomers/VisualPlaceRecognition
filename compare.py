@@ -1,7 +1,7 @@
 """
 Stellt die gespeicherten Auswertungen aller Verfahren nebeneinander.
 
-07_evaluation legt je Lauf eine Datei unter results/evaluation/ ab. Dieses
+07_evaluation legt je Lauf eine Datei unter results/<stadt>/evaluation/ ab. Dieses
 Skript liest sie und druckt die Vergleichstabelle.
 
     python compare.py                      # R@k bei 25 m
@@ -467,7 +467,7 @@ def plot(laeufe, args):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Vergleichstabelle aus results/evaluation/",
+        description="Vergleichstabelle aus results/<stadt>/evaluation/",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("--threshold", type=int, default=STANDARD_SCHWELLE,
@@ -476,7 +476,7 @@ def main():
     ap.add_argument("--split", default="Alle Queries",
                     help='Welche Auswertung (Standard: "Alle Queries")')
     ap.add_argument("--plot", action="store_true",
-                    help="Vergleichsabbildungen nach results/figures/evaluation/ "
+                    help="Vergleichsabbildungen nach results/<stadt>/figures/evaluation/ "
                          "schreiben, sonst nichts")
     ap.add_argument("--localization", action="store_true",
                     help="Statt Recall die Lokalisierung aus 08 vergleichen: "
@@ -487,7 +487,7 @@ def main():
                          "die echten Encoder")
     ap.add_argument("--ci", action="store_true",
                     help="95-%%-Intervall des Sequenz-Bootstraps neben R@1, "
-                         "wenn experiments/results/bootstrap_ci.json vorliegt")
+                         "wenn experiments/results/<stadt>/bootstrap_ci.json vorliegt")
     ap.add_argument("--reference", choices=("database", "full"), default="database",
                     help="database = Benchmark-Protokoll (15 %% der Sequenzen als Referenz); "
                          "full = database + train als Referenz (experiments/full_reference.py)")

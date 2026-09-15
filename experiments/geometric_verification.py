@@ -21,7 +21,7 @@ Ein Lauf ueber alle Anfragen gehoert auf den Rechner mit der GPU.
     python experiments/geometric_verification.py --method megaloc --top-k 10 --max-side 512
 
 Ergebnis: bei einer Stichprobe nach experiments/results/, bei allen Anfragen
-als eigene Zeile nach results/evaluation/ (Variante "gv<k>").
+als eigene Zeile nach results/<stadt>/evaluation/ (Variante "gv<k>").
 """
 
 import argparse

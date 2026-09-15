@@ -25,7 +25,7 @@ den GPU-Rechner:
     python experiments/timing.py --skip-encode              # nur Suche und Index
     python experiments/timing.py --skip-search              # nur Encodieren
 
-Ergebnis: experiments/results/timing.json
+Ergebnis: experiments/results/<stadt>/timing.json
 """
 
 import argparse
