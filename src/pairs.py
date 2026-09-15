@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
 
-from .geo import to_metric_xy
+from .geo import heading_matches, to_metric_xy
 
 
 def train_positive_pairs(metadata, positive_radius_m, max_heading_diff_deg):
@@ -37,12 +37,10 @@ def train_positive_pairs(metadata, positive_radius_m, max_heading_diff_deg):
     pairs = cKDTree(xy).query_pairs(r=float(positive_radius_m), output_type="ndarray")
     pairs = pairs[seq[pairs[:, 0]] != seq[pairs[:, 1]]]
 
-    # Mapillary kodiert eine unbekannte Blickrichtung als -1 und liefert
-    # vereinzelt Werte knapp ueber 360. Unbekannt verwirft kein Paar.
+    # Unbekannte Blickrichtung verwirft kein Paar -- siehe geo.heading_matches.
     ang = trn["compass_angle"].to_numpy(dtype=float)
-    ang = np.where(ang < 0, np.nan, ang % 360.0)
-    dang = np.abs((ang[pairs[:, 0]] - ang[pairs[:, 1]] + 180.0) % 360.0 - 180.0)
-    pairs = pairs[np.isnan(dang) | (dang <= float(max_heading_diff_deg))]
+    pairs = pairs[heading_matches(ang[pairs[:, 0]], ang[pairs[:, 1]],
+                                  max_heading_diff_deg)]
 
     dist = np.linalg.norm(xy[pairs[:, 0]] - xy[pairs[:, 1]], axis=1)
     return pd.DataFrame({

@@ -267,7 +267,7 @@ Adapter und Whitening reagieren.
 | **Fotografen** | 57; einer stellt 47,8 % aller Bilder, die drei größten zusammen 65,2 % |
 | **Aufnahmejahre** | 2014 bis 2026; 2022 allein 29 %, 2016 ein zweiter Schwerpunkt |
 | **Nähe zur Referenz** | 63,9 % der Anfragen haben ein Datenbankbild im Umkreis von 25 m (Median 22 Nachbarn, Median 107 Tage Abstand); 9,3 % davon eines vom selben Fotografen am selben Tag, 83,3 % eines von einem anderen Fotografen |
-| **Ground Truth** | ein Datenbankbild zählt als richtig, wenn es höchstens 25 m entfernt liegt (Standard); Varianten: anderer Fotograf oder > 180 Tage Abstand („Hard"), Kompassabweichung ≤ 90° („Blickrichtung") |
+| **Ground Truth** | ein Datenbankbild zählt als richtig, wenn es höchstens 25 m entfernt liegt (Standard); Varianten: anderer Fotograf oder > 180 Tage Abstand („Hard"), Kompassabweichung ≤ 90° („Blickrichtung"; eine unbekannte Blickrichtung schließt nicht aus — Mapillary kodiert sie als −1, und roh verglichen läse sich das als 359°) |
 | **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `image_root/<stadt>` (Standard `~/Downloads/mapillary/osnabrueck`; je Rechner per `VPR_IMAGE_ROOT`) und legt daneben `test/` für eigene Fotos an. Metadaten und Split-Listen liegen im Git |
 | **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,3 GB je Encoder (alle Varianten zusammen 77 GB), Ergebnisse 1,1 GB |
 

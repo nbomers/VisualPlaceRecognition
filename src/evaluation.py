@@ -26,7 +26,7 @@ from tqdm.auto import tqdm
 
 from scipy.spatial import cKDTree
 
-from .geo import haversine_distance, heading_difference, to_metric_xy
+from .geo import haversine_distance, heading_matches, to_metric_xy
 from .run_guard import code_version, short_hash
 
 
@@ -200,8 +200,12 @@ def standard_evaluations(retrieved_indices, query_metadata, database_metadata, c
     # haben keinen gemeinsamen Bildinhalt -- geometrisch "richtig", visuell
     # unmoeglich. Faellt "loesbar" gegenueber der Standardauswertung, sind das
     # die Anfragen, die kein Encoder loesen kann.
+    #
+    # heading_matches behandelt eine unbekannte Blickrichtung (-1) als "passt"
+    # -- dieselbe Konvention wie in src/pairs.py. Sie roh zu vergleichen hiesse,
+    # -1 als 359 Grad zu lesen.
     def heading_ok(qi, di):
-        return heading_difference(q_heading[qi], db_heading[di]) <= max_heading_diff
+        return heading_matches(q_heading[qi], db_heading[di], max_heading_diff)
 
     befunde = {}
     befunde["Alle Queries"] = run("Alle Queries")
