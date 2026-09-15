@@ -47,7 +47,7 @@ Mapillary-Token, rund 60 GB Platz für Bilder und 25 GB je vollständigem
 Encoder-Satz.
 
 ```bash
-git clone https://github.com/nbomers/pytorch.git && cd pytorch
+git clone https://github.com/nbomers/visual-place-recognition.git && cd visual-place-recognition
 conda env create -f environment.yml && conda activate pytorch
 nbstripout --install --attributes .gitattributes
 cp .env.example .env            # MAPILLARY_TOKEN eintragen
