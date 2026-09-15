@@ -174,7 +174,7 @@ Open-Source-VPR auf einer fremden Stadt".
 | Recall gegen mehrere Ground-Truth-Definitionen, nicht nur eine | erfüllt — Standard, Hard (anderer Fotograf oder > 180 Tage), Blickrichtung, plus Zufallsbasis |
 | Unterschiede statistisch belegt | erfüllt — Sequenz-Bootstrap mit gepaarten Differenzen für 35 Vergleiche |
 | Ergebnisse erklären, nicht nur berichten | erfüllt — Dichtekurve, Whitening-Vergleich, Fehlerstruktur, Stadtteilkarte, Verwechslungsatlas, sechs Negativergebnisse |
-| Ein System, das man vorführen kann | erfüllt — `locate.py` und `demo/demo.ipynb`: ein eigenes Foto durch jeden Encoder inklusive PCA-, Whitening- und Verkettungsvarianten (nur AnyLoc nicht), mit Konfidenz und Karte |
+| Ein System, das man vorführen kann | erfüllt — `locate.py` und `demo/demo.ipynb`: ein eigenes Foto durch jeden Encoder inklusive PCA-, Whitening- und Verkettungsvarianten, mit Konfidenz und Karte |
 
 ## Pipeline
 
@@ -575,8 +575,9 @@ Baut den Encoder über die Factory — auch die PCA-, Whitening- und
 Verkettungsvarianten, deren Projektion neben den Embeddings liegt —, sucht
 im FAISS-Index über die Datenbank und gibt Koordinate, Konfidenz (die
 Ähnlichkeit des besten Treffers, siehe Ablehnungskurve) und die Top-k
-zurück. Nur AnyLoc-Varianten gehen nicht: die AnyLoc-PCA aus 04 liegt
-nicht neben den Embeddings. `demo/demo.ipynb` nutzt denselben Weg und zeigt
+zurück. Auch AnyLoc und seine Varianten: 04 legt die
+angepasste PCA als `anyloc_pca.npz` neben die Embeddings, die Factory laedt
+sie. `demo/demo.ipynb` nutzt denselben Weg und zeigt
 dazu Trefferreihen, Karten auf dem Straßennetz und alle Encoder am selben
 Anfragebild.
 
@@ -896,10 +897,11 @@ Dichtekurven, Stadtteilkarten, Verwechslungsatlas.
 
 **Bewusst vereinfacht.** Ein Split-Seed, eine Stadt, eine Auflösung je
 Encoder. AnyLoc wurde zunächst ohne Whitening verglichen — das ist für
-VLAD unüblich und kostete 0,12 R@1; die gewhitente Variante steht in der
-Tabelle, in `04` eingebaut ist sie nicht, und für ein neues Bild ist
-AnyLoc nicht vorführbar, weil seine PCA aus 04 nicht neben den Embeddings
-liegt.
+VLAD unüblich und kostete 0,12 R@1; die gewhitente Variante steht als
+eigene Zeile in der Tabelle, in `04` eingebaut ist sie nicht. Das ist
+Absicht: `anyloc` soll bleiben, was seine Autoren veröffentlicht haben,
+und was Whitening bringt, sagt die abgeleitete Zeile sauberer als ein
+verändertes Original.
 
 **Eine zweite Stadt.** Seit `src/paths.py` hat jede Stadt ihren eigenen
 Zweig in `data/`, `results/` und `experiments/results/`: `city` umstellen,
