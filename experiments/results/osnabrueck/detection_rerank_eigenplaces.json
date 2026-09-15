@@ -1,0 +1,79 @@
+{
+  "datum": "2026-09-15",
+  "verfahren": "eigenplaces",
+  "top_k": 10,
+  "radius_m": 25.0,
+  "n_queries_gesamt": 53414,
+  "n_brauchbar": 18666,
+  "n_stichprobe": 2000,
+  "n_bilder": 11866,
+  "abdeckung_anfragen": 0.847,
+  "varianten": {
+    "alle Klassen": {
+      "n_klassen": 256,
+      "n_paare": 23484,
+      "auc_detection": 0.5616,
+      "auc_deskriptor": 0.7347,
+      "n_volle_abdeckung": 1286,
+      "umsortieren": {
+        "0": {
+          "recall_1_alle": 0.688,
+          "recall_1_volle_abdeckung": 0.7551
+        },
+        "0.05": {
+          "recall_1_alle": 0.6875,
+          "recall_1_volle_abdeckung": 0.7558
+        },
+        "0.1": {
+          "recall_1_alle": 0.6845,
+          "recall_1_volle_abdeckung": 0.7535
+        },
+        "0.2": {
+          "recall_1_alle": 0.685,
+          "recall_1_volle_abdeckung": 0.7543
+        },
+        "0.5": {
+          "recall_1_alle": 0.6805,
+          "recall_1_volle_abdeckung": 0.7496
+        },
+        "1": {
+          "recall_1_alle": 0.642,
+          "recall_1_volle_abdeckung": 0.6998
+        }
+      }
+    },
+    "ohne Autos/Personen": {
+      "n_klassen": 241,
+      "n_paare": 23484,
+      "auc_detection": 0.5586,
+      "auc_deskriptor": 0.7347,
+      "n_volle_abdeckung": 1286,
+      "umsortieren": {
+        "0": {
+          "recall_1_alle": 0.688,
+          "recall_1_volle_abdeckung": 0.7551
+        },
+        "0.05": {
+          "recall_1_alle": 0.6875,
+          "recall_1_volle_abdeckung": 0.7558
+        },
+        "0.1": {
+          "recall_1_alle": 0.6855,
+          "recall_1_volle_abdeckung": 0.7543
+        },
+        "0.2": {
+          "recall_1_alle": 0.6855,
+          "recall_1_volle_abdeckung": 0.7558
+        },
+        "0.5": {
+          "recall_1_alle": 0.6775,
+          "recall_1_volle_abdeckung": 0.7465
+        },
+        "1": {
+          "recall_1_alle": 0.634,
+          "recall_1_volle_abdeckung": 0.6882
+        }
+      }
+    }
+  }
+}
