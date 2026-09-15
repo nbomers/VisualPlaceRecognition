@@ -638,25 +638,49 @@ unclassified). Dazu Sequenzen, Fotografen-Konzentration, Anteil seit 2022.
 python experiments/city_coverage.py "Mainz, Germany" "Würzburg, Germany"
 ```
 
-Gemessen 2026-09-14 (Mainz ausstehend — Overpass hatte die Verbindung
-verweigert):
+Gemessen 2026-09-14/15. Straßenabdeckung für sechs Kandidaten und
+Osnabrück; 30 weitere Städte nur über die Kacheln (`--tiles-only`, ohne
+Straßennetz), alle 36 in `results/city_coverage.json`:
 
 | Stadt | Bilder | /km² | Straßen km | gedeckt | große | Wohn | Seq. | Fotografen | größter | seit 2022 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Jena | 699.097 | 6.113 | 725 | **99%** | 100% | **99%** | 4.516 | 62 | 51% | 45% |
+| Gütersloh | 600.347 | 5.363 | – | **99%** | 100% | **99%** | 10.636 | 40 | **80%** | 75% |
 | Würzburg | 428.847 | 4.895 | 915 | **98%** | 100% | **98%** | 2.004 | 92 | 51% | 28% |
+| Mainz | 643.832 | 6.593 | – | **95%** | 99% | **94%** | 6.961 | 65 | **74%** | 44% |
 | Halle (Saale) | 919.790 | 6.787 | 1.305 | **92%** | 100% | **91%** | 3.931 | 72 | 30% | 87% |
 | Heidelberg | 530.614 | 4.879 | 822 | **87%** | 98% | **83%** | 3.307 | 113 | 33% | 36% |
 | Erlangen | 611.724 | 7.943 | 808 | **70%** | 100% | **63%** | 3.925 | 86 | 36% | 49% |
 | Osnabrück | 336.168 | 2.808 | 1.327 | **44%** | 94% | **38%** | 1.334 | 57 | 47% | 84% |
 
+Nur Kacheln (Auswahl): Krefeld 1,02 Mio. (7.389/km², größter 46 %),
+Heilbronn 688k (6.890/km², 48 %), Koblenz 311k (2.933/km², 35 %),
+Kaiserslautern 390k (2.792/km²), Chemnitz 389k (1.759/km²); Siegen,
+Wolfsburg, Weimar und Gera sind Ein-Fotografen-Kampagnen (80–88 %).
+Unter ~3.000 Bildern/km² ist mit Osnabrück-artigen Lücken zu rechnen.
+
 **Befund.** Dichte und Abdeckung sind verschiedene Dinge: Erlangen hat die
 höchste Dichte und nur 63 % der Wohnstraßen, Würzburg und Jena haben
 praktisch jede Straße. Osnabrück mit 38 % Wohnstraßen erklärt seine 36 %
-unlösbaren Anfragen direkt. Für eine zweite Stadt: **Würzburg** (98 %,
-Osnabrücks Größe, aber nur 28 % der Bilder seit 2022 — großer Zeitabstand),
-**Jena** (99 %, 45 % frisch), **Halle** (91 %, 87 % frisch, kein Fotograf
-über 30 %, aber dreimal so viele Bilder wie Osnabrück).
+unlösbaren Anfragen direkt.
+
+**Gütersloh** sieht perfekt aus (99 %, 10.636 Sequenzen, 75 % frisch),
+aber 80 % der Bilder und 94 % der Sequenzen (9.952 von 10.636) stammen
+von einem Mapper, der die Stadt seit 2014 an 259 Tagen abfährt — zeitlich
+vielfältig, aber eine Kamera, eine Montagehöhe. Query und Datenbank wären
+zu 94 % dasselbe Gerät; in Osnabrück zeigt das Schwierigkeitsprofil, was
+das wert ist (Nachbar vom selben Fotografen am selben Tag: R@1 0.690 statt
+0.556). Ein besseres Ergebnis als in Osnabrück wäre nicht von der Kamera
+zu trennen. Mainz (74 %) hat dasselbe Problem. Beide taugen für eine
+andere Frage — wie stark Recall an der Kamera hängt, Query-Sequenzen des
+Top-Fotografen gegen die übrigen — nicht für „funktioniert es in einer
+zweiten Stadt".
+
+**Für die zweite Stadt** bleiben Würzburg (98 %, 1,3× Osnabrück, 92
+Fotografen, aber 72 % der Bilder älter als 2022 — großer Zeitabstand),
+Jena (99 %, 2,1× Osnabrück, 4.516 Sequenzen und damit engere Intervalle)
+und Halle (91 %, kein Fotograf über 30 %, 87 % frisch, 2,7× Osnabrück).
+Gütersloh ist als drittes Experiment zur Kamerafrage vorgemerkt.
 
 ---
 

@@ -48,6 +48,9 @@ def _args():
     ap.add_argument("staedte", nargs="+", help='z.B. "Mainz, Germany"')
     ap.add_argument("--pause", type=int, default=60, help="Sekunden zwischen Staedten (Overpass)")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--tiles-only", action="store_true",
+                    help="Nur zaehlen (Bilder, Sequenzen, Fotografen, Jahre), kein Strassennetz -- "
+                         "braucht kein Overpass, eine Minute je Stadt")
     return ap.parse_args()
 
 
@@ -94,11 +97,11 @@ def street_coverage(polygon, utm_crs, pts):
     return laenge, gedeckt
 
 
-def survey(name, token):
+def survey(name, token, tiles_only=False):
     polygon, utm_crs = city_boundary(name)
     area = gpd.GeoSeries([polygon], crs="EPSG:4326").to_crs(utm_crs).area.iloc[0] / 1e6
     pts = image_points(polygon, token)
-    laenge, gedeckt = street_coverage(polygon, utm_crs, pts)
+    laenge, gedeckt = (Counter(), Counter()) if tiles_only else street_coverage(polygon, utm_crs, pts)
     fot = Counter(p.get("creator_id") for p in pts if p.get("creator_id") is not None)
     seqs = Counter(p.get("sequence_id") for p in pts if p.get("sequence_id"))
     seit22 = sum(1 for p in pts if p.get("captured_at") and time.gmtime(p["captured_at"] / 1000).tm_year >= 2022)
@@ -126,26 +129,32 @@ def main():
     for i, name in enumerate(args.staedte):
         if name in done and not args.force:
             continue
-        if i:
+        if i and not args.tiles_only:
             time.sleep(args.pause)
         t0 = time.time()
         try:
-            r = done[name] = survey(name, token)
+            r = survey(name, token, args.tiles_only)
+            if args.tiles_only and name in done:       # Strassenwerte aus frueherem Lauf behalten
+                r = {**done[name], **{k: v for k, v in r.items() if v is not None}}
+            done[name] = r
         except Exception as e:
             print(f"{name}: {type(e).__name__}: {str(e)[:120]}")
             continue
-        print(f"{r['stadt']:<16} {r['bilder']:>9,} Bilder {r['bilder_pro_km2']:>6,}/km2 | "
-              f"Strassen gedeckt {r['abdeckung_gesamt']:.0%} (gross {r['abdeckung_grosse_strassen']:.0%}, "
-              f"Wohn {r['abdeckung_wohnstrassen']:.0%}) | {r['sequenzen']:,} Seq. | "
-              f"{r['fotografen']} Fotografen, groesster {r['anteil_groesster_fotograf']:.0%} | "
-              f"seit 2022: {r['anteil_seit_2022']:.0%}  ({time.time() - t0:.0f} s)", flush=True)
+        strassen = (f"Strassen gedeckt {r['abdeckung_gesamt']:.0%} (gross {r['abdeckung_grosse_strassen']:.0%}, "
+                    f"Wohn {r['abdeckung_wohnstrassen']:.0%})" if r.get("abdeckung_gesamt") is not None
+                    else "Strassen: nicht gemessen")
+        print(f"{r['stadt']:<16} {r['bilder']:>9,} Bilder {r['bilder_pro_km2']:>6,}/km2 | {strassen} | "
+              f"{r['sequenzen']:,} Seq. | {r['fotografen']} Fotografen, groesster "
+              f"{r['anteil_groesster_fotograf']:.0%} | seit 2022: {r['anteil_seit_2022']:.0%}  "
+              f"({time.time() - t0:.0f} s)", flush=True)
         OUT.parent.mkdir(parents=True, exist_ok=True)
         OUT.write_text(json.dumps(done, indent=1, ensure_ascii=False))
     if done:
         print(f"\n{'Stadt':<16}{'Bilder':>10}{'/km2':>7}{'gedeckt':>9}{'Wohn':>7}{'seit22':>8}{'Fotogr.':>9}")
-        for r in sorted(done.values(), key=lambda r: -(r['abdeckung_gesamt'] or 0)):
-            print(f"{r['stadt']:<16}{r['bilder']:>10,}{r['bilder_pro_km2']:>7,}{r['abdeckung_gesamt']:>9.0%}"
-                  f"{r['abdeckung_wohnstrassen']:>7.0%}{r['anteil_seit_2022']:>8.0%}{r['anteil_groesster_fotograf']:>9.0%}")
+        for r in sorted(done.values(), key=lambda r: -(r.get('abdeckung_gesamt') or 0)):
+            ab = f"{r['abdeckung_gesamt']:>9.0%}{r['abdeckung_wohnstrassen']:>7.0%}" if r.get("abdeckung_gesamt") is not None else f"{'-':>9}{'-':>7}"
+            print(f"{r['stadt']:<16}{r['bilder']:>10,}{r['bilder_pro_km2']:>7,}{ab}"
+                  f"{r['anteil_seit_2022']:>8.0%}{r['anteil_groesster_fotograf']:>9.0%}")
 
 
 if __name__ == "__main__":
