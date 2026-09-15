@@ -466,6 +466,9 @@ Die Schlüssel, die man am ehesten anfasst:
 | `verify_all_images` | `true` prüft in 03 den gesamten Bildbestand statt nur der neu geholten |
 | `vpr.max_images` | Obergrenze für 04, nur zum Ausprobieren — `null` = alle |
 | `image_root` | Wurzel der Bildordner (`<image_root>/<stadt>`, `<image_root>/test`); je Rechner per `VPR_IMAGE_ROOT` oder `VPR_IMAGE_PATH` überschreibbar |
+| `osm.overpass_url` | Overpass-Endpunkt für Straßennetz und Stadtteile (ohne `/interpreter`); je Rechner per `VPR_OVERPASS_URL` überschreibbar |
+| `osm.timeout_s` | Zeitlimit je Overpass-Abfrage — gilt für die HTTP-Anfrage **und** das `[timeout:…]` im Overpass-Skript (osmnx-Standard 180 ist für ein Stadt-Straßennetz oft zu knapp) |
+| `osm.rate_limit` | vor jeder Abfrage den Serverstatus lesen und auf einen freien Slot warten — langsamer, aber ohne 429 mitten im Lauf |
 
 ## Nutzung
 
@@ -512,6 +515,15 @@ läuft, würde dem laufenden Durchgang die Stadt unter den Füßen wechseln —
 die nächste Stufe schriebe nach `results/<andere stadt>/` und fände ihre
 Eingaben nicht. Über die Umgebung bleiben beide Läufe getrennt, und die
 versionierte Datei bleibt unangetastet.
+
+Nach demselben Muster sticht **`VPR_OVERPASS_URL`** den Endpunkt aus
+`osm.overpass_url`. Der Standard `overpass-api.de` ist ein öffentlicher,
+geteilter Dienst; wenn er zumacht, hilft ein Spiegel, ohne dass die
+versionierte Datei sich ändert:
+
+```bash
+VPR_OVERPASS_URL="https://overpass.kumi.systems/api" python run.py
+```
 
 `--method` und `--adapter` nehmen auch Kommalisten oder `all`. Dann rechnet
 `run.py` eine Kombination nach der anderen: 01 bis 03 laufen dabei nur einmal,
@@ -904,10 +916,37 @@ und was Whitening bringt, sagt die abgeleitete Zeile sauberer als ein
 verändertes Original.
 
 **Eine zweite Stadt.** Seit `src/paths.py` hat jede Stadt ihren eigenen
-Zweig in `data/`, `results/` und `experiments/results/`: `city` umstellen,
-01 und 03 laufen lassen, dann die Pipeline wie gewohnt. Ein Encoder auf
-einer Stadt von Osnabrücks Größe kostet auf dem M1 Pro eine Nacht (04) plus
-Minuten (06–08). Auf Mapillary dichter erschlossen als Osnabrück (2.808
+Zweig in `data/`, `results/` und `experiments/results/`. Der ganze Weg,
+am Beispiel Würzburg:
+
+```bash
+export VPR_CITY="Würzburg, Germany"      # sticht city, ohne die Datei zu ändern
+python run.py --from 01                  # 01 Kacheln + Split, 02 Audit, 03 Bilder
+python run.py --method all               # danach der übliche Durchgang
+```
+
+Drei Dinge lohnen dabei den Blick:
+
+1. **Die Stadtgrenze.** 01 druckt Fläche, `osm_type/osm_id` und die
+   Kachelzahl. Passt die Fläche nicht (Würzburg 87,6 km², der gleichnamige
+   Landkreis knapp 1.000), hat Nominatim den Kreis geliefert — dann `city`
+   präziser angeben, etwa `"Stadt Würzburg, Bayern, Germany"`.
+2. **Der Split entsteht neu.** `data/<stadt>/processed/*_sequences.txt`
+   existiert für eine neue Stadt noch nicht, also würfelt `src/split.py`
+   mit `split_seed`. Ab dem zweiten Lauf werden die Listen übernommen —
+   das ist der Grund, warum eine abgebrochene Kachel in 01 hart abbricht
+   statt nur zu warnen: der Split würde sonst aus unvollständigen Daten
+   gezogen und eingefroren.
+3. **Overpass.** Straßennetz und Stadtteile in 01 kommen von einem
+   öffentlichen, geteilten Dienst, und `cache/` ist gitignored — auf einem
+   frischen Rechner läuft jede Abfrage das erste Mal wirklich. Fällt sie
+   aus, sagt 01 das und läuft zu Ende; der Datensatz steht da längst. Die
+   Karten holt ein erneuter Lauf von 01 später nach — der Split wird dabei
+   aus den `*_sequences.txt` übernommen, nicht neu gewürfelt. Dauerhaft zäh: `osm.timeout_s` hoch, oder einen Spiegel über
+   `VPR_OVERPASS_URL` setzen.
+
+Ein Encoder auf einer Stadt von Osnabrücks Größe kostet auf dem M1 Pro eine
+Nacht (04) plus Minuten (06–08). Auf Mapillary dichter erschlossen als Osnabrück (2.808
 Bilder/km²) sind etwa Erlangen (7.943), Mainz (6.593), Jena (6.113),
 Würzburg (4.895) und Heidelberg (4.879);
 Bamberg (25.248/km², 1,38 Mio. Bilder auf 55 km²) ist ein Sonderfall.
