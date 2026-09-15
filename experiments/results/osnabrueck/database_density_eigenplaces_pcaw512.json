@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-12",
+  "datum": "2026-09-14",
   "method": "eigenplaces_pcaw512",
   "radius_m": 25.0,
   "n_queries": 53414,
