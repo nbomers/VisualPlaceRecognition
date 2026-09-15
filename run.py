@@ -17,6 +17,7 @@ rechnen dann eine Kombination nach der anderen.
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -62,6 +63,10 @@ def _args():
                "  python run.py --force                        alles neu rechnen",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    ap.add_argument("--bestand", action="store_true",
+                    help="Nur zeigen, welche Encoder auf DIESEM Rechner vollstaendig "
+                         "sind. Embeddings und Trefferlisten sind gitignored und "
+                         "liegen je nach Rechner verteilt.")
     ap.add_argument("--force", action="store_true",
                     help="Auch Stufen ausfuehren, deren Ergebnis schon passt")
     ap.add_argument("--from", dest="start", metavar="NOTEBOOK",
@@ -141,6 +146,69 @@ def _stages(cfg, method, adapter):
     ]
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _fehlerzeile(e):
+    """
+    Die Zeile, die wirklich etwas sagt.
+
+    nbclient wirft CellExecutionError, dessen erste Zeile immer "An error
+    occurred while executing the following cell" lautet -- darunter stehen
+    Zellenquelle und Traceback. Was man lesen will, ist die letzte Zeile:
+    dort steht die Ausnahme mit ihrer Meldung.
+    """
+    zeilen = [_ANSI.sub("", z).rstrip() for z in str(e).splitlines()]
+    zeilen = [z for z in zeilen if z.strip() and not set(z.strip()) <= {"-"}]
+    return zeilen[-1].strip() if zeilen else f"{type(e).__name__}"
+
+
+def bestand(cfg):
+    """
+    Was auf diesem Rechner liegt -- je Encoder und Variante.
+
+    Embeddings (77 GB ueber alle Varianten) und Trefferlisten sind
+    gitignored; im Projekt entstanden sie auf zwei Rechnern und wurden per
+    rsync zusammengefuehrt. Ein Lauf, der 07/08 neu rechnet, kann deshalb
+    nur die Encoder anfassen, die HIER vorliegen. Diese Uebersicht sagt,
+    welche das sind, bevor die Haelfte der Kombinationen abbricht.
+    """
+    p = paths(cfg, ROOT)
+    kopf = f"{'Encoder / Variante':<40}{'Embeddings':<12}{'Treffer':<10}{'07':<5}{'08':<5}"
+    print(f"Bestand in {p.root}\n")
+    print(kopf)
+    print("-" * len(kopf))
+    vollstaendig, unvollstaendig = [], []
+    for method in cfg["vpr"]["models"]:
+        for adapter in ("none", "linear"):
+            name = method if adapter == "none" else f"{method}_{adapter}"
+            emb = p.embedding_file(name, method)
+            meta = p.metadata_file(name, method)
+            hat_emb = emb.exists() and meta.exists()
+            hat_ret = p.retrieval_file(name, method).exists()
+            hat_07 = (p.evaluation / f"{name}.json").exists()
+            hat_08 = (p.localization / f"{name}.json").exists()
+            if not (hat_emb or hat_ret or hat_07 or hat_08):
+                continue
+            zeichen = {True: "ja", False: "--"}
+            print(f"{name:<40}{zeichen[hat_emb]:<12}{zeichen[hat_ret]:<10}"
+                  f"{zeichen[hat_07]:<5}{zeichen[hat_08]:<5}")
+            (vollstaendig if hat_emb and hat_ret else unvollstaendig).append(name)
+
+    print("-" * len(kopf))
+    print(f"{len(vollstaendig)} Encoder koennen hier 07/08 neu rechnen.")
+    if unvollstaendig:
+        print(f"{len(unvollstaendig)} ohne Embeddings oder Trefferliste -- die liegen "
+              "auf dem anderen Rechner:")
+        print("  " + ", ".join(unvollstaendig))
+        print("\nDort dasselbe laufen lassen; die Ergebnis-JSONs sind klein und")
+        print("wandern ueber git zusammen.")
+    if vollstaendig:
+        print(f"\n  python run.py --method {','.join(sorted({n.removesuffix('_linear') for n in vollstaendig}))} "
+              "--adapter all --from 07")
+    return vollstaendig
+
+
 def _download_stand(cfg):
     """
     Was 03 zuletzt hinterlassen hat: erwartete, vorhandene und fehlende
@@ -158,6 +226,23 @@ def _download_stand(cfg):
         return json.loads(pfad.read_text())
     except ValueError:
         return None
+
+
+def _nicht_auf_diesem_rechner(cfg, method, adapter):
+    """
+    Fehlen die Eingaben einer spaeten Stufe ganz, liegt der Encoder auf dem
+    anderen Rechner -- das ist kein Fehlschlag, sondern Arbeitsteilung.
+
+    Gibt den fehlenden Pfad zurueck oder None. Nur bei --from ausgewertet:
+    ohne --from ist "Datei fehlt" die normale Aufforderung, die Stufe zu
+    rechnen.
+    """
+    p = paths(cfg, ROOT)
+    name = method if adapter in ("none", "None") else f"{method}_{adapter}"
+    for pfad in (p.metadata_file(name, method), p.embedding_file(name, method)):
+        if not pfad.exists():
+            return pfad
+    return None
 
 
 def _result_current(ergebnis, treffer, cfg, method, adapter):
@@ -304,6 +389,10 @@ def _durchlauf(cfg, method, adapter, args, erledigt):
 def main():
     args = _args()
 
+    if args.bestand:
+        bestand(BASIS_CFG)
+        return
+
     methoden = _liste(args.method,
                       _modelle(BASIS_CFG, abgeleitet=False),
                       BASIS_CFG["vpr"]["method"],
@@ -320,6 +409,7 @@ def main():
 
     erledigt = set()
     ergebnisse = []
+    uebersprungen = []
     gesamt = time.time()
 
     for method, adapterwert in kombinationen:
@@ -338,14 +428,27 @@ def main():
         print("#" * 60)
         print(f"# {method}  /  adapter={adapterwert}")
         print("#" * 60)
+
+        # Bei --from setzt der Aufruf voraus, dass die frueheren Stufen schon
+        # gerechnet sind. Sind ihre Ergebnisse gar nicht da, gehoert dieser
+        # Encoder auf den anderen Rechner -- uebersprungen, nicht gescheitert.
+        if args.start:
+            fehlt = _nicht_auf_diesem_rechner(cfg, method, adapterwert)
+            if fehlt is not None:
+                print(f"uebersprungen: liegt nicht auf diesem Rechner "
+                      f"({fehlt.relative_to(ROOT)} fehlt)\n")
+                uebersprungen.append(f"{method}/{adapterwert}")
+                continue
+
         try:
             zeiten = _durchlauf(cfg, method, adapterwert, args, erledigt)
             ergebnisse.append((method, adapterwert, sum(d for _, d in zeiten), None))
         except Exception as e:
             # Ein gescheiterter Encoder soll die uebrigen nicht mitreissen --
             # sonst ist eine Nacht Rechenzeit wegen eines OOM verloren.
-            ergebnisse.append((method, adapterwert, 0.0, f"{type(e).__name__}: {e}"))
-            print(f"\nABGEBROCHEN: {method}/{adapterwert} -- {type(e).__name__}")
+            ergebnisse.append((method, adapterwert, 0.0, _fehlerzeile(e)))
+            print(f"\nABGEBROCHEN: {method}/{adapterwert}")
+            print(f"  {_fehlerzeile(e)}")
             if len(kombinationen) == 1:
                 raise
             print("weiter mit der naechsten Kombination\n")
@@ -358,11 +461,22 @@ def main():
     print(f"  {'gesamt':<32s} {(time.time() - gesamt) / 60:>7.2f} min")
     print("=" * 60)
 
+    if uebersprungen:
+        print(f"\n{len(uebersprungen)} Kombinationen liegen nicht auf diesem Rechner "
+              "und wurden uebersprungen:")
+        print("  " + ", ".join(uebersprungen))
+        print("  -> dort dasselbe laufen lassen (python run.py --bestand zeigt, was da ist);")
+        print("     die Ergebnis-JSONs sind klein und wandern ueber git zusammen.")
+
     gescheitert = [(m, a, f) for m, a, _, f in ergebnisse if f]
     if gescheitert:
         print("\nFehlgeschlagen:")
         for m, a, f in gescheitert:
-            print(f"  {m}/{a}: {f.splitlines()[0][:100]}")
+            print(f"  {m + '/' + a:<36} {f[:110]}")
+        if any("No such file or directory" in f for _, _, f in gescheitert):
+            print("\nFehlende Dateien heissen meist: dieser Encoder liegt auf dem")
+            print("anderen Rechner. Embeddings und Trefferlisten sind gitignored;")
+            print("was hier vollstaendig ist, zeigt:  python run.py --bestand")
         # Sonst sieht ein Durchgang, bei dem die Haelfte abgebrochen ist, fuer
         # jedes aufrufende Skript wie ein Erfolg aus.
         raise SystemExit(1)

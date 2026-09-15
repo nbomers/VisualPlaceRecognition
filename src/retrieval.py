@@ -37,7 +37,19 @@ def load_retrieval(root, cfg, method, adapter="none", sequence_window=None,
     """
     name = method if adapter in ("none", "None") else f"{method}_{adapter}"
     pfade = Paths(cfg, root)
-    meta = pd.read_parquet(pfade.metadata_file(name, method))
+    meta_datei = pfade.metadata_file(name, method)
+    if not meta_datei.exists():
+        # Embeddings sind gitignored und liegen je nach Rechner verteilt.
+        # Die nackte FileNotFoundError von pandas sagt das nicht.
+        raise FileNotFoundError(
+            f"Keine Embeddings fuer {name!r} unter {meta_datei.parent}.\n"
+            "Entweder wurde der Encoder hier nie gerechnet, oder er liegt auf "
+            "einem anderen Rechner (Embeddings und Trefferlisten sind "
+            "gitignored).\n"
+            "  python run.py --bestand        zeigt, was hier vollstaendig ist\n"
+            f"  python run.py --method {method}   rechnet ihn hier"
+        )
+    meta = pd.read_parquet(meta_datei)
     fingerprint = embedding_fingerprint(cfg, method, adapter, meta)
     if reference_splits:
         name = f"{name}_fullref"
