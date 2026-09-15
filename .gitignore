@@ -184,3 +184,11 @@ data/*/processed/*
 !data/*/processed/database_sequences.txt
 !data/*/processed/query_sequences.txt
 !data/*/processed/metadata.parquet
+
+# Arbeitsstand und Auftragsliste bleiben lokal, die filter-repo-Callbacks
+# unter docs/history/ erst recht. Die Staedte-Tabelle ist die Ausnahme.
+docs/
+!docs/mapillary_coverage_staedte.json
+
+# Arbeitsstand, Auftragsliste und die filter-repo-Callbacks bleiben lokal.
+docs/
