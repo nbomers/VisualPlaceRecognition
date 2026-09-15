@@ -90,7 +90,7 @@ def main():
         print(f"{'+-' + str(w):>8}   {r25['1']:>6.3f} {r25['5']:>6.3f} {r25['10']:>6.3f}   "
               f"{r25['1'] - b25['1']:>+6.3f}")
 
-        # Als eigene Variante in results/evaluation: compare.py zeigt sie in
+        # Als eigene Variante in results/<stadt>/evaluation: compare.py zeigt sie in
         # der Spalte "Variante" neben none und linear.
         variante = f"{adapter}+seq{w}" if adapter not in ("none", "None") else f"seq{w}"
         pfad = write_evaluation(

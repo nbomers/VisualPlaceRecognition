@@ -17,11 +17,11 @@ Anfrage, keine Distanzmatrix im Bootstrap); der Bootstrap selbst ist
 Arithmetik auf Sequenz-Summen. Reines Nachbearbeiten der .npz aus 06;
 kein Modell, keine GPU.
 
-    python experiments/bootstrap_ci.py                  # alle Zeilen aus results/evaluation/
+    python experiments/bootstrap_ci.py                  # alle Zeilen aus results/<stadt>/evaluation/
     python experiments/bootstrap_ci.py --n-bootstrap 200
     python compare.py --ci                              # Intervalle neben R@1
 
-Ergebnis: experiments/results/bootstrap_ci.json
+Ergebnis: experiments/results/<stadt>/bootstrap_ci.json
 """
 
 import argparse
