@@ -71,7 +71,19 @@ def main():
     print(f"{'Fenster':>8}   {'R@1':>6} {'R@5':>6} {'R@10':>6}   {'dR@1':>6}")
     print(f"{'einzeln':>8}   {b25['1']:>6.3f} {b25['5']:>6.3f} {b25['10']:>6.3f}")
 
-    for w in [int(x) for x in args.windows.split(",") if x.strip()]:
+    fenstergroessen = [int(x) for x in args.windows.split(",") if x.strip()]
+    # w = 0 wuerde eine seq0-Zeile erzeugen, die identisch zur Baseline ist --
+    # kein Fehler, aber eine Zeile in compare.py, die nichts aussagt.
+    if any(w < 1 for w in fenstergroessen):
+        raise SystemExit(
+            f"--windows braucht Werte ab 1, bekommen: {args.windows!r}.\n"
+            "Ein Fenster von 0 Nachbarn ist die Einzelbild-Auswertung -- "
+            "die steht schon als Baseline in compare.py."
+        )
+    if not fenstergroessen:
+        raise SystemExit("--windows ist leer.")
+
+    for w in fenstergroessen:
         neu_idx, neu_sim = aggregate_sequence(indices, similarities, fenster, w, top_k)
         befunde = standard_evaluations(neu_idx, query, database, CFG, verbose=not args.quiet)
         r25 = befunde["Alle Queries"]["schwellen"]["25"]["recall"]

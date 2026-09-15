@@ -57,3 +57,39 @@ def test_ohne_jeden_nachbarn():
     q = _rahmen(np.array([52.0, 52.1]), np.array([8.0, 8.1]), 200)
     db = _rahmen(np.array([53.0, 53.1]), np.array([9.0, 9.1]), 30_000)
     assert not localizable(q, db, 25.0).any()
+
+
+# ----------------------------------------------------------------------
+# Welche Dateien load_retrieval oeffnet
+#
+# Die fullref-Zeilen haben KEINE eigene Metadatendatei -- sie nutzen die des
+# Basis-Encoders, nur die .npz traegt das Suffix. Wer das nachbaut statt
+# retrieval_inputs zu fragen, sucht anyloc_fullref_metadata.parquet und
+# findet sie nie. Genau so hat die Vorabpruefung in bootstrap_ci.py einmal
+# alle 18 Encoder als "nicht vorhanden" gemeldet, obwohl alles da war.
+# ----------------------------------------------------------------------
+
+def _cfg_stadt():
+    return {"city": "Osnabrück, Germany", "image_root": "/tmp"}
+
+
+def test_fullref_nutzt_die_metadaten_des_basis_encoders():
+    from src.retrieval import retrieval_inputs
+
+    meta, npz = retrieval_inputs(".", _cfg_stadt(), "anyloc", "none")
+    meta_full, npz_full = retrieval_inputs(".", _cfg_stadt(), "anyloc", "none",
+                                           reference_splits=["database", "train"])
+    assert meta_full == meta, "fullref hat keine eigene Metadatendatei"
+    assert meta.name == "anyloc_metadata.parquet"
+    assert npz.name == "anyloc_retrieval.npz"
+    assert npz_full.name == "anyloc_fullref_retrieval.npz"
+
+
+def test_adapter_im_namen_von_metadaten_und_trefferliste():
+    from src.retrieval import retrieval_inputs
+
+    meta, npz = retrieval_inputs(".", _cfg_stadt(), "megaloc", "linear")
+    assert meta.name == "megaloc_linear_metadata.parquet"
+    assert npz.name == "megaloc_linear_retrieval.npz"
+    # Der Ordner bleibt der des echten Encoders, nicht der der Variante.
+    assert meta.parent.name == "megaloc" and npz.parent.name == "megaloc"

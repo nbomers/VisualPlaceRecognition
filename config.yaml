@@ -115,11 +115,12 @@ vpr:
   # angepasst. Diese Werte gehen in den Fingerabdruck ein -- wer pca_dim
   # aendert, entwertet die Datei korrekt.
   #
-  # Whitening bewusst nur auf 512 Komponenten, nicht auf allen: die kleinsten
-  # Eigenwerte sind bei 50.000 Stichproben Rauschen, und Whitening teilt
-  # durch sie -- es wuerde das Rauschen verstaerken statt den Ort. Die zwei
-  # Ausnahmen (anyloc_pcaw4096, eigenplaces_pcaw2048) sind der Test genau
-  # dieser Aussage.
+  # Whitening bewusst nur auf 512 Komponenten, nicht auf allen. Die Vermutung
+  # dahinter: die kleinsten Eigenwerte sind bei 50.000 Stichproben Rauschen,
+  # und Whitening teilt durch sie. Die zwei Ausnahmen (anyloc_pcaw4096,
+  # eigenplaces_pcaw2048) zeigen, dass das Vorzeichen zur Vermutung passt --
+  # den Mechanismus belegen sie nicht. Dafuer braeuchte es Shrinkage
+  # (durch sqrt(lambda + eps * lambda_max) teilen); ungemessen.
   #
   # Die Bloecke teilen sich ihre Werte ueber YAML-Anker (_vorlagen unten);
   # <<: fuegt den Anker ein, source kommt je Variante dazu.

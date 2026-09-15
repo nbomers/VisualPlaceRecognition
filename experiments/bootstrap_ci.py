@@ -33,7 +33,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from _common import CFG, PATHS, RESULTS, ROOT
-from src.retrieval import hits_at_k, load_retrieval, localizable
+from src.retrieval import hits_at_k, load_retrieval, localizable, retrieval_inputs
 
 EVAL_DIR = PATHS.evaluation
 OUT = RESULTS / "bootstrap_ci.json"
@@ -145,10 +145,13 @@ def main():
     # hier abbrechen statt nach zehn Encodern mitten im Lauf.
     fehlend = []
     for rec in records:
-        name = rec["embedding_name"]
-        meta = PATHS.metadata_file(name, rec["method"])
-        if not meta.exists():
-            fehlend.append(f"{name} ({meta.relative_to(ROOT)})")
+        # Nicht selbst zusammenbauen -- retrieval_inputs nennt genau die
+        # Dateien, die load_run gleich oeffnen wird.
+        for pfad in retrieval_inputs(ROOT, CFG, rec["method"], rec["adapter"],
+                                     reference_splits=rec.get("reference_splits")):
+            if not pfad.exists():
+                fehlend.append(f"{rec['embedding_name']} ({pfad.relative_to(ROOT)})")
+                break
     if fehlend:
         raise SystemExit(
             f"{len(fehlend)} von {len(records)} Encodern liegen nicht auf diesem "
