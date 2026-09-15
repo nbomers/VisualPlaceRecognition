@@ -47,8 +47,8 @@ Mapillary-Token, rund 60 GB Platz für Bilder und 25 GB je vollständigem
 Encoder-Satz.
 
 ```bash
-git clone https://github.com/nbomers/visual-place-recognition.git && cd visual-place-recognition
-conda env create -f environment.yml && conda activate pytorch
+git clone https://github.com/nbomers/VisualPlaceRecognition.git && cd VisualPlaceRecognition
+conda env create -f environment.yml && conda activate vpr
 nbstripout --install --attributes .gitattributes
 cp .env.example .env            # MAPILLARY_TOKEN eintragen
 python setup_external.py        # AnyLoc- und MixVPR-Repos, Gewichte, Vokabular
@@ -894,14 +894,14 @@ EigenPlaces 2,8 Stunden, MegaLoc 4,4 Stunden; AnyLoc 6,3 Stunden auf der GPU.
 
 ### Abbildungen
 
-`results/figures/evaluation/` — `vergleich_r1_25m.png` (R@1 je Zeile mit
+`results/<stadt>/figures/evaluation/` — `vergleich_r1_25m.png` (R@1 je Zeile mit
 Bootstrap-Intervall, liegende Balken nach Wert sortiert, Farbe = Encoder),
 `vergleich_recall_k_25m.png` und `vergleich_schwellen.png` (Kurven, Farbe =
 Encoder, gestrichelt = Adapter). Mit `--derived` heißen sie `_derived` und
 werden zu kleinen Vielfachen: ein Feld je Encoder, Farbe und Markerform =
 Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 37 Zeilen in eine
-Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde. `results/figures/localization/` —
-je Encoder die Fehlerverteilung. `results/figures/demo/` — Trefferreihen,
+Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde. `results/<stadt>/figures/localization/` —
+je Encoder die Fehlerverteilung. `results/<stadt>/figures/demo/` — Trefferreihen,
 Karten auf dem Straßennetz, Encoder-Vergleich. `experiments/results/` —
 Dichtekurven, Stadtteilkarten, Verwechslungsatlas.
 
