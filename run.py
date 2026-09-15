@@ -126,9 +126,9 @@ def _stages(cfg, method, adapter):
          p.processed / "metadata.parquet", None),
         ("02_dataset_audit.ipynb",
          p.dataset_audit, None),
-        # 03 schreibt die Fehlerliste immer, auch wenn sie leer ist.
-        ("03_image_download.ipynb",
-         p.processed / "failed_image_download.txt", None),
+        # 03 wird ueber den Bildbestand beurteilt, nicht ueber eine Datei --
+        # siehe _download_stand(); deshalb hier kein Artefakt.
+        ("03_image_download.ipynb", None, None),
         ("04_embeddings.ipynb",
          emb / f"{method}_embeddings.npy", gate(method, "none")),
         ("05_adapter.ipynb",
@@ -139,6 +139,25 @@ def _stages(cfg, method, adapter):
         ("07_evaluation.ipynb", None, None),
         ("08_localization.ipynb", None, None),
     ]
+
+
+def _download_stand(cfg):
+    """
+    Was 03 zuletzt hinterlassen hat: erwartete, vorhandene und fehlende
+    Bilder. None, wenn 03 nie gelaufen ist.
+
+    03 nur auf die Existenz seiner Ausgabedatei zu pruefen war die stillste
+    Luecke der Pipeline: laeuft der Token mitten im Download ab, liegt die
+    Datei trotzdem da und 03 gilt als erledigt. Beurteilt wird deshalb der
+    Bestand.
+    """
+    pfad = paths(cfg, ROOT).processed / "image_download.json"
+    if not pfad.exists():
+        return None
+    try:
+        return json.loads(pfad.read_text())
+    except ValueError:
+        return None
 
 
 def _result_current(ergebnis, treffer, cfg, method, adapter):
@@ -225,6 +244,23 @@ def _durchlauf(cfg, method, adapter, args, erledigt):
         if notebook.startswith("05") and adapter in ("none", "None") and not force:
             print(f"uebersprungen (kein Adapter): {notebook}")
             continue
+
+        # 03 ist fertig, wenn die Bilder da sind -- nicht, wenn eine Datei
+        # existiert. Fehlen mehr als max_missing_images_frac, laeuft es neu
+        # und holt genau die fehlenden nach.
+        if notebook.startswith("03") and not force:
+            stand = _download_stand(cfg)
+            if stand is not None:
+                schranke = float(stand.get("max_missing_images_frac",
+                                           cfg.get("max_missing_images_frac", 0.0)))
+                if float(stand.get("anteil_fehlend", 1.0)) <= schranke:
+                    print(f"uebersprungen (vollstaendig):{notebook}  ->  "
+                          f"{stand['vorhanden']:,} von {stand['erwartet']:,} Bildern")
+                    erledigt.add(notebook)
+                    continue
+                print(f"neu zu rechnen:              {notebook}  ->  "
+                      f"{stand['fehlend']:,} Bilder fehlen "
+                      f"({float(stand['anteil_fehlend']):.2%} > {schranke:.2%})")
 
         # 07 und 08 schreiben JSONs ohne eigene Sidecar-Datei. Aktuell sind
         # sie, wenn sie den Fingerabdruck der Trefferliste UND die Kennung
@@ -327,6 +363,9 @@ def main():
         print("\nFehlgeschlagen:")
         for m, a, f in gescheitert:
             print(f"  {m}/{a}: {f.splitlines()[0][:100]}")
+        # Sonst sieht ein Durchgang, bei dem die Haelfte abgebrochen ist, fuer
+        # jedes aufrufende Skript wie ein Erfolg aus.
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@ import pandas as pd
 import requests
 from tqdm import tqdm
 
-from _common import CFG, PATHS, ROOT
+from _common import CFG, PATHS, RESULTS, ROOT
 from src.geo import haversine_distance
 from src.mapillary import get_session, load_token
 CACHE_PATH = PATHS.cache / "detections.jsonl"
@@ -288,6 +288,19 @@ def main():
     # ------------------------------------------------------------------
     # Zwei Varianten: mit und ohne die zeitabhaengigen Klassen
     # ------------------------------------------------------------------
+    befund = {
+        "datum": pd.Timestamp.now().strftime("%Y-%m-%d"),
+        "verfahren": name,
+        "top_k": int(args.top_k),
+        "radius_m": float(args.radius),
+        "n_queries_gesamt": int(len(queries)),
+        "n_brauchbar": int(len(brauchbar)),
+        "n_stichprobe": int(len(gezogen)),
+        "n_bilder": int(len(alle_ids)),
+        "abdeckung_anfragen": round(float(np.mean([hat_det[i] for i in q_ids])), 4),
+        "varianten": {},
+    }
+
     for drop_transient in (False, True):
         etikett = "ohne Autos/Personen" if drop_transient else "alle Klassen"
         matrix, zeile_von, n_klassen = build_vectors(cache, alle_ids, drop_transient)
@@ -340,19 +353,38 @@ def main():
         print(f"  Umsortieren des Top-k    "
               f"(alle {len(marken):,} | volle Abdeckung {int(voll.sum()):,})")
         print(f"    {'Gewicht':>8}   {'R@1 alle':>9}   {'R@1 voll':>9}")
+        gewichte = {}
         for lam in (0.0, 0.05, 0.1, 0.2, 0.5, 1.0):
             gemischt = z_desc + lam * z_det
             beste = gemischt.argmax(axis=1)
             getroffen = marken[np.arange(len(beste)), beste]
             r1 = float(getroffen.mean())
             r1_voll = float(getroffen[voll].mean()) if voll.any() else float("nan")
+            gewichte[f"{lam:g}"] = {"recall_1_alle": round(r1, 4),
+                                    "recall_1_volle_abdeckung": round(r1_voll, 4)}
             markierung = "   <- Ausgangslage" if lam == 0.0 else ""
             print(f"    {lam:>8.2f}   {r1:>9.4f}   {r1_voll:>9.4f}{markierung}")
+
+        befund["varianten"][etikett] = {
+            "n_klassen": int(n_klassen),
+            "n_paare": int(n_paare),
+            "auc_detection": round(float(auc_det), 4),
+            "auc_deskriptor": round(float(auc_desc), 4),
+            "n_volle_abdeckung": int(voll.sum()),
+            "umsortieren": gewichte,
+        }
+
+    # Ein Negativergebnis ist auch eins: ohne versionierte Datei steht die
+    # Zahl nur im README und niemand kann sie nachrechnen.
+    out = RESULTS / f"detection_rerank_{name}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(befund, indent=2, ensure_ascii=False))
 
     print()
     print("Lesart: liegt die AUC bei 0.50 und faellt R@1 mit steigendem")
     print("Gewicht, traegt das Signal nichts. Die Idee ist dann sauber")
     print("widerlegt und der Befund gehoert in die Fehleranalyse.")
+    print(f"\n-> {out.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

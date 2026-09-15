@@ -20,13 +20,19 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 
 
-def _paths():
+def _config():
     from src.config import load_config, paths
-    return paths(load_config(ROOT), ROOT)
+    cfg = load_config(ROOT)
+    return cfg, paths(cfg, ROOT)
 
 
-PATHS = _paths()
+CFG, PATHS = _config()
 EVAL_DIR = PATHS.evaluation
+
+# Die Schwelle der Ground Truth steht in der config, nicht zweimal. Frueher
+# war die 25 hier ein argparse-Literal -- wer vpr.uncertain_radius_m aenderte,
+# aenderte die Tabelle nicht mit.
+STANDARD_SCHWELLE = int(float(CFG["vpr"]["uncertain_radius_m"]))
 
 
 def load(reference="database"):
@@ -54,9 +60,37 @@ FIGURE_DIR = PATHS.figures / "evaluation"
 def _abgeleitet(method):
     """Hat der Encoder in der config einen source-Eintrag, ist er aus einem
     anderen gerechnet -- die PCA- und Whitening-Varianten."""
-    from src.config import load_config
-    block = load_config(ROOT)["vpr"].get(method)
+    block = CFG["vpr"].get(method)
     return isinstance(block, dict) and ("source" in block or "sources" in block)
+
+
+def _basis_encoder(method):
+    """
+    Der echte Encoder hinter einem Namen: megaloc_pcaw512 -> megaloc,
+    eigenplaces_megaloc_concat -> eigenplaces (erste Quelle). Die Kette wird
+    verfolgt, bis ein Name ohne source/sources erreicht ist.
+    """
+    gesehen = set()
+    while _abgeleitet(method) and method not in gesehen:
+        gesehen.add(method)
+        block = CFG["vpr"][method]
+        method = block["source"] if "source" in block else block["sources"][0]
+    return method
+
+
+def _variantenfamilie(method):
+    """
+    Was die Ableitung mit dem Deskriptor gemacht hat: "" (Basis), "pca512",
+    "pcaw512", "concat", ... -- der Namensteil hinter dem Basis-Encoder.
+    Dieselbe Familie heisst bei jedem Encoder gleich und bekommt deshalb
+    ueber alle Facetten hinweg dieselbe Farbe.
+    """
+    basis = _basis_encoder(method)
+    if method == basis:
+        return ""
+    rest = method[len(basis):].lstrip("_") if method.startswith(basis) else method
+    # eigenplaces_megaloc_concat -> "concat", nicht "megaloc_concat".
+    return "concat" if rest.endswith("concat") else (rest or "")
 
 
 def _reihen(laeufe, split, schwelle, k):
@@ -152,88 +186,263 @@ def localization_table(args):
     print("dass Mitteln oder Clustern helfen koennte.")
 
 
+# ----------------------------------------------------------------------
+# Abbildungen
+#
+# Farbe traegt Identitaet, nie Rang: dieselbe Variantenfamilie hat in jeder
+# Facette dieselbe Farbe, derselbe Encoder in jeder Abbildung. Ueber acht
+# Serien in einem Achsenpaar gibt es nicht -- darueber wird facettiert statt
+# weitere Farben zu erfinden. Der Adapter ist keine eigene Farbe, sondern der
+# Linienstil: zwei Kanaele fuer zwei unabhaengige Fragen.
+# ----------------------------------------------------------------------
+
+# Validierte kategoriale Reihenfolge (helle Flaeche), feste Reihenfolge, nie
+# zyklisch weitergedreht. Gilt fuer die Encoder: in Balken und in der einen
+# Kurvenachse liegen nur benachbarte Paare nebeneinander, dafuer traegt diese
+# Reihenfolge (schlechtestes benachbartes Paar CVD dE 9.1, Normalsicht 19.6).
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+           "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
+
+# In den kleinen Vielfachen steht jede Farbe gegen jede andere (die Legende
+# zeigt alle zugleich), und dafuer traegt die volle Reihenfolge nicht: Gruen
+# gegen Orange liegt bei CVD dE 3.2. Diese sechs sind die Auswahl daraus, die
+# auch ueber ALLE Paare besteht. Dazu je Familie eine eigene Markerform --
+# die Identitaet haengt damit nicht an der Farbe allein.
+FAMILIEN_PALETTE = ["#2a78d6", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7"]
+FAMILIEN_MARKER = ["o", "s", "^", "D", "v", "P"]
+INK = "#1c1c1c"
+INK_LEISE = "#5c5c5c"
+GITTER = "#d9d9d6"
+
+# Linienstil je Auswertungsvariante -- gilt in allen Abbildungen gleich.
+STILE = {"none": ("-", "Baseline"), "None": ("-", "Baseline"),
+         "linear": ("--", "+ linearer Adapter"), "seq3": (":", "+ Sequenz ±3")}
+
+# Sprechende Namen der Deskriptorvarianten, in fester Reihenfolge.
+FAMILIEN = [("", "Basis"), ("pca512", "PCA 512"), ("pcaw512", "PCA+Whitening 512"),
+            ("pcaw2048", "Whitening 2048"), ("pcaw4096", "Whitening 4096"),
+            ("concat", "Verkettung")]
+FAMILIE_LABEL = dict(FAMILIEN)
+
+
+def _stil(variant):
+    return STILE.get(variant, ("-.", variant))
+
+
+def _achse_aufraeumen(ax):
+    """Recessives Gitter, keine Rahmen oben und rechts."""
+    ax.grid(color=GITTER, linewidth=0.7, alpha=0.9)
+    ax.set_axisbelow(True)
+    for kante in ("top", "right"):
+        ax.spines[kante].set_visible(False)
+    for kante in ("left", "bottom"):
+        ax.spines[kante].set_color(GITTER)
+    ax.tick_params(colors=INK_LEISE, labelsize=8, length=0)
+
+
+def _kurven(laeufe, split, x_werte, wert_von):
+    """(name, method, variant, dim, y-Liste) je Lauf, der alle x-Werte hergibt."""
+    raus = []
+    for r in sorted(laeufe, key=lambda r: -r["dim"]):
+        a = r["auswertungen"].get(split)
+        if a is None:
+            continue
+        y = [wert_von(a, x) for x in x_werte]
+        if any(v is None for v in y):
+            continue
+        raus.append((r["embedding_name"], r["method"], r["variant"], r["dim"], y))
+    return raus
+
+
+def _zeichne_kurven(ax, kurven, farbe_von, label_von, marker_von=None):
+    for name, method, variant, dim, y in kurven:
+        stil, _ = _stil(variant)
+        ax.plot(range(len(y)), y, stil, color=farbe_von(method), linewidth=2.2,
+                marker=marker_von(method) if marker_von else "o", markersize=5.5,
+                markeredgecolor="white", markeredgewidth=0.8,
+                label=label_von(name, method, dim), solid_capstyle="round")
+
+
+def _facetten(laeufe, split, x_werte, wert_von, x_label, y_label, titel, ziel, args):
+    """
+    Eine Kurvenabbildung. Bis acht Serien in einem Achsenpaar mit Legende
+    daneben; darueber (--derived) kleine Vielfache je Encoder -- Farbe ist
+    dann die Deskriptorvariante, die in jeder Facette dasselbe bedeutet.
+    """
+    import matplotlib.pyplot as plt
+
+    kurven = _kurven(laeufe, split, x_werte, wert_von)
+    if not kurven:
+        return None
+
+    def achse_beschriften(ax, mit_x=True, mit_y=True):
+        ax.set_xticks(range(len(x_werte)))
+        ax.set_xticklabels([str(x) for x in x_werte])
+        if mit_x:
+            ax.set_xlabel(x_label, color=INK_LEISE, fontsize=9)
+        if mit_y:
+            ax.set_ylabel(y_label, color=INK_LEISE, fontsize=9)
+        _achse_aufraeumen(ax)
+
+    if not args.derived:
+        # Eine Achse, Farbe = Encoder.
+        encoder = sorted({_basis_encoder(m) for _, m, _, _, _ in kurven})
+        farben = {e: PALETTE[i % len(PALETTE)] for i, e in enumerate(encoder)}
+        fig, ax = plt.subplots(figsize=(7.6, 4.6))
+        _zeichne_kurven(ax, kurven,
+                        lambda m: farben[_basis_encoder(m)],
+                        lambda n, m, d: f"{n}  ({d}d)")
+        achse_beschriften(ax)
+        ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False,
+                  fontsize=8, labelcolor=INK, handlelength=2.4)
+        fig.suptitle(titel, color=INK, fontsize=11, x=0.02, ha="left")
+        ax.set_title("durchgezogen = Baseline, gestrichelt = Adapter",
+                     color=INK_LEISE, fontsize=8.5, loc="left")
+    else:
+        # Kleine Vielfache: ein Feld je Encoder, Farbe = Deskriptorvariante.
+        encoder = sorted({_basis_encoder(m) for _, m, _, _, _ in kurven})
+        familien = [f for f, _ in FAMILIEN
+                    if f in {_variantenfamilie(m) for _, m, _, _, _ in kurven}]
+        farben = {f: FAMILIEN_PALETTE[i % len(FAMILIEN_PALETTE)]
+                  for i, f in enumerate(familien)}
+        marker = {f: FAMILIEN_MARKER[i % len(FAMILIEN_MARKER)]
+                  for i, f in enumerate(familien)}
+        spalten = min(3, len(encoder))
+        zeilen = -(-len(encoder) // spalten)
+        fig, achsen = plt.subplots(zeilen, spalten, figsize=(4.0 * spalten, 3.1 * zeilen),
+                                   sharey=True, squeeze=False)
+        alle = [a for reihe in achsen for a in reihe]
+        for i, (ax, enc) in enumerate(zip(alle, encoder)):
+            teil = [k for k in kurven if _basis_encoder(k[1]) == enc]
+            _zeichne_kurven(ax, teil,
+                            lambda m: farben[_variantenfamilie(m)],
+                            lambda n, m, d: None,
+                            lambda m: marker[_variantenfamilie(m)])
+            ax.set_title(enc, color=INK, fontsize=10, loc="left")
+            # Achsen nur beschriften, wo es nicht dreimal dasselbe waere:
+            # x unten in jeder Spalte, y links in jeder Zeile.
+            unterste = i + spalten >= len(encoder)
+            achse_beschriften(ax, mit_x=unterste, mit_y=(i % spalten == 0))
+        frei = alle[len(encoder):]
+        for ax in frei:
+            ax.set_visible(False)
+
+        from matplotlib.lines import Line2D
+        eintraege = [Line2D([], [], color=farben[f], linewidth=2.2,
+                            marker=marker[f], markersize=5.5,
+                            markeredgecolor="white", markeredgewidth=0.8,
+                            label=FAMILIE_LABEL.get(f, f or "Basis"))
+                     for f in familien]
+        varianten = sorted({v for _, _, v, _, _ in kurven}, key=lambda v: v != "none")
+        eintraege += [Line2D([], [], color=INK_LEISE, linewidth=1.6,
+                             linestyle=_stil(v)[0], label=_stil(v)[1]) for v in varianten]
+        if frei:
+            # Bleibt ein Feld im Raster leer, gehoert die Legende dorthin --
+            # kein Platz unter der Abbildung, keine Kollision mit der Achse.
+            legende_ax = frei[0]
+            legende_ax.set_visible(True)
+            legende_ax.axis("off")
+            legende_ax.legend(handles=eintraege, loc="center left", frameon=False,
+                              fontsize=9, labelcolor=INK, handlelength=2.6,
+                              borderaxespad=0.0)
+        else:
+            fig.legend(handles=eintraege, loc="upper center", ncol=min(5, len(eintraege)),
+                       frameon=False, fontsize=8.5, labelcolor=INK,
+                       bbox_to_anchor=(0.5, 0.035))
+            fig.subplots_adjust(bottom=0.16)
+        fig.suptitle(titel, color=INK, fontsize=11.5, x=0.01, ha="left")
+
+    fig.tight_layout()
+    fig.savefig(ziel, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return ziel
+
+
 def plot(laeufe, args):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     plt.rcParams["figure.dpi"] = 150
+    plt.rcParams["font.size"] = 9
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     split, schwelle = args.split, args.threshold
     suffix = "_derived" if args.derived else ""
     geschrieben = []
 
     # ------------------------------------------------------------------
-    # 1. R@1 je Zeile mit dem Bootstrap-Intervall, nach Deskriptorbreite
-    #    sortiert. Der Adapter ist dabei eine Variante wie jede andere.
+    # 1. R@1 je Zeile mit dem Bootstrap-Intervall.
+    #    Liegende Balken, nach Wert sortiert: 37 Namen lesen sich waagerecht,
+    #    um 60 Grad gedreht nicht. Farbe = Encoder, der Variantenname steht
+    #    ohnehin daneben.
     # ------------------------------------------------------------------
     reihen = _reihen(laeufe, split, schwelle, 1)
     intervalle = bootstrap_intervals(args, still=True)
-    reihen.sort(key=lambda r: (r[1], r[0], r[2] != "none"))
-    encoder = [n for n, _, a, _ in reihen if a in ("none", "None")]
+    reihen.sort(key=lambda r: r[3])          # kleinster Wert unten
+    encoder_liste = sorted({_basis_encoder(n) for n, _, _, _ in reihen})
+    farben_enc = {e: PALETTE[i % len(PALETTE)] for i, e in enumerate(encoder_liste)}
 
     if reihen:
-        namen = [f"{n}" + ("" if a in ("none", "None") else f" +{a}") for n, _, a, _ in reihen]
+        def voller_name(n, a):
+            return n if a in ("none", "None") else f"{n}_{a}"
+
+        namen = [f"{n}" + ("" if a in ("none", "None") else f"  +{a}")
+                 for n, _, a, _ in reihen]
         werte = [v for _, _, _, v in reihen]
-        fehler = [
-            [v - intervalle[f"{n}{'' if a in ('none', 'None') else '_' + a}"][0],
-             intervalle[f"{n}{'' if a in ('none', 'None') else '_' + a}"][1] - v]
-            if f"{n}{'' if a in ('none', 'None') else '_' + a}" in intervalle else [0, 0]
-            for n, _, a, v in reihen
-        ]
-        farben = ["#37474f" if a in ("none", "None") else "#90a4ae" for _, _, a, _ in reihen]
-        fig, ax = plt.subplots(figsize=(max(7, 0.42 * len(reihen) + 2), 4.8))
-        x = range(len(reihen))
-        ax.bar(x, werte, 0.7, color=farben,
-               yerr=[[e[0] for e in fehler], [e[1] for e in fehler]] if intervalle else None,
-               capsize=2, error_kw={"linewidth": 0.8, "color": "0.3"})
-        ax.set_xticks(list(x))
-        ax.set_xticklabels(namen, rotation=60, ha="right", fontsize=7)
-        ax.set_ylabel(f"R@1 bei {schwelle} m")
-        ax.set_title(f"{split}  |  Schwelle {schwelle} m  |  nach Deskriptorbreite sortiert"
-                     + ("  |  95-%-Intervall aus dem Sequenz-Bootstrap" if intervalle else ""))
-        ax.grid(axis="y", alpha=0.3)
-        ax.set_axisbelow(True)
-        plt.tight_layout()
+        farben = [farben_enc[_basis_encoder(n)] for n, _, _, _ in reihen]
+        unten, oben = [], []
+        for n, _, a, v in reihen:
+            ci = intervalle.get(voller_name(n, a))
+            unten.append(v - ci[0] if ci else 0.0)
+            oben.append(ci[1] - v if ci else 0.0)
+
+        hoehe = max(3.2, 0.26 * len(reihen) + 1.4)
+        fig, ax = plt.subplots(figsize=(8.4, hoehe))
+        y = range(len(reihen))
+        ax.barh(y, werte, 0.68, color=farben,
+                xerr=[unten, oben] if intervalle else None,
+                capsize=2, error_kw={"linewidth": 0.9, "ecolor": INK_LEISE})
+        ax.set_yticks(list(y))
+        ax.set_yticklabels(namen, fontsize=8, color=INK)
+        ax.set_xlabel(f"R@1 bei {schwelle} m", color=INK_LEISE, fontsize=9)
+        ax.set_xlim(0, min(1.0, max(werte + [0.1]) * 1.18))
+        _achse_aufraeumen(ax)
+        ax.grid(axis="y", visible=False)
+        # Direkte Werte statt einer zweiten Ableseachse.
+        for yi, (v, o) in enumerate(zip(werte, oben)):
+            ax.text(v + o + 0.012, yi, f"{v:.3f}", va="center", fontsize=7.5,
+                    color=INK_LEISE)
+        from matplotlib.patches import Patch
+        ax.legend(handles=[Patch(facecolor=farben_enc[e], label=e) for e in encoder_liste],
+                  loc="lower right", frameon=False, fontsize=8, labelcolor=INK)
+        fig.suptitle(f"{split}  |  Schwelle {schwelle} m", color=INK,
+                     fontsize=11.5, x=0.01, ha="left")
+        ax.set_title("Fehlerbalken: 95-%-Intervall aus dem Sequenz-Bootstrap"
+                     if intervalle else "ohne Intervalle -- python experiments/bootstrap_ci.py",
+                     color=INK_LEISE, fontsize=8.5, loc="left")
+        fig.tight_layout()
         ziel = FIGURE_DIR / f"vergleich_r1_{schwelle}m{suffix}.png"
-        fig.savefig(ziel, bbox_inches="tight")
+        fig.savefig(ziel, bbox_inches="tight", facecolor="white")
         plt.close(fig)
         geschrieben.append(ziel)
 
     # ------------------------------------------------------------------
-    # 2. Recall ueber k -- die uebliche VPR-Kurve, nur die Baselines.
+    # 2. Recall ueber k -- die uebliche VPR-Kurve.
     # ------------------------------------------------------------------
     ks = sorted({int(k)
                  for r in laeufe
                  for a in [r["auswertungen"].get(split)] if a
                  for e in a["schwellen"].values()
                  for k in e["recall"]})
-    if ks and encoder:
-        fig, ax = plt.subplots(figsize=(6.5, 4.5))
-        for r in sorted(laeufe, key=lambda r: -r["dim"]):
-            a = r["auswertungen"].get(split)
-            if a is None or str(schwelle) not in a["schwellen"]:
-                continue
-            recall = a["schwellen"][str(schwelle)]["recall"]
-            y = [recall.get(str(k)) for k in ks]
-            if any(v is None for v in y):
-                continue
-            stil = "-" if r["variant"] in ("none", "None") else "--"
-            ax.plot(ks, y, stil, marker="o", markersize=3.5, linewidth=1.5,
-                    label=f"{r['embedding_name']} ({r['dim']}d)")
-        ax.set_xscale("log")
-        ax.set_xticks(ks)
-        ax.set_xticklabels([str(k) for k in ks])
-        ax.set_xlabel("k")
-        ax.set_ylabel(f"Recall@k bei {schwelle} m")
-        ax.set_title(f"{split}  |  durchgezogen = Baseline, gestrichelt = Adapter")
-        ax.legend(fontsize=7)
-        ax.grid(alpha=0.3)
-        plt.tight_layout()
-        ziel = FIGURE_DIR / f"vergleich_recall_k_{schwelle}m{suffix}.png"
-        fig.savefig(ziel, bbox_inches="tight")
-        plt.close(fig)
-        geschrieben.append(ziel)
+    if ks:
+        ziel = _facetten(
+            laeufe, split, ks,
+            lambda a, k: a["schwellen"].get(str(schwelle), {}).get("recall", {}).get(str(k)),
+            "k", f"Recall@k bei {schwelle} m",
+            f"{split}  |  Recall@k bei {schwelle} m",
+            FIGURE_DIR / f"vergleich_recall_k_{schwelle}m{suffix}.png", args)
+        if ziel:
+            geschrieben.append(ziel)
 
     # ------------------------------------------------------------------
     # 3. R@1 ueber die Distanzschwelle -- zeigt, wie streng die 25 m sind.
@@ -243,32 +452,14 @@ def plot(laeufe, args):
                         for a in [r["auswertungen"].get(split)] if a
                         for s in a["schwellen"]})
     if schwellen:
-        fig, ax = plt.subplots(figsize=(6.5, 4.5))
-        for r in sorted(laeufe, key=lambda r: -r["dim"]):
-            a = r["auswertungen"].get(split)
-            if a is None:
-                continue
-            y = [a["schwellen"].get(str(s), {}).get("recall", {}).get("1")
-                 for s in schwellen]
-            if any(v is None for v in y):
-                continue
-            stil = "-" if r["variant"] in ("none", "None") else "--"
-            ax.plot(schwellen, y, stil, marker="o", markersize=3.5,
-                    linewidth=1.5, label=f"{r['embedding_name']}")
-        ax.axvline(schwelle, color="0.8", linewidth=1.0, zorder=0)
-        ax.set_xscale("log")
-        ax.set_xticks(schwellen)
-        ax.set_xticklabels([str(s) for s in schwellen])
-        ax.set_xlabel("Distanzschwelle [m]")
-        ax.set_ylabel("R@1")
-        ax.set_title(f"{split}  |  wie streng ist die Ground Truth?")
-        ax.legend(fontsize=7)
-        ax.grid(alpha=0.3)
-        plt.tight_layout()
-        ziel = FIGURE_DIR / f"vergleich_schwellen{suffix}.png"
-        fig.savefig(ziel, bbox_inches="tight")
-        plt.close(fig)
-        geschrieben.append(ziel)
+        ziel = _facetten(
+            laeufe, split, schwellen,
+            lambda a, t: a["schwellen"].get(str(t), {}).get("recall", {}).get("1"),
+            "Distanzschwelle [m]", "R@1",
+            f"{split}  |  wie streng ist die Ground Truth?",
+            FIGURE_DIR / f"vergleich_schwellen{suffix}.png", args)
+        if ziel:
+            geschrieben.append(ziel)
 
     for z in geschrieben:
         print(f"geschrieben: {z.relative_to(ROOT)}")
@@ -279,8 +470,9 @@ def main():
         description="Vergleichstabelle aus results/evaluation/",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--threshold", type=int, default=25,
-                    help="Distanzschwelle in Metern (Standard: 25)")
+    ap.add_argument("--threshold", type=int, default=STANDARD_SCHWELLE,
+                    help=f"Distanzschwelle in Metern (Standard: {STANDARD_SCHWELLE}, "
+                         "aus config.yaml -> vpr.uncertain_radius_m)")
     ap.add_argument("--split", default="Alle Queries",
                     help='Welche Auswertung (Standard: "Alle Queries")')
     ap.add_argument("--plot", action="store_true",

@@ -17,9 +17,10 @@ import hashlib
 
 import numpy as np
 import pandas as pd
+from scipy.spatial import cKDTree
 from tqdm.auto import tqdm
 
-from .geo import haversine_distance
+from .geo import haversine_distance, to_metric_xy
 from .paths import Paths
 from .run_guard import embedding_fingerprint, require_fingerprint
 
@@ -63,18 +64,37 @@ def _id_digest(ids):
 _LOESBAR = {}
 
 
-def localizable(query, database, threshold, block=256):
-    """Je Anfrage: liegt mindestens ein Datenbankbild innerhalb der Schwelle?"""
+def localizable(query, database, threshold, block=4096):
+    """
+    Je Anfrage: liegt mindestens ein Datenbankbild innerhalb der Schwelle?
+
+    Wie in src/evaluation.py: Kandidaten kommen aus einem KDTree in
+    UTM-Metern, die exakte Haversine-Distanz wird nur fuer diese Paare
+    gerechnet. Der Aufschlag auf den Suchradius (UTM und Haversine weichen um
+    unter 0,3 % voneinander ab) haelt jeden Haversine-Treffer unter der
+    Schwelle im Kandidatenkreis -- das Ergebnis ist identisch mit der vollen
+    Distanzmatrix, bei 279k Referenzbildern aber Sekunden statt Minuten.
+    """
     key = (_id_digest(query["image_id"]), _id_digest(database["image_id"]), float(threshold))
     if key not in _LOESBAR:
         q_lat, q_lon = query["lat"].to_numpy(), query["lon"].to_numpy()
         db_lat, db_lon = database["lat"].to_numpy(), database["lon"].to_numpy()
+        db_xy, crs = to_metric_xy(db_lat, db_lon)
+        q_xy, _ = to_metric_xy(q_lat, q_lon, crs=crs)
+        baum = cKDTree(db_xy)
+        radius = float(threshold) * 1.01 + 2.0
+
         loesbar = np.zeros(len(query), dtype=bool)
         for start in tqdm(range(0, len(query), block), desc="loesbar", leave=False):
-            qi = slice(start, start + block)
-            d = haversine_distance(q_lat[qi, None], q_lon[qi, None],
-                                   db_lat[None, :], db_lon[None, :])
-            loesbar[qi] = (d <= threshold).any(axis=1)
+            qi = np.arange(start, min(start + block, len(query)))
+            listen = baum.query_ball_point(q_xy[qi], r=radius)
+            laengen = np.fromiter((len(n) for n in listen), dtype=np.int64, count=len(listen))
+            if not laengen.sum():
+                continue
+            lokal = np.repeat(qi, laengen)
+            di = np.concatenate([np.asarray(n, dtype=np.int64) for n in listen if len(n)])
+            d = haversine_distance(q_lat[lokal], q_lon[lokal], db_lat[di], db_lon[di])
+            loesbar[lokal[d <= threshold]] = True
         _LOESBAR[key] = pd.Series(loesbar, index=query["image_id"].to_numpy())
     return _LOESBAR[key].reindex(query["image_id"].to_numpy()).to_numpy()
 

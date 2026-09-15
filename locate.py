@@ -26,7 +26,8 @@ from src.locate import Locator  # noqa: E402
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Ein Foto in Osnabrueck verorten.")
+    ap = argparse.ArgumentParser(description="Ein Foto in der konfigurierten Stadt verorten "
+                                "(config.yaml -> city).")
     ap.add_argument("bild", nargs="+", help="Bilddatei(en) oder ein Ordner voller Bilder")
     ap.add_argument("--method", help="Encoder aus vpr.models (Standard: config.yaml)")
     ap.add_argument("--adapter", help="none | linear (Standard: config.yaml)")
