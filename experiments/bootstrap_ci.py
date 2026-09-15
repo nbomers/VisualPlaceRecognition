@@ -139,6 +139,30 @@ def main():
     if not records:
         raise SystemExit(f"Keine Auswertungen in {EVAL_DIR.relative_to(ROOT)}.")
 
+    # Der Bootstrap braucht JEDE Zeile: eine gepaarte Differenz ueber dieselben
+    # Fahrten setzt voraus, dass beide Encoder vorliegen, und ein unvollstaendiger
+    # bootstrap_ci.json faellt spaeter in tests/test_results.py durch. Deshalb
+    # hier abbrechen statt nach zehn Encodern mitten im Lauf.
+    fehlend = []
+    for rec in records:
+        name = rec["embedding_name"]
+        meta = PATHS.metadata_file(name, rec["method"])
+        if not meta.exists():
+            fehlend.append(f"{name} ({meta.relative_to(ROOT)})")
+    if fehlend:
+        raise SystemExit(
+            f"{len(fehlend)} von {len(records)} Encodern liegen nicht auf diesem "
+            "Rechner:\n  " + "\n  ".join(fehlend[:10])
+            + (f"\n  ... und {len(fehlend) - 10} weitere" if len(fehlend) > 10 else "")
+            + "\n\nEmbeddings und Trefferlisten sind gitignored und im Projekt auf "
+            "zwei\nRechner verteilt. Der Bootstrap vergleicht Encoder gepaart ueber "
+            "dieselben\nFahrten und braucht sie deshalb alle zugleich -- ein "
+            "Teilergebnis waere\nfalsch, nicht nur unvollstaendig.\n"
+            "  python run.py --bestand   zeigt, was hier liegt\n"
+            "  rsync die fehlenden data/<stadt>/embeddings/ und "
+            "results/<stadt>/retrieval/ zusammen"
+        )
+
     sequences = None
     n_queries = 0
     summen = {}

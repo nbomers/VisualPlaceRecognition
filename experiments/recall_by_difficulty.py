@@ -27,7 +27,7 @@ import pandas as pd
 from scipy.spatial import cKDTree
 
 from _common import CFG, RESULTS, ROOT
-from src.geo import heading_difference, to_metric_xy
+from src.geo import heading_matches, to_metric_xy
 from src.retrieval import hits_at_k, load_retrieval, localizable
 
 NACHBAR_KLASSEN = [(1, 2), (3, 5), (6, 10), (11, 20), (21, 50), (51, 10**9)]
@@ -60,8 +60,8 @@ def query_properties(query, database, threshold, max_heading_diff):
     tage_min = np.full(len(query), np.inf)
     np.minimum.at(tage_min, qi, tage)
 
-    blick = heading_difference(query["compass_angle"].to_numpy()[qi],
-                               database["compass_angle"].to_numpy()[di]) <= max_heading_diff
+    blick = heading_matches(query["compass_angle"].to_numpy()[qi],
+                            database["compass_angle"].to_numpy()[di], max_heading_diff)
     blick_ok = np.zeros(len(query), dtype=bool)
     np.logical_or.at(blick_ok, qi, blick)
 

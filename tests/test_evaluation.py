@@ -121,3 +121,66 @@ def test_panorama_auswertung():
     assert _recall(ohne, 25, 1) == 2 / 3
     # die Standardauswertung bleibt, wie sie war
     assert befunde["Alle Queries"]["schwellen"]["25"]["loesbar"] == 4
+
+
+# ----------------------------------------------------------------------
+# Unbekannte Blickrichtung
+#
+# Mapillary kodiert sie als -1. Roh verglichen verhaelt sich -1 wie 359 Grad:
+# je nach Gegenwinkel faellt die Referenz dann zufaellig durch die
+# Blickrichtungs-Auswertung oder nicht. In Osnabrueck betrifft das ein
+# einziges Bild, in einer anderen Stadt kann es ein spuerbarer Anteil sein --
+# und es wuerde still passieren.
+# ----------------------------------------------------------------------
+
+def _blickrichtung(befunde):
+    return next(v for k, v in befunde.items() if k.startswith("Blickrichtung"))
+
+
+def test_unbekannte_blickrichtung_aendert_die_auswertung_nicht():
+    """
+    db0 schaut nach Norden wie q0 und zaehlt deshalb. Auf "unbekannt"
+    gesetzt, muss dieselbe Auswertung herauskommen -- eine fehlende Angabe
+    darf eine Referenz nicht verwerfen, die vorher gezaehlt hat.
+    """
+    q, db, indices = _daten()
+    vorher = _blickrichtung(standard_evaluations(indices, q, db, _cfg(), verbose=False))
+
+    q, db, indices = _daten()
+    db.loc[0, "compass_angle"] = -1.0
+    nachher = _blickrichtung(standard_evaluations(indices, q, db, _cfg(), verbose=False))
+
+    assert nachher == vorher
+
+
+def test_bekannte_gegenrichtung_verwirft_weiterhin():
+    """Die Gegenprobe: eine bekannte Gegenrichtung muss ausschliessen --
+    sonst haette der Fix die Auswertung nur stumpf gemacht."""
+    q, db, indices = _daten()
+    vorher = _blickrichtung(standard_evaluations(indices, q, db, _cfg(), verbose=False))
+
+    q, db, indices = _daten()
+    db.loc[0, "compass_angle"] = 180.0          # q0 schaut nach Norden
+    nachher = _blickrichtung(standard_evaluations(indices, q, db, _cfg(), verbose=False))
+
+    assert nachher["schwellen"]["10"]["loesbar"] < vorher["schwellen"]["10"]["loesbar"]
+
+
+def test_unbekannte_blickrichtung_wird_nicht_als_359_grad_gelesen():
+    """
+    Der konkrete Fehler: q schaut nach Norden (0 Grad), die Referenz ist
+    unbekannt (-1). Als 359 Grad gelesen waere die Differenz 1 Grad -- hier
+    zufaellig harmlos. Bei einer Anfrage mit 90 Grad waere sie 91 und die
+    Referenz fiele raus. Beide Faelle muessen gleich ausgehen.
+    """
+    from src.geo import heading_difference, heading_matches
+
+    assert np.isnan(heading_difference(-1.0, 350.0))
+    assert np.isnan(heading_difference(90.0, -1.0))
+    assert heading_matches(-1.0, 350.0, 90.0)
+    assert heading_matches(90.0, -1.0, 90.0)      # roh waere das 91 Grad -> raus
+    # Bekannte Richtungen bleiben unveraendert scharf.
+    assert not heading_matches(0.0, 91.0, 90.0)
+    assert heading_matches(0.0, 89.0, 90.0)
+    # Werte knapp ueber 360 sind dasselbe wie ihr Rest.
+    assert heading_matches(365.0, 5.0, 1.0)

@@ -22,10 +22,41 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     return EARTH_RADIUS_M * 2 * np.arcsin(np.sqrt(a))
 
 
+def normalize_heading(werte):
+    """
+    Mapillary-Kompasswinkel in [0, 360) -- oder NaN, wenn unbekannt.
+
+    Die Quelle kodiert eine unbekannte Blickrichtung als -1 und liefert
+    vereinzelt Werte knapp ueber 360. Beides hier abfangen, nicht in jedem
+    Aufrufer: -1 roh weiterzureichen hiesse, es als 359 Grad zu lesen, und
+    das ist kein fehlender Wert, sondern ein falscher.
+    """
+    a = np.asarray(werte, dtype=float)
+    return np.where(a < 0, np.nan, a % 360.0)
+
+
 def heading_difference(a, b):
-    """Zyklische Differenz zweier Kompasswinkel in Grad, 0 bis 180."""
-    diff = np.abs(np.asarray(a, dtype=float) - np.asarray(b, dtype=float)) % 360.0
+    """
+    Zyklische Differenz zweier Kompasswinkel in Grad, 0 bis 180.
+    Ist eine der beiden Richtungen unbekannt, kommt NaN heraus.
+    """
+    a, b = normalize_heading(a), normalize_heading(b)
+    diff = np.abs(a - b) % 360.0
     return np.minimum(diff, 360.0 - diff)
+
+
+def heading_matches(a, b, max_diff_deg):
+    """
+    Schauen zwei Bilder in aehnliche Richtung?
+
+    Unbekannte Blickrichtung schliesst NICHT aus. Der Test soll Paare
+    verwerfen, von denen man WEISS, dass sie auseinanderschauen -- nicht
+    solche, ueber die die Metadaten nichts sagen. Sonst bestraft die
+    Auswertung fehlende Daten statt falscher Orte, und zwar unsichtbar:
+    je nach Stadt sind das einzelne Bilder oder ein spuerbarer Anteil.
+    """
+    d = heading_difference(a, b)
+    return np.isnan(d) | (d <= float(max_diff_deg))
 
 
 def utm_crs_for(lat, lon):
