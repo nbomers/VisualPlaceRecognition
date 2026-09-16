@@ -368,8 +368,8 @@ gegen die `config.yaml` geprüft.
 |---|---|
 | **Python** | 3.14 (`environment.yml`) |
 | **Paketmanager** | conda (empfohlen) oder uv |
-| **GPU** | nicht nötig, aber: 04 encodiert 332.868 Bilder. Auf einem M1 Pro sind CLIP, MixVPR und EigenPlaces in Stunden fertig; AnyLoc (ViT-G, 1,14 Mrd. Parameter) und MegaLoc gehören auf eine CUDA-GPU, dort mit `fp16` und kleinen Batches auf 8 GB VRAM |
-| **Arbeitsspeicher** | 16 GB reichen für alles außer dem Adapter-Training auf MegaLoc (8448 d); dort braucht 05 rund 12 GB frei |
+| **GPU** | nicht nötig, aber: 04 encodiert jedes Bild der Stadt — in Osnabrück 332.868, in Jena 699.120. Auf einem M1 Pro sind CLIP, MixVPR und EigenPlaces in Stunden fertig; AnyLoc (ViT-G, 1,14 Mrd. Parameter) und MegaLoc gehören auf eine CUDA-GPU, dort mit `fp16` und kleinen Batches auf 8 GB VRAM |
+| **Arbeitsspeicher** | hängt an der Stadt, nicht am Projekt: ein Encodersatz ist `Bilder × Dimension × 4 Byte` groß. Bei MegaLoc (8448 d) sind das in Osnabrück 11,2 GB, in Jena 23,6 GB. 16 GB reichen für Osnabrück durchgehend; für eine Stadt in Jenas Größe braucht 05 rund 16 GB frei, 04 und die Experimente arbeiten blockweise und kommen mit 8 GB aus. Zahlen und Messung unter [Ergebnisse](#ergebnisse), Abschnitt *Laufzeit und Speicher* |
 | **Speicherplatz** | 50 GB Bilder + 3 bis 25 GB je Encoder-Satz + 1 GB Ergebnisse |
 | **Mapillary-Token** | kostenloser Developer-Account, siehe [Konfiguration](#konfiguration) |
 
@@ -568,6 +568,7 @@ python experiments/recall_by_district.py    # Recall je Stadtteil, Karte
 python experiments/confusion_atlas.py       # wohin die Fehlgriffe zeigen, Karte
 python experiments/localization_aggregation.py   # Schwerpunkt, Clustering, Snap, Gated gegen Top-1
 python experiments/sequence_retrieval.py --method eigenplaces_pcaw512  # Nachbarframes aufsummieren
+python experiments/sequence_hmm.py --method eigenplaces_pcaw512        # dieselbe Fahrt als Pfad (HMM)
 python experiments/geometric_verification.py --method eigenplaces_megaloc_concat   # SuperPoint + LightGlue, GPU
 python experiments/detection_rerank.py      # Mapillary-Detections als Re-Ranking-Signal
 python experiments/detection_probe.py       # liefert Mapillary ueberhaupt brauchbare Detections?
@@ -891,6 +892,43 @@ Der Durchsatz hängt am Rückgrat und der Eingabegröße, nicht an der PCA —
 `eigenplaces_pcaw512` encodiert genauso schnell wie `eigenplaces`. Für
 332.868 Bilder heißt das auf dem Mac: CLIP 40 Minuten, MixVPR 75 Minuten,
 EigenPlaces 2,8 Stunden, MegaLoc 4,4 Stunden; AnyLoc 6,3 Stunden auf der GPU.
+
+**Arbeitsspeicher.** Die eine Zahl, aus der alles folgt, ist die Größe eines
+Encodersatzes: `Bilder × Dimension × 4 Byte`. Bei MegaLoc (8448 d) sind das in
+Osnabrück 11,2 GB und in Jena — 699.120 Bilder, gut das Doppelte — 23,6 GB.
+Solange ein Schritt diese Matrix am Stück im Speicher hält, skaliert er mit
+der Stadt, und ein Rechner, der Osnabrück gerade noch schafft, stirbt bei
+Jena. Gemessene Spitzen (RSS, MegaLoc):
+
+| Schritt | Osnabrück | Jena |
+|---|---|---|
+| 04, Embeddings schreiben | 22,5 GB → entfällt | 47,2 GB → entfällt |
+| 05, Adapter (fit + val) | 7,8 GB | 16,2 GB |
+| 06, Retrieval | 5,1 GB | 11,0 GB |
+| `database_density.py`, letzte Stufe | 11,2 → 6 GB | 23,6 → 8,3 GB |
+| `full_reference.py` | 6 GB | 8,3 GB |
+
+Die Pfeile sind zwei Änderungen. **04** schrieb sein Ergebnis in ein
+`np.zeros((n, dim))` und prüfte es danach mit `np.linalg.norm(x, axis=1)` —
+das legt ein Temporär in Arraygröße an, also noch einmal 23,6 GB neben den
+schon belegten. Genau dort starb bei Jena der Kernel, nach anderthalb Stunden
+fertigem Encodieren und ohne Traceback (der OOM-Killer schickt SIGKILL,
+nbclient meldet nur `Kernel died`). Jetzt liegt das Ergebnis von der ersten
+Zeile an als memmap auf der Platte, ist damit zugleich der Wiedereinstieg
+nach einem Absturz, und 04 prüft blockweise; der Speicherbedarf hängt nur
+noch am Modell und am Batch — was davon übrig bleibt, ist nicht mehr
+gemessen, aber es ist die Größe, die auch `locate.py` mit einer Handvoll
+Bilder belegt, nicht die der Stadt. **`database_density.py`** und
+`full_reference.py` bauten einen `faiss.IndexFlatIP` über alle
+Referenzbilder — `database` plus `train`, in Jena 584.388 Bilder oder
+19,8 GB. Der Index behält jeden Vektor, den er bekommt, die standen also
+ein zweites Mal im Speicher, neben den Anfragen. Beide suchen jetzt über
+`src.retrieval.blockwise_search`: ein Index je 65.536 Referenzbilder, die
+Top-k über die Blöcke zusammengeführt. Das Ergebnis ist identisch, geprüft
+gegen einen einzelnen Index.
+
+Wer eine dritte Stadt rechnet, rechnet vorher diese eine Multiplikation. Die
+Bilderzahl steht nach 01 im Audit, die Dimension in der Tabelle oben.
 
 ### Abbildungen
 
