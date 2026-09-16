@@ -27,12 +27,11 @@ liegt darueber; dort misst man nicht mehr denselben Ort.
 
 import argparse
 
-import numpy as np
 import pandas as pd
 
 from _common import CFG, PATHS, ROOT
 from src.evaluation import standard_evaluations, write_evaluation
-from src.retrieval import aggregate_sequence, load_retrieval, sequence_windows
+from src.retrieval import aggregate_sequence, descriptor_dim, load_retrieval, sequence_windows
 from src.run_guard import embedding_fingerprint
 
 
@@ -58,7 +57,7 @@ def main():
     query, database, indices, similarities = load_retrieval(ROOT, CFG, method, adapter)
     top_k = indices.shape[1]
     emb_dir = PATHS.embedding_dir(method)
-    dim = int(np.load(emb_dir / f"{name}_embeddings.npy", mmap_mode="r").shape[1])
+    dim = descriptor_dim(ROOT, CFG, method, adapter)
     fingerprint = embedding_fingerprint(
         CFG, method, adapter, pd.read_parquet(emb_dir / f"{name}_metadata.parquet"))
     fenster = sequence_windows(query)

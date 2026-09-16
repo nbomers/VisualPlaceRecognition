@@ -36,7 +36,7 @@ from tqdm import tqdm
 from _common import CFG, PATHS, RESULTS, ROOT
 from src.device import pick_device
 from src.evaluation import standard_evaluations, write_evaluation
-from src.retrieval import load_retrieval
+from src.retrieval import descriptor_dim, load_retrieval
 from src.run_guard import embedding_fingerprint
 
 OUT_DIR = RESULTS
@@ -100,7 +100,7 @@ def main():
     emb_dir = PATHS.embedding_dir(method)
     query, database, indices, _ = load_retrieval(ROOT, CFG, method, adapter)
     k = min(args.top_k, indices.shape[1])
-    dim = int(np.load(emb_dir / f"{name}_embeddings.npy", mmap_mode="r").shape[1])
+    dim = descriptor_dim(ROOT, CFG, method, adapter)
     fingerprint = embedding_fingerprint(
         CFG, method, adapter, pd.read_parquet(emb_dir / f"{name}_metadata.parquet"))
 

@@ -12,6 +12,19 @@ Hier liegen sie, damit die Zahlen auffindbar bleiben, ohne die Pipeline zu
 belasten. Wer sie für eine Ausarbeitung oder Präsentation braucht, kopiert
 sich heraus, was er zeigen will.
 
+**Auf welchem Rechner sie laufen.** Die reinen Nachbearbeitungsskripte
+(`sequence_retrieval.py`, `sequence_hmm.py`) rechnen nur auf der Trefferliste
+aus 06 — dafür reichen `<name>_retrieval.npz` samt Fingerabdruck und
+`<name>_metadata.parquet`, zusammen ein paar zehn MB. Die Embedding-Datei
+brauchen sie nicht mehr: die Deskriptorbreite für die Ergebnis-JSON kommt über
+`descriptor_dim` aus der versionierten `results/<stadt>/evaluation/<name>.json`,
+wenn die `.npy` fehlt. Vorher hing an dieser einen Zahl der ganze Encodersatz —
+bei MegaLoc 23,6 GB, die auf einem zweiten Rechner gar nicht liegen
+(`*.npy` und `embeddings/` sind gitignored). Alles andere hier —
+`full_reference.py`, `database_density.py`, `geometric_verification.py` —
+braucht die Embeddings bzw. die Bilder wirklich und gehört auf den Rechner,
+der sie gerechnet hat. Was wo vollständig ist, zeigt `python run.py --bestand`.
+
 Jedes Skript beginnt mit `from _common import CFG, ROOT, RESULTS` und nutzt
 die Bausteine aus `src/` — `src/retrieval.py` für Trefferlisten, lösbar
 und Treffer je Anfrage, `src/evaluation.py` für jede Recall-Zahl.
@@ -172,9 +185,9 @@ das es gibt — `train` und `database` zusammen, 279.453 Bilder statt 48.321?
 
 ### `full_reference.py`
 
-Sucht blockweise (65.536 Referenzzeilen je FAISS-Index, Top-k zusammen-
-geführt) und bewertet mit `standard_evaluations`, vier Ground Truths wie in
-07. Nur Encoder ohne Adapter — `train` war das Trainingsmaterial des
+Sucht blockweise über `src.retrieval.blockwise_search` (65.536 Referenz-
+zeilen je FAISS-Index, Top-k über die Blöcke zusammengeführt) und bewertet
+mit `standard_evaluations`, vier Ground Truths wie in 07. Nur Encoder ohne Adapter — `train` war das Trainingsmaterial des
 Adapters. Zeilen heißen `<name>_fullref`, `compare.py --reference full`
 zeigt sie, `bootstrap_ci.py --reference full` rechnet die Intervalle.
 
@@ -717,6 +730,14 @@ python experiments/database_density.py --method eigenplaces
 
 Ergebnis in `results/database_density_{method}.json` und `.png`.
 
+Die letzte Stufe ist `database` plus ganz `train`: bei MegaLoc auf Jena
+584.388 Bilder oder 19,8 GB. Ein `IndexFlatIP` darüber hätte sie ein
+zweites Mal belegt — der
+Index behält jeden Vektor, den er bekommt, blockweises Befüllen allein
+bringt also nichts. Deshalb läuft die Suche hier über dieselbe
+`src.retrieval.blockwise_search` wie in `full_reference.py`: ein Index je
+Block, danach wieder frei. Spitze damit rund 8 GB statt 23,6.
+
 Whitening **und** Dichte zusammen (`--method eigenplaces_pcaw512` bzw.
 `megaloc_pcaw512`, volle train-Referenz): EigenPlaces **0.715**, MegaLoc
 **0.778**, R@5 0.845. Das sind die höchsten Zahlen im Projekt — ohne ein
@@ -765,6 +786,50 @@ Benachbarte Frames sehen dieselbe Straße und machen denselben Fehler; ab ±5
 überspannt das Fenster 33 m, mehr als die 25-m-Schwelle. Sequenzlokalisierung
 setzt unabhängige Fehler voraus — die groben Verwechslungen hier sind
 kohärent. Derselbe Befund wie bei Clustering und Snap in 08.
+
+### `sequence_hmm.py` — dieselbe Fahrt als Pfad
+
+Das Aufsummieren scheitert aus zwei Gründen, die es nicht trennt: die Fehler
+benachbarter Frames sind kohärent, **und** der Mechanismus braucht dasselbe
+Datenbankbild in mehreren Trefferlisten. Ein HMM braucht das nicht — die
+Kandidaten dürfen je Frame andere sein, sie müssen nur geometrisch
+zusammenpassen:
+
+| | |
+|---|---|
+| Zustände | die Top-k eines Frames |
+| Emission | `beta ×` Ähnlichkeit aus der Suche |
+| Übergang | `-abs(d(i,j) - v × dt) / sigma` — passt der Abstand zweier Kandidaten zur verstrichenen Zeit? |
+| Ergebnis | Posterior je Frame (Forward-Backward) für die Rangliste, Viterbi für den Pfad |
+
+Ein Kandidat sechs Kilometer abseits fällt damit, weil man in 0,17 s keine
+sechs Kilometer fährt — nicht, weil der Nachbarframe ihn nicht auch gefunden
+hätte. `v` kommt aus den **Datenbank**sequenzen; die Query-Positionen sind die
+Ground Truth und gehen nirgends ein (`tests/test_sequence_hmm.py` hält das
+fest).
+
+```bash
+python experiments/sequence_hmm.py --method eigenplaces_pcaw512
+python experiments/sequence_hmm.py --method megaloc --beta 3,30,300 --sigma 5,25,200
+```
+
+**Noch nicht auf echten Daten gemessen.** Was der Code kann, ist geprüft:
+Forward-Backward und Viterbi gegen die Summe bzw. das Maximum über alle
+27 Pfade eines 3×3-Falls einzeln nachgerechnet, und ein konstruierter Fall,
+in dem `aggregate_sequence` den Ausreißer stehen lässt und das HMM ihn
+zurückstuft. Was der Code **nicht** kann, steht schon im Befund oben: wenn
+eine ganze Fahrt geschlossen auf die falsche Straße zeigt, ist dieser Pfad
+genauso konsistent wie der richtige. Die Erwartung ist deshalb klein — das
+HMM greift nur bei *unzusammenhängenden* Ausreißern, und 88 % der Fehlgriffe
+sind kohärente Verwechslungen.
+
+Wie die geometrische Verifikation sortiert es die Top-k nur um: R@20 bleibt
+bei Top-20 unverändert, bewegen können sich R@1 bis R@10.
+
+`beta` und `sigma` sind Hyperparameter. Die Tabelle wird auf den Anfragen
+ausgewertet — die beste Zeile herauszugreifen wäre Tuning auf der Testmenge.
+Deshalb druckt das Skript den ganzen Durchlauf; für eine berichtete Zahl legt
+man die Parameter vorher fest.
 
 ### `geometric_verification.py` — Top-k lokal nachprüfen
 

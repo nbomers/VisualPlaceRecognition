@@ -21,14 +21,13 @@ Split selbst. Ergebnis: eine Tabelle und eine Kurve unter experiments/results/.
 import argparse
 import json
 
-import faiss
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
-from tqdm import tqdm
 
 from _common import CFG, PATHS, RESULTS, ROOT
 from src.geo import haversine_distance
+from src.retrieval import blockwise_search
 
 OUT_DIR = RESULTS
 
@@ -86,7 +85,6 @@ def main():
     lat, lon = meta["lat"].to_numpy(), meta["lon"].to_numpy()
     lat0 = float(lat[q_rows].mean())
     q_xy = metric_xy(lat[q_rows], lon[q_rows], lat0)
-    q_emb = np.ascontiguousarray(emb[q_rows], dtype=np.float32)
 
     fractions = [float(f) for f in args.fractions.split(",")]
     ks = [k for k in (1, 5, 10, 20) if k <= args.top_k]
@@ -110,14 +108,12 @@ def main():
         loesbar = np.array([len(n) > 0 for n in nachbarn])
         n_nachbarn = np.array([len(n) for n in nachbarn])
 
-        index = faiss.IndexFlatIP(emb.shape[1])
-        for start in range(0, len(ref_rows), 65536):
-            index.add(np.ascontiguousarray(emb[ref_rows[start:start + 65536]], dtype=np.float32))
-
-        idx = np.empty((len(q_rows), args.top_k), dtype=np.int64)
-        for start in tqdm(range(0, len(q_rows), 2048),
-                          desc=f"train {f:.0%}", leave=False):
-            _, idx[start:start + 2048] = index.search(q_emb[start:start + 2048], args.top_k)
+        # Ein Index je Referenzblock statt einer ueber alles: IndexFlatIP
+        # behaelt jeden Vektor, den er bekommt, das Befuellen zu blocken
+        # haette also nichts gebracht. Bei MegaLoc auf Jena waeren es in der
+        # letzten Stufe 19,8 GB allein im Index gewesen -- und das nach der
+        # laengsten Laufzeit. Dieselbe Funktion nutzt full_reference.py.
+        idx, _ = blockwise_search(emb, ref_rows, q_rows, args.top_k)
 
         treffer_rows = ref_rows[idx]
         d = haversine_distance(lat[q_rows][:, None], lon[q_rows][:, None],
