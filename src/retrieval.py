@@ -14,6 +14,7 @@ Kandidaten, nicht die volle Matrix.
 """
 
 import hashlib
+import json
 
 import numpy as np
 import pandas as pd
@@ -85,6 +86,44 @@ def load_retrieval(root, cfg, method, adapter="none", sequence_window=None,
             indices.shape[1],
         )
     return query, database, indices, similarities
+
+
+def descriptor_dim(root, cfg, method, adapter="none"):
+    """
+    Breite des Deskriptors -- aus der Embedding-Datei, sonst aus der
+    Evaluations-JSON.
+
+    Die reinen Nachbearbeitungsskripte (sequence_retrieval, sequence_hmm,
+    geometric_verification) brauchen inhaltlich nur die .npz aus 06 und
+    metadata.parquet. Die Embedding-Datei lasen sie trotzdem, fuer eine
+    einzige Zahl in der Ergebnis-JSON -- bei MegaLoc 23,6 GB, die auf einem
+    zweiten Rechner gar nicht liegen (*.npy ist gitignored). Dieselbe Zahl
+    steht in results/<stadt>/evaluation/<name>.json, und die IST versioniert.
+
+    Reihenfolge ist Absicht: liegt die .npy da, gilt sie. Nur ihr Kopf wird
+    gelesen, nicht die Daten.
+    """
+    name = method if adapter in ("none", "None") else f"{method}_{adapter}"
+    pfade = Paths(cfg, root)
+
+    npy = pfade.embedding_file(name, method)
+    if npy.exists():
+        return int(np.load(npy, mmap_mode="r").shape[1])
+
+    js = pfade.evaluation / f"{name}.json"
+    if js.exists():
+        try:
+            return int(json.loads(js.read_text())["dim"])
+        except (ValueError, KeyError, OSError):
+            pass                        # unbrauchbar -> unten sauber melden
+
+    raise FileNotFoundError(
+        f"Deskriptorbreite fuer {name!r} nicht zu ermitteln.\n"
+        f"  weder {npy}\n"
+        f"  noch  {js} (mit Schluessel \"dim\")\n"
+        "Die .npy ist gitignored und liegt nur auf dem Rechner, der sie "
+        "gerechnet hat; die JSON entsteht in 07."
+    )
 
 
 def _id_digest(ids):
@@ -195,3 +234,60 @@ def aggregate_sequence(indices, similarities, fenster, w, top_k):
             neu_idx[qi, m:] = uniq[beste[-1]]
             neu_sim[qi, m:] = -np.inf
     return neu_idx, neu_sim
+
+
+# ----------------------------------------------------------------------
+# Suche ueber eine Referenz, die nicht als Ganzes in den Speicher passt.
+#
+# Ein IndexFlatIP haelt jeden Vektor, den man ihm gibt -- das Befuellen zu
+# blocken hilft also nichts, wenn der Index selbst alles behaelt. Bei
+# MegaLoc (8448 Dimensionen) sind 584.388 Referenzbilder 19,8 GB allein im
+# Index. Deshalb hier ein Index JE BLOCK, dessen Top-k mit dem bisherigen
+# Stand verschmolzen wird: das Ergebnis ist identisch mit einem Index ueber
+# alles (gegen einen ungeblockten Index geprueft, auch fuer Treffer, die
+# genau auf einer Blockgrenze liegen), der Speicher bleibt bei einem Block.
+# ----------------------------------------------------------------------
+
+BLOCK_REF = 65_536
+BLOCK_Q = 2_048
+
+
+def blockwise_search(emb, ref_rows, q_rows, top_k, block_ref=BLOCK_REF, block_q=BLOCK_Q):
+    """
+    Top-k ueber alle Referenzzeilen, Index fuer Index.
+
+    emb       memmap oder Array (n_gesamt, dim)
+    ref_rows  Zeilen, die als Referenz zaehlen
+    q_rows    Zeilen der Anfragen
+    Rueckgabe (indices, similarities); indices sind Positionen IN ref_rows,
+    nicht Zeilen in emb -- `ref_rows[indices]` fuehrt zurueck. Die Breite ist
+    min(top_k, len(ref_rows)), nicht zwangslaeufig top_k.
+    """
+    import faiss
+    from tqdm.auto import tqdm as _tqdm
+
+    # Nie mehr Spalten anfordern, als es Referenzbilder gibt. Sonst blieben
+    # die uebrigen Spalten auf ihrem Startwert stehen -- Aehnlichkeit -inf,
+    # aber Index 0, und damit ein Treffer auf ref_rows[0], den die Aufrufer
+    # als echten Nachbarn in den Recall zaehlen wuerden. Trifft nur kleine
+    # Referenzmengen (database_density mit --fractions 0 auf einer winzigen
+    # Stadt), faellt dort aber nicht auf.
+    top_k = min(top_k, len(ref_rows))
+
+    q = np.ascontiguousarray(emb[q_rows], dtype=np.float32)
+    beste_sim = np.full((len(q_rows), top_k), -np.inf, dtype=np.float32)
+    beste_idx = np.zeros((len(q_rows), top_k), dtype=np.int64)
+    for start in _tqdm(range(0, len(ref_rows), block_ref), desc="Referenzbloecke", leave=False):
+        zeilen = ref_rows[start:start + block_ref]
+        index = faiss.IndexFlatIP(emb.shape[1])
+        index.add(np.ascontiguousarray(emb[zeilen], dtype=np.float32))
+        for qs in range(0, len(q), block_q):
+            sim, idx = index.search(q[qs:qs + block_q], min(top_k, len(zeilen)))
+            # Bisherige und neue Kandidaten zusammen, die besten top_k behalten.
+            sim_alle = np.concatenate([beste_sim[qs:qs + block_q], sim], axis=1)
+            idx_alle = np.concatenate([beste_idx[qs:qs + block_q], start + idx], axis=1)
+            wahl = np.argsort(-sim_alle, axis=1, kind="stable")[:, :top_k]
+            beste_sim[qs:qs + block_q] = np.take_along_axis(sim_alle, wahl, axis=1)
+            beste_idx[qs:qs + block_q] = np.take_along_axis(idx_alle, wahl, axis=1)
+        del index
+    return beste_idx, beste_sim

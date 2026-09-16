@@ -5,8 +5,13 @@ einem KDTree statt aus der vollen Distanzmatrix; dieser Test nagelt fest,
 dass beide Wege dasselbe ergeben.
 """
 
+import subprocess
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.geo import haversine_distance
 from src.retrieval import localizable
@@ -93,3 +98,92 @@ def test_adapter_im_namen_von_metadaten_und_trefferliste():
     assert npz.name == "megaloc_linear_retrieval.npz"
     # Der Ordner bleibt der des echten Encoders, nicht der der Variante.
     assert meta.parent.name == "megaloc" and npz.parent.name == "megaloc"
+
+
+# -- blockwise_search --------------------------------------------------------
+#
+# Die Suche ueber die volle Referenz laeuft blockweise, weil ein IndexFlatIP
+# ueber alles bei MegaLoc auf Jena 19,8 GB belegt haette. Ein Ergebnis, das
+# sich dabei aendert, waere ein stiller Fehler in jeder Zahl von
+# full_reference.py und database_density.py -- also nachgerechnet.
+#
+# Die Pruefung laeuft in einem eigenen Prozess (tests/blockwise_check.py).
+# Grund: faiss und torch bringen auf macOS jeweils ihr eigenes OpenMP mit,
+# und wer zweitens laedt, beendet den Prozess mit einem Segmentation Fault.
+# tests/test_adapter_training.py laedt torch, also darf in DIESEM Prozess
+# kein faiss mehr dazukommen.
+
+
+def test_blockwise_search_im_eigenen_prozess():
+    skript = Path(__file__).with_name("blockwise_check.py")
+    lauf = subprocess.run([sys.executable, str(skript)],
+                          capture_output=True, text=True)
+    if lauf.returncode == 77:
+        pytest.skip("faiss nicht installiert")
+    assert lauf.returncode == 0, (
+        f"{skript.name} fehlgeschlagen (Code {lauf.returncode}):\n"
+        f"{lauf.stdout}\n{lauf.stderr}"
+    )
+
+
+# -- descriptor_dim ----------------------------------------------------------
+
+
+def _mini_cfg(tmp_path):
+    return {"city": "Teststadt, Germany", "image_root": str(tmp_path / "bilder")}
+
+
+def test_descriptor_dim_nimmt_die_npy_wenn_sie_da_ist(tmp_path):
+    from src.paths import Paths
+    from src.retrieval import descriptor_dim
+
+    cfg = _mini_cfg(tmp_path)
+    pfade = Paths(cfg, tmp_path)
+    npy = pfade.embedding_file("megaloc", "megaloc")
+    npy.parent.mkdir(parents=True, exist_ok=True)
+    np.save(npy, np.zeros((4, 8448), dtype=np.float32))
+    # Eine JSON mit ABWEICHENDEM Wert daneben: die Datei muss gewinnen.
+    js = pfade.evaluation / "megaloc.json"
+    js.parent.mkdir(parents=True, exist_ok=True)
+    js.write_text('{"dim": 99}')
+
+    assert descriptor_dim(tmp_path, cfg, "megaloc") == 8448
+
+
+def test_descriptor_dim_faellt_auf_die_evaluations_json_zurueck(tmp_path):
+    """
+    Der Punkt der Funktion: die .npy ist gitignored und liegt nur auf dem
+    Rechner, der sie gerechnet hat -- die JSON liegt im Git.
+    """
+    from src.paths import Paths
+    from src.retrieval import descriptor_dim
+
+    cfg = _mini_cfg(tmp_path)
+    pfade = Paths(cfg, tmp_path)
+    js = pfade.evaluation / "megaloc_linear.json"
+    js.parent.mkdir(parents=True, exist_ok=True)
+    js.write_text('{"embedding_name": "megaloc_linear", "dim": 8448}')
+
+    assert descriptor_dim(tmp_path, cfg, "megaloc", "linear") == 8448
+
+
+def test_descriptor_dim_meldet_beide_pfade(tmp_path):
+    from src.retrieval import descriptor_dim
+
+    cfg = _mini_cfg(tmp_path)
+    with pytest.raises(FileNotFoundError) as fehler:
+        descriptor_dim(tmp_path, cfg, "megaloc")
+    text = str(fehler.value)
+    assert "megaloc_embeddings.npy" in text and "megaloc.json" in text
+
+
+def test_descriptor_dim_ueberspringt_eine_kaputte_json(tmp_path):
+    from src.paths import Paths
+    from src.retrieval import descriptor_dim
+
+    cfg = _mini_cfg(tmp_path)
+    js = Paths(cfg, tmp_path).evaluation / "megaloc.json"
+    js.parent.mkdir(parents=True, exist_ok=True)
+    js.write_text("{kein json")
+    with pytest.raises(FileNotFoundError):
+        descriptor_dim(tmp_path, cfg, "megaloc")

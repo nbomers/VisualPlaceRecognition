@@ -13,9 +13,11 @@ Nur fuer Encoder ohne Adapter: der Adapter wurde auf train trainiert,
 train als Referenz waere fuer ihn Leakage. Sequenz- und andere Varianten
 gehoeren zum Benchmark-Protokoll, nicht hierher.
 
-Die Suche laeuft blockweise ueber die Referenz (65.536 Zeilen je FAISS-
-Index) und fuehrt die Top-k zusammen -- bei 8448 Dimensionen waere ein
-Index ueber alles 9,4 GB.
+Die Suche laeuft blockweise ueber die Referenz (src/retrieval.py ->
+blockwise_search, 65.536 Zeilen je FAISS-Index) und fuehrt die Top-k
+zusammen. Ein Index ueber alles braucht Referenzbilder x Dimension x 4 Byte
+und waechst mit der Stadt: bei 8448 Dimensionen sind das in Osnabrueck
+9,4 GB, in Jena 19,8 GB. Geblockt bleibt es bei rund 2 GB je Index.
 
     python experiments/full_reference.py                      # alle Encoder mit .npy
     python experiments/full_reference.py --methods megaloc,eigenplaces_pcaw512
@@ -27,19 +29,16 @@ results/<stadt>/evaluation/<name>_fullref.json (Variante "fullref").
 import argparse
 import time
 
-import faiss
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 from _common import CFG, PATHS, ROOT
 from src.evaluation import standard_evaluations, write_evaluation
+from src.retrieval import blockwise_search
 from src.run_guard import embedding_fingerprint, require_fingerprint, write_fingerprint
 
 EMB_DIR = PATHS.embeddings
 REFERENZ = ("database", "train")
-BLOCK_REF = 65_536
-BLOCK_Q = 2_048
 
 
 def _args():
@@ -54,26 +53,6 @@ def _args():
 
 def encoders_with_npy():
     return [m for m in CFG["vpr"]["models"] if (EMB_DIR / m / f"{m}_embeddings.npy").exists()]
-
-
-def search_blockwise(emb, ref_rows, q_rows, top_k):
-    """Top-k ueber alle Referenzzeilen, Index fuer Index -- Ergebnis wie ein Index ueber alles."""
-    q = np.ascontiguousarray(emb[q_rows], dtype=np.float32)
-    beste_sim = np.full((len(q_rows), top_k), -np.inf, dtype=np.float32)
-    beste_idx = np.zeros((len(q_rows), top_k), dtype=np.int64)
-    for start in tqdm(range(0, len(ref_rows), BLOCK_REF), desc="Referenzbloecke", leave=False):
-        zeilen = ref_rows[start:start + BLOCK_REF]
-        index = faiss.IndexFlatIP(emb.shape[1])
-        index.add(np.ascontiguousarray(emb[zeilen], dtype=np.float32))
-        for qs in range(0, len(q), BLOCK_Q):
-            sim, idx = index.search(q[qs:qs + BLOCK_Q], min(top_k, len(zeilen)))
-            # Bisherige und neue Kandidaten zusammen, die besten top_k behalten.
-            sim_alle = np.concatenate([beste_sim[qs:qs + BLOCK_Q], sim], axis=1)
-            idx_alle = np.concatenate([beste_idx[qs:qs + BLOCK_Q], start + idx], axis=1)
-            wahl = np.argsort(-sim_alle, axis=1, kind="stable")[:, :top_k]
-            beste_sim[qs:qs + BLOCK_Q] = np.take_along_axis(sim_alle, wahl, axis=1)
-            beste_idx[qs:qs + BLOCK_Q] = np.take_along_axis(idx_alle, wahl, axis=1)
-    return beste_idx, beste_sim
 
 
 def run_one(method, force):
@@ -108,7 +87,7 @@ def run_one(method, force):
         print(f"  Trefferliste liegt vor: {npz.name}")
     else:
         t0 = time.time()
-        idx, sim = search_blockwise(emb, ref_rows, q_rows, top_k)
+        idx, sim = blockwise_search(emb, ref_rows, q_rows, top_k)
         print(f"  Suche: {len(q_rows):,} Anfragen gegen {len(ref_rows):,} Referenzbilder, "
               f"{emb.shape[1]} d, {time.time() - t0:.0f} s")
         npz.parent.mkdir(parents=True, exist_ok=True)
