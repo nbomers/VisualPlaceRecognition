@@ -107,18 +107,32 @@ def survey(name, token, tiles_only=False):
     fot = Counter(p.get("creator_id") for p in pts if p.get("creator_id") is not None)
     seqs = Counter(p.get("sequence_id") for p in pts if p.get("sequence_id"))
     seit22 = sum(1 for p in pts if p.get("captured_at") and time.gmtime(p["captured_at"] / 1000).tm_year >= 2022)
+    # Panoramen liefern die Kacheln mit; 07 filtert sie aus den ANFRAGEN
+    # (query_filter=~q_pano), nicht aus der Datenbank. Ein hoher Anteil
+    # schrumpft also die Auswertung und laesst zugleich Bilder in der
+    # Referenz, die ein perspektivisches Modell nur schlecht vergleichen
+    # kann. Halle lag bei 29 %, Wuerzburg bei 9 % -- das war der Grund
+    # gegen beide, und die Zahl stand bis hierher in keiner Tabelle.
+    mit_pano = [p["is_pano"] for p in pts if p.get("is_pano") is not None]
+    pano = sum(1 for v in mit_pano if v)
     ges = sum(laenge.values())
     return {
         "stadt": name.split(",")[0], "km2": round(area, 1), "bilder": len(pts),
-        "bilder_pro_km2": round(len(pts) / area), "strassen_km": round(ges / 1000),
+        # None statt 0, wenn nicht gemessen: der Merge unten uebernimmt jeden
+        # Wert, der nicht None ist. Mit einer 0 hat ein --tiles-only --force
+        # die Strassenlaengen frueherer Laeufe ueberschrieben -- die
+        # Abdeckungsfelder daneben waren korrekt, die Laengen nicht.
+        "bilder_pro_km2": round(len(pts) / area),
+        "strassen_km": round(ges / 1000) if ges else None,
         "abdeckung_gesamt": round(sum(gedeckt.values()) / ges, 3) if ges else None,
         "abdeckung_grosse_strassen": round(gedeckt["gross"] / laenge["gross"], 3) if laenge["gross"] else None,
         "abdeckung_wohnstrassen": round(gedeckt["klein"] / laenge["klein"], 3) if laenge["klein"] else None,
-        "wohnstrassen_km": round(laenge["klein"] / 1000),
+        "wohnstrassen_km": round(laenge["klein"] / 1000) if laenge["klein"] else None,
         "sequenzen": len(seqs), "median_sequenz": int(np.median(list(seqs.values()))) if seqs else 0,
         "fotografen": len(fot),
         "anteil_groesster_fotograf": round(fot.most_common(1)[0][1] / len(pts), 3) if fot else None,
         "anteil_seit_2022": round(seit22 / max(len(pts), 1), 2),
+        "anteil_panorama": round(pano / len(mit_pano), 3) if mit_pano else None,
         "datum": pd.Timestamp.now().strftime("%Y-%m-%d"),
     }
 
@@ -147,18 +161,25 @@ def main():
         strassen = (f"Strassen gedeckt {r['abdeckung_gesamt']:.0%} (gross {r['abdeckung_grosse_strassen']:.0%}, "
                     f"Wohn {r['abdeckung_wohnstrassen']:.0%})" if r.get("abdeckung_gesamt") is not None
                     else "Strassen: nicht gemessen")
+        # .get und die None-Zweige: Staedte, die vor anteil_panorama gemessen
+        # wurden, stehen weiter in der JSON und sollen hier nicht abstuerzen.
+        pano = (f"Panorama {r['anteil_panorama']:.0%}"
+                if r.get("anteil_panorama") is not None else "Panorama: unbekannt")
         print(f"{r['stadt']:<16} {r['bilder']:>9,} Bilder {r['bilder_pro_km2']:>6,}/km2 | {strassen} | "
               f"{r['sequenzen']:,} Seq. | {r['fotografen']} Fotografen, groesster "
-              f"{r['anteil_groesster_fotograf']:.0%} | seit 2022: {r['anteil_seit_2022']:.0%}  "
-              f"({time.time() - t0:.0f} s)", flush=True)
+              f"{r['anteil_groesster_fotograf']:.0%} | seit 2022: {r['anteil_seit_2022']:.0%} | "
+              f"{pano}  ({time.time() - t0:.0f} s)", flush=True)
         OUT.parent.mkdir(parents=True, exist_ok=True)
         OUT.write_text(json.dumps(done, indent=1, ensure_ascii=False))
     if done:
-        print(f"\n{'Stadt':<16}{'Bilder':>10}{'/km2':>7}{'gedeckt':>9}{'Wohn':>7}{'seit22':>8}{'Fotogr.':>9}")
+        print(f"\n{'Stadt':<16}{'Bilder':>10}{'/km2':>7}{'gedeckt':>9}{'Wohn':>7}{'seit22':>8}"
+              f"{'Fotogr.':>9}{'Pano':>7}")
         for r in sorted(done.values(), key=lambda r: -(r.get('abdeckung_gesamt') or 0)):
             ab = f"{r['abdeckung_gesamt']:>9.0%}{r['abdeckung_wohnstrassen']:>7.0%}" if r.get("abdeckung_gesamt") is not None else f"{'-':>9}{'-':>7}"
+            pa = (f"{r['anteil_panorama']:>7.1%}" if r.get("anteil_panorama") is not None
+                  else f"{'-':>7}")
             print(f"{r['stadt']:<16}{r['bilder']:>10,}{r['bilder_pro_km2']:>7,}{ab}"
-                  f"{r['anteil_seit_2022']:>8.0%}{r['anteil_groesster_fotograf']:>9.0%}")
+                  f"{r['anteil_seit_2022']:>8.0%}{r['anteil_groesster_fotograf']:>9.0%}{pa}")
 
 
 if __name__ == "__main__":
