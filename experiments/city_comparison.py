@@ -118,7 +118,11 @@ def _stadt(slug, method, schwelle):
         # genau das trennt den Abschlag vom Dublettenanteil.
         d["loesbar_hard"] = hard["schwellen"][schwelle]["loesbar"]
     pano = a.get("Nur Nicht-Panorama-Queries")
-    d["ohne_panorama"] = _recall(pano, schwelle) if pano else None
+    if pano:
+        d["ohne_panorama"] = _recall(pano, schwelle)
+        # Mit dieser Zahl laesst sich R@1 der Panorama-Anfragen exakt
+        # zurueckrechnen -- 07 wertet sie nicht eigens aus.
+        d["loesbar_ohne_panorama"] = pano["schwellen"][schwelle]["loesbar"]
 
     voll = ev / f"{method}_fullref.json"
     if voll.exists():
@@ -220,7 +224,18 @@ def zerlegung(zeile):
     erwartet = zeile["n_korrekt"] * (1 - zeile["dublette"]) / zeile["loesbar_hard"]
     return {"r": r, "erwartet": erwartet, "gemessen": zeile["hard"],
             "rest": zeile["hard"] - erwartet,
-            "erwarteter_abschlag": erwartet - zeile["alle"]}
+            "erwarteter_abschlag": erwartet - zeile["alle"],
+            # Zwei Masse, die dasselbe Wort "Dublette" tragen und doch
+            # verschiedene Dinge zaehlen:
+            #   d     Anteil der korrekten TREFFER, die Dubletten sind
+            #   1-r   Anteil der loesbaren ANFRAGEN, deren einzige Referenz
+            #         eine Dublette war -- die strukturelle Abhaengigkeit
+            # Ihre Differenz ist der Abschlag: rel = -(d - (1-r)) / r.
+            # Sie verschwindet, wenn das System Dubletten nur in dem Mass
+            # nutzt, in dem der Datensatz sie erzwingt.
+            "strukturell": 1 - r,
+            "uebernutzung": zeile["dublette"] - (1 - r),
+            "rel_abschlag": (zeile["hard"] - zeile["alle"]) / zeile["alle"]}
 
 
 def _zerlegungstabelle(zeilen):
@@ -237,12 +252,14 @@ def _zerlegungstabelle(zeilen):
         print("\nHard-Abschlag zerlegt: keine Stadt mit Herkunftsmessung "
               "(experiments/recall_by_difficulty.py).")
         return {}
-    print("\nHard-Abschlag zerlegt   R@1_hard = n_korrekt x (1 - Dubl) / loesbar_hard")
-    print(f"{'Stadt':<16}{'Dubl':>7}{'r':>7}{'erwartet':>10}{'gemessen':>10}{'Rest':>8}")
-    print("-" * 58)
+    print("\nHard-Abschlag zerlegt   rel. Abschlag = -(d - (1-r)) / r")
+    print("  d   = Anteil der korrekten Treffer, die Dubletten sind")
+    print("  1-r = Anteil der loesbaren Anfragen, die NUR durch Dubletten loesbar waren")
+    print(f"{'Stadt':<16}{'d':>7}{'1-r':>7}{'d-(1-r)':>10}{'rel.Absch':>11}{'Rest':>8}")
+    print("-" * 59)
     for z, x in mit:
-        print(f"{z['stadt']:<16}{z['dublette']:>7.1%}{x['r']:>7.3f}"
-              f"{x['erwartet']:>10.3f}{x['gemessen']:>10.3f}{x['rest']:>+8.3f}")
+        print(f"{z['stadt']:<16}{z['dublette']:>7.1%}{x['strukturell']:>7.1%}"
+              f"{x['uebernutzung']:>+10.3f}{x['rel_abschlag']:>+11.3f}{x['rest']:>+8.3f}")
     groesster = max(abs(x["rest"]) for _, x in mit)
     if groesster > 0.002:
         print(f"  ACHTUNG: groesster Rest {groesster:+.4f}. Die Identitaet gilt "
@@ -250,6 +267,56 @@ def _zerlegungstabelle(zeilen):
               f"min_days_apart und dieselbe Trefferliste benutzt haben.")
     else:
         print(f"  Groesster Rest {groesster:.4f} -- die Zerlegung traegt.")
+    return {z["stadt"]: x for z, x in mit}
+
+
+def panorama(zeile):
+    """
+    R@1 der Panorama-Anfragen -- exakt, obwohl 07 sie nicht eigens auswertet.
+
+    07 rechnet "Alle Queries" und "Nur Nicht-Panorama-Queries". Die Differenz
+    der Trefferzahlen ist die Trefferzahl AUF den Panoramen, die Differenz der
+    loesbaren Anfragen ihre Zahl:
+
+        R@1_pano = (R_alle * L - R_ohne * L_ohne) / (L - L_ohne)
+
+    Das ist der direkte Wert, nicht die bisher berichtete Hochrechnung
+    "Differenz geteilt durch Panoramaanteil" -- und er sagt dasselbe, nur
+    ohne Umweg.
+    """
+    noetig = ("alle", "loesbar_n", "ohne_panorama", "loesbar_ohne_panorama")
+    if any(zeile.get(k) is None for k in noetig):
+        return None
+    n = zeile["loesbar_n"] - zeile["loesbar_ohne_panorama"]
+    if n < 1:
+        return None
+    treffer = (zeile["alle"] * zeile["loesbar_n"]
+               - zeile["ohne_panorama"] * zeile["loesbar_ohne_panorama"])
+    r = treffer / n
+    return {"n_pano": n, "recall_pano": r, "recall_ohne": zeile["ohne_panorama"],
+            "strafe": zeile["ohne_panorama"] - r,
+            # Binomialer Standardfehler, optimistisch (Sequenzen sind korreliert),
+            # aber er zeigt schon, wann n zu klein ist, um etwas zu behaupten.
+            "se_binomial": (r * (1 - r) / n) ** 0.5}
+
+
+def _panoramatabelle(zeilen):
+    mit = [(z, panorama(z)) for z in zeilen]
+    mit = [(z, x) for z, x in mit if x]
+    if not mit:
+        print("\nPanorama-Anfragen: keine Stadt mit getrennter Auswertung.")
+        return {}
+    print("\nPanorama-Anfragen   R@1 getrennt, exakt aus beiden Auswertungen von 07")
+    print(f"{'Stadt':<16}{'n':>8}{'R@1 Pano':>10}{'R@1 ohne':>10}{'Strafe':>9}{'+-SE':>8}")
+    print("-" * 61)
+    for z, x in sorted(mit, key=lambda t: -t[1]["n_pano"]):
+        print(f"{z['stadt']:<16}{x['n_pano']:>8,}{x['recall_pano']:>10.3f}"
+              f"{x['recall_ohne']:>10.3f}{x['strafe']:>9.3f}{x['se_binomial']:>8.3f}")
+    gross = [x for _, x in mit if x["n_pano"] >= 1000]
+    if len(gross) >= 2:
+        sp = [x["strafe"] for x in gross]
+        print(f"  Ueber die {len(gross)} Staedte mit mindestens 1.000 Panorama-Anfragen: "
+              f"Strafe {min(sp):.3f} bis {max(sp):.3f}")
     return {z["stadt"]: x for z, x in mit}
 
 
@@ -321,6 +388,18 @@ def main():
         "auch der Nenner schrumpft, und kann deshalb selbst dann flach sein, wenn die "
         "Identitaet auf drei Stellen aufgeht.")
     zerlegt = _zerlegungstabelle(zeilen)
+    for z in zeilen:
+        x = zerlegt.get(z["stadt"])
+        if x:
+            z["uebernutzung"] = x["uebernutzung"]
+            z["rel_abschlag"] = x["rel_abschlag"]
+    befunde["uebernutzung_abschlag"] = _zusammenhang(
+        "Uebernutzung d-(1-r) gegen relativen Hard-Abschlag", zeilen,
+        "uebernutzung", "rel_abschlag",
+        "Die starke Fassung: nicht der Dublettenanteil allein, sondern sein Ueberschuss "
+        "ueber die strukturelle Abhaengigkeit. Analytisch erzwungen (rel = -(d-(1-r))/r), "
+        "die Rangkorrelation prueft nur, ob beide Skripte dasselbe messen.")
+    panoramen = _panoramatabelle(zeilen)
     befunde["jahre_hard"] = _zusammenhang(
         "Anteil seit 2022 gegen Hard-Abschlag", zeilen, "seit_2022", "hard_abschlag",
         "Wenige alte Kampagnen -> Anfrage und Treffer aus derselben Befahrung -> der Filter greift hart.")
@@ -332,7 +411,8 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({"method": args.method, "schwelle_m": float(schwelle),
                                "staedte": zeilen, "befunde": befunde,
-                               "zerlegung": zerlegt}, indent=2))
+                               "zerlegung": zerlegt,
+                               "panorama": panoramen}, indent=2))
     print(f"\ngeschrieben: {OUT.relative_to(ROOT)}")
 
     if args.plot:

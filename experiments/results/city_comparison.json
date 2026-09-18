@@ -5,9 +5,10 @@
     {
       "stadt": "osnabrueck",
       "alle": 0.5683044090056285,
+      "loesbar_n": 34112,
       "loesbar_anteil": 0.6386340659752124,
       "hard": 0.5431902659084411,
-      "ohne_panorama": null,
+      "loesbar_hard": 31477,
       "voll": 0.7976212715611184,
       "halbbreite": 0.0957945447654627,
       "n_sequenzen": 198,
@@ -20,96 +21,238 @@
     {
       "stadt": "fuerth",
       "alle": 0.5491676345334882,
+      "loesbar_n": 15498,
       "loesbar_anteil": 0.6200688165159638,
       "hard": 0.4078394033166706,
+      "loesbar_hard": 12603,
       "ohne_panorama": 0.5534430942114203,
+      "loesbar_ohne_panorama": 15306,
       "voll": 0.6986174300985026,
       "dublette": 0.3960756667841617,
       "median_tage": 291.2379513888889,
+      "n_korrekt": 8511,
       "halbbreite": 0.05893034079459761,
       "n_sequenzen": 239,
       "halbbreite_voll": 0.06142219242918112,
       "abdeckung": 0.718,
       "panorama": 0.03,
       "seit_2022": 0.26,
-      "hard_abschlag": -0.14132823121681753
+      "hard_abschlag": -0.14132823121681753,
+      "uebernutzung": 0.2092773702297676,
+      "rel_abschlag": -0.25734989159890004
     },
     {
       "stadt": "karlsruhe",
       "alle": 0.41931825545978874,
+      "loesbar_n": 61724,
       "loesbar_anteil": 0.7079983023823998,
       "hard": 0.36197150507421244,
+      "loesbar_hard": 60502,
       "ohne_panorama": 0.4490316573556797,
+      "loesbar_ohne_panorama": 53700,
       "voll": 0.6395030786470822,
       "dublette": 0.15385209798315433,
       "median_tage": 407.74214699074076,
+      "n_korrekt": 25882,
       "halbbreite": 0.05761253130235866,
       "n_sequenzen": 584,
       "halbbreite_voll": 0.04967717597590954,
       "abdeckung": 0.748,
       "panorama": 0.179,
       "seit_2022": 0.72,
-      "hard_abschlag": -0.057346750385576295
+      "hard_abschlag": -0.057346750385576295,
+      "uebernutzung": 0.13405428837911057,
+      "rel_abschlag": -0.1367618739200723
     },
     {
       "stadt": "kaiserslautern",
       "alle": 0.6510170902890677,
+      "loesbar_n": 50438,
       "loesbar_anteil": 0.8561002104691425,
       "hard": 0.44736786267478623,
+      "loesbar_hard": 47129,
       "ohne_panorama": 0.6540201255355186,
+      "loesbar_ohne_panorama": 50185,
       "voll": 0.8101075762660966,
       "dublette": 0.3578998660007309,
       "median_tage": 278.8916447511574,
+      "n_korrekt": 32836,
       "halbbreite": 0.045406087416805296,
       "n_sequenzen": 249,
       "halbbreite_voll": 0.047613809049980305,
       "abdeckung": 0.803,
       "panorama": 0.003,
       "seit_2022": 0.29,
-      "hard_abschlag": -0.2036492276142815
+      "hard_abschlag": -0.2036492276142815,
+      "uebernutzung": 0.2922945684076464,
+      "rel_abschlag": -0.31281702224415675
     },
     {
       "stadt": "wuerzburg",
       "alle": 0.335717413516275,
+      "loesbar_n": 27404,
       "loesbar_anteil": 0.4551932627942129,
       "hard": 0.3014726423753841,
+      "loesbar_hard": 25057,
       "ohne_panorama": 0.3517525608194622,
+      "loesbar_ohne_panorama": 24992,
       "voll": 0.4763583295913785,
       "dublette": 0.17891304347826087,
       "median_tage": 626.9545186689816,
+      "n_korrekt": 9200,
       "halbbreite": 0.05857318768767242,
       "n_sequenzen": 300,
       "halbbreite_voll": 0.061408783350854534,
       "abdeckung": 0.979,
       "panorama": 0.087,
       "seit_2022": 0.28,
-      "hard_abschlag": -0.03424477114089086
+      "hard_abschlag": -0.03424477114089086,
+      "uebernutzung": 0.09326861200840242,
+      "rel_abschlag": -0.1020047509070623
+    },
+    {
+      "stadt": "jena",
+      "alle": 0.4166735397456411,
+      "loesbar_n": 60623,
+      "loesbar_anteil": 0.529190453743955,
+      "hard": 0.4069495773331634,
+      "loesbar_hard": 47082,
+      "ohne_panorama": 0.416928210380257,
+      "loesbar_ohne_panorama": 60538,
+      "voll": 0.6223179551932557,
+      "dublette": 0.2414885193982581,
+      "median_tage": 2187.7785254166665,
+      "n_korrekt": 25260,
+      "halbbreite": 0.03349182092012104,
+      "n_sequenzen": 677,
+      "halbbreite_voll": 0.035283271239601954,
+      "abdeckung": 0.991,
+      "panorama": 0.003,
+      "seit_2022": 0.45,
+      "hard_abschlag": -0.009723962412477694,
+      "uebernutzung": 0.018124449655751107,
+      "rel_abschlag": -0.023337124834981602
     }
   ],
   "befunde": {
     "abdeckung_intervall": {
-      "n": 5,
-      "rho": -0.7,
-      "p": 0.23333333333333334,
+      "n": 6,
+      "rho": -0.8285714285714285,
+      "p": 0.058333333333333334,
       "art": "exakt"
     },
     "loesbar_intervall": {
-      "n": 5,
-      "rho": -0.6000000000000001,
-      "p": 0.35,
+      "n": 6,
+      "rho": -0.08571428571428563,
+      "p": 0.9194444444444444,
       "art": "exakt"
     },
     "dublette_hard": {
-      "n": 4,
-      "rho": -0.6000000000000001,
-      "p": 0.4166666666666667,
+      "n": 5,
+      "rho": -0.5,
+      "p": 0.45,
+      "art": "exakt"
+    },
+    "uebernutzung_abschlag": {
+      "n": 5,
+      "rho": -1.0,
+      "p": 0.016666666666666666,
       "art": "exakt"
     },
     "jahre_hard": {
-      "n": 5,
-      "rho": 0.5,
-      "p": 0.45,
+      "n": 6,
+      "rho": 0.48571428571428577,
+      "p": 0.35555555555555557,
       "art": "exakt"
+    }
+  },
+  "zerlegung": {
+    "fuerth": {
+      "r": 0.8132017034456059,
+      "erwartet": 0.4078394033166707,
+      "gemessen": 0.4078394033166706,
+      "rest": -5.551115123125783e-17,
+      "erwarteter_abschlag": -0.14132823121681748,
+      "strukturell": 0.18679829655439406,
+      "uebernutzung": 0.2092773702297676,
+      "rel_abschlag": -0.25734989159890004
+    },
+    "karlsruhe": {
+      "r": 0.9802021903959562,
+      "erwartet": 0.36197150507421244,
+      "gemessen": 0.36197150507421244,
+      "rest": 0.0,
+      "erwarteter_abschlag": -0.057346750385576295,
+      "strukturell": 0.01979780960404376,
+      "uebernutzung": 0.13405428837911057,
+      "rel_abschlag": -0.1367618739200723
+    },
+    "kaiserslautern": {
+      "r": 0.9343947024069155,
+      "erwartet": 0.44736786267478623,
+      "gemessen": 0.44736786267478623,
+      "rest": 0.0,
+      "erwarteter_abschlag": -0.2036492276142815,
+      "strukturell": 0.06560529759308453,
+      "uebernutzung": 0.2922945684076464,
+      "rel_abschlag": -0.31281702224415675
+    },
+    "wuerzburg": {
+      "r": 0.9143555685301415,
+      "erwartet": 0.3014726423753841,
+      "gemessen": 0.3014726423753841,
+      "rest": 0.0,
+      "erwarteter_abschlag": -0.03424477114089086,
+      "strukturell": 0.08564443146985845,
+      "uebernutzung": 0.09326861200840242,
+      "rel_abschlag": -0.1020047509070623
+    },
+    "jena": {
+      "r": 0.776635930257493,
+      "erwartet": 0.4069495773331634,
+      "gemessen": 0.4069495773331634,
+      "rest": 0.0,
+      "erwarteter_abschlag": -0.009723962412477694,
+      "strukturell": 0.223364069742507,
+      "uebernutzung": 0.018124449655751107,
+      "rel_abschlag": -0.023337124834981602
+    }
+  },
+  "panorama": {
+    "fuerth": {
+      "n_pano": 192,
+      "recall_pano": 0.20833333333333334,
+      "recall_ohne": 0.5534430942114203,
+      "strafe": 0.345109760878087,
+      "se_binomial": 0.02930892884745509
+    },
+    "karlsruhe": {
+      "n_pano": 8024,
+      "recall_pano": 0.22046360917248256,
+      "recall_ohne": 0.4490316573556797,
+      "strafe": 0.22856804818319712,
+      "se_binomial": 0.00462797701610605
+    },
+    "kaiserslautern": {
+      "n_pano": 253,
+      "recall_pano": 0.05533596837944664,
+      "recall_ohne": 0.6540201255355186,
+      "strafe": 0.5986841571560719,
+      "se_binomial": 0.014374150462328485
+    },
+    "wuerzburg": {
+      "n_pano": 2412,
+      "recall_pano": 0.16956882255389719,
+      "recall_ohne": 0.3517525608194622,
+      "strafe": 0.18218373826556503,
+      "se_binomial": 0.00764075322566749
+    },
+    "jena": {
+      "n_pano": 85,
+      "recall_pano": 0.23529411764705882,
+      "recall_ohne": 0.416928210380257,
+      "strafe": 0.1816340927331982,
+      "se_binomial": 0.04600905228676722
     }
   }
 }

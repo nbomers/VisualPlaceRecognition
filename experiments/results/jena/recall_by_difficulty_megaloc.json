@@ -1,0 +1,114 @@
+{
+  "datum": "2026-09-18",
+  "embedding_name": "megaloc",
+  "threshold_m": 25.0,
+  "n_loesbar": 60623,
+  "recall_1": 0.4166735397456411,
+  "merkmale": [
+    {
+      "merkmal": "Nachbarn im Umkreis",
+      "klassen": [
+        {
+          "klasse": "1-2",
+          "n": 2267,
+          "recall_1": 0.17203352448169387
+        },
+        {
+          "klasse": "3-5",
+          "n": 7749,
+          "recall_1": 0.25758162343528196
+        },
+        {
+          "klasse": "6-10",
+          "n": 16303,
+          "recall_1": 0.3492608722321045
+        },
+        {
+          "klasse": "11-20",
+          "n": 19047,
+          "recall_1": 0.42652386202551584
+        },
+        {
+          "klasse": "21-50",
+          "n": 13526,
+          "recall_1": 0.5758539109862487
+        },
+        {
+          "klasse": "51+",
+          "n": 1698,
+          "recall_1": 0.7449941107184923
+        }
+      ]
+    },
+    {
+      "merkmal": "Tage zum naechsten Referenzbild",
+      "klassen": [
+        {
+          "klasse": "0-7",
+          "n": 15130,
+          "recall_1": 0.3638466622604098
+        },
+        {
+          "klasse": "8-30",
+          "n": 3254,
+          "recall_1": 0.5439459127228027
+        },
+        {
+          "klasse": "31-180",
+          "n": 6456,
+          "recall_1": 0.434634448574969
+        },
+        {
+          "klasse": "181-365",
+          "n": 4805,
+          "recall_1": 0.40978147762747136
+        },
+        {
+          "klasse": "366+",
+          "n": 30630,
+          "recall_1": 0.42523669604962455
+        }
+      ]
+    },
+    {
+      "merkmal": "Nachbar mit passender Blickrichtung",
+      "klassen": [
+        {
+          "klasse": "ja",
+          "n": 41187,
+          "recall_1": 0.5864714594410858
+        },
+        {
+          "klasse": "nein",
+          "n": 19436,
+          "recall_1": 0.05685326198806339
+        }
+      ]
+    },
+    {
+      "merkmal": "Nachbar vom selben Fotografen am selben Tag",
+      "klassen": [
+        {
+          "klasse": "ja",
+          "n": 14188,
+          "recall_1": 0.35184663095573726
+        },
+        {
+          "klasse": "nein",
+          "n": 46435,
+          "recall_1": 0.43648110261656076
+        }
+      ]
+    }
+  ],
+  "herkunft_top1": {
+    "n_korrekt": 25260,
+    "anteil_selbes_konto": 0.38665874901029296,
+    "anteil_dublette": 0.2414885193982581,
+    "median_tage": 2187.7785254166665,
+    "anteil_unter_1_tag": 0.10866983372921615,
+    "anteil_ueber_1_jahr": 0.6833333333333333,
+    "median_blickwinkel_grad": 6.262925579368339,
+    "min_days_apart": 180.0
+  }
+}
