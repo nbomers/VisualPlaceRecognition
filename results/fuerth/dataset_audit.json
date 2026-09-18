@@ -1,0 +1,43 @@
+{
+  "datum": "2026-09-16",
+  "bilder": 191920,
+  "sequenzen": 1607,
+  "sequenzen_mit_einem_bild": 224,
+  "bilder_je_sequenz_median": 61.0,
+  "bilder_je_split": {
+    "train": 135371,
+    "database": 31545,
+    "query": 25004
+  },
+  "split_reproduzierbar": true,
+  "sequenz_leakage": 0,
+  "fehlende_pflichtwerte": 0,
+  "fehlende_auswertungswerte": 0,
+  "panoramen": 5775,
+  "compass_unbekannt": 0,
+  "aufnahmejahre": {
+    "2014": 19426,
+    "2015": 4996,
+    "2016": 3296,
+    "2017": 4857,
+    "2018": 48863,
+    "2019": 27084,
+    "2020": 22228,
+    "2021": 11422,
+    "2022": 10657,
+    "2023": 4274,
+    "2024": 6295,
+    "2025": 23250,
+    "2026": 5272
+  },
+  "fotografen": 56,
+  "anteil_groesster_fotograf": 0.29842642767819927,
+  "query_mit_referenz_im_radius": {
+    "radius_m": 25.0,
+    "anteil": 0.6199808030715086,
+    "anteil_selber_fotograf_selber_tag": 0.09966455941168881,
+    "anteil_anderer_fotograf": 0.7662882208747258,
+    "median_nachbarn": 11.0,
+    "median_tage_zum_naechsten": 141.79396973958333
+  }
+}

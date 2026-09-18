@@ -1,0 +1,157 @@
+{
+  "datum": "2026-09-17",
+  "reference": "full",
+  "split": "Alle Queries",
+  "threshold_m": 25.0,
+  "n_bootstrap": 1000,
+  "seed": 42,
+  "n_sequences": 239,
+  "n_queries": 24994,
+  "n_loesbar": 22639,
+  "encoder": {
+    "eigenplaces_fullref": {
+      "method": "eigenplaces",
+      "adapter": "none",
+      "variant": "fullref",
+      "dim": 2048,
+      "n_loesbar": 22639,
+      "recall": {
+        "1": {
+          "wert": 0.6271036706568311,
+          "ci": [
+            0.5580648978411212,
+            0.6881716324382925
+          ],
+          "halbbreite": 0.06505336729858563,
+          "halbbreite_naiv": 0.006299283832987198
+        },
+        "5": {
+          "wert": 0.713591589734529,
+          "ci": [
+            0.6458908601134579,
+            0.773500345906129
+          ],
+          "halbbreite": 0.06380474289633559,
+          "halbbreite_naiv": 0.005889049386678766
+        },
+        "10": {
+          "wert": 0.7403153849551659,
+          "ci": [
+            0.6741234175020903,
+            0.7976115871820111
+          ],
+          "halbbreite": 0.06174408483996041,
+          "halbbreite_naiv": 0.005711615314386625
+        },
+        "20": {
+          "wert": 0.7634171120632537,
+          "ci": [
+            0.6975913933062319,
+            0.8195694199737431
+          ],
+          "halbbreite": 0.060989013333755615,
+          "halbbreite_naiv": 0.005536050731690878
+        }
+      }
+    },
+    "megaloc_fullref": {
+      "method": "megaloc",
+      "adapter": "none",
+      "variant": "fullref",
+      "dim": 8448,
+      "n_loesbar": 22639,
+      "recall": {
+        "1": {
+          "wert": 0.6986174300985026,
+          "ci": [
+            0.6339892229022086,
+            0.7568336077605708
+          ],
+          "halbbreite": 0.06142219242918112,
+          "halbbreite_naiv": 0.005977316135595523
+        },
+        "5": {
+          "wert": 0.7805115066919917,
+          "ci": [
+            0.7228932695956275,
+            0.8312703774972741
+          ],
+          "halbbreite": 0.05418855395082328,
+          "halbbreite_naiv": 0.00539166605400235
+        },
+        "10": {
+          "wert": 0.8029064888025089,
+          "ci": [
+            0.7484052154873087,
+            0.8507577662734419
+          ],
+          "halbbreite": 0.05117627539306663,
+          "halbbreite_naiv": 0.0051819843700335825
+        },
+        "20": {
+          "wert": 0.8213260303016918,
+          "ci": [
+            0.7689394654915458,
+            0.8690906109307017
+          ],
+          "halbbreite": 0.050075572719577965,
+          "halbbreite_naiv": 0.00499017629043216
+        }
+      }
+    }
+  },
+  "paare": [
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 1,
+      "recall_a": 0.6271036706568311,
+      "recall_b": 0.6986174300985026,
+      "differenz": 0.07151375944167149,
+      "ci": [
+        0.05204798255701144,
+        0.09217600951752628
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 5,
+      "recall_a": 0.713591589734529,
+      "recall_b": 0.7805115066919917,
+      "differenz": 0.06691991695746269,
+      "ci": [
+        0.04648182213454688,
+        0.08798499054126248
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 10,
+      "recall_a": 0.7403153849551659,
+      "recall_b": 0.8029064888025089,
+      "differenz": 0.06259110384734301,
+      "ci": [
+        0.04241714161473297,
+        0.0850496563379465
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 20,
+      "recall_a": 0.7634171120632537,
+      "recall_b": 0.8213260303016918,
+      "differenz": 0.057908918238438134,
+      "ci": [
+        0.03897764533997357,
+        0.08215988826230522
+      ],
+      "schliesst_null_ein": false
+    }
+  ]
+}

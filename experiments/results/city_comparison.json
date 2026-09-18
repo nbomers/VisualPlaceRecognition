@@ -1,0 +1,115 @@
+{
+  "method": "megaloc",
+  "schwelle_m": 25.0,
+  "staedte": [
+    {
+      "stadt": "osnabrueck",
+      "alle": 0.5683044090056285,
+      "loesbar_anteil": 0.6386340659752124,
+      "hard": 0.5431902659084411,
+      "ohne_panorama": null,
+      "voll": 0.7976212715611184,
+      "halbbreite": 0.0957945447654627,
+      "n_sequenzen": 198,
+      "halbbreite_voll": 0.05487033083873116,
+      "abdeckung": 0.437,
+      "panorama": 0.0,
+      "seit_2022": 0.84,
+      "hard_abschlag": -0.025114143097187402
+    },
+    {
+      "stadt": "fuerth",
+      "alle": 0.5491676345334882,
+      "loesbar_anteil": 0.6200688165159638,
+      "hard": 0.4078394033166706,
+      "ohne_panorama": 0.5534430942114203,
+      "voll": 0.6986174300985026,
+      "dublette": 0.3960756667841617,
+      "median_tage": 291.2379513888889,
+      "halbbreite": 0.05893034079459761,
+      "n_sequenzen": 239,
+      "halbbreite_voll": 0.06142219242918112,
+      "abdeckung": 0.718,
+      "panorama": 0.03,
+      "seit_2022": 0.26,
+      "hard_abschlag": -0.14132823121681753
+    },
+    {
+      "stadt": "karlsruhe",
+      "alle": 0.41931825545978874,
+      "loesbar_anteil": 0.7079983023823998,
+      "hard": 0.36197150507421244,
+      "ohne_panorama": 0.4490316573556797,
+      "voll": 0.6395030786470822,
+      "dublette": 0.15385209798315433,
+      "median_tage": 407.74214699074076,
+      "halbbreite": 0.05761253130235866,
+      "n_sequenzen": 584,
+      "halbbreite_voll": 0.04967717597590954,
+      "abdeckung": 0.748,
+      "panorama": 0.179,
+      "seit_2022": 0.72,
+      "hard_abschlag": -0.057346750385576295
+    },
+    {
+      "stadt": "kaiserslautern",
+      "alle": 0.6510170902890677,
+      "loesbar_anteil": 0.8561002104691425,
+      "hard": 0.44736786267478623,
+      "ohne_panorama": 0.6540201255355186,
+      "voll": 0.8101075762660966,
+      "dublette": 0.3578998660007309,
+      "median_tage": 278.8916447511574,
+      "halbbreite": 0.045406087416805296,
+      "n_sequenzen": 249,
+      "halbbreite_voll": 0.047613809049980305,
+      "abdeckung": 0.803,
+      "panorama": 0.003,
+      "seit_2022": 0.29,
+      "hard_abschlag": -0.2036492276142815
+    },
+    {
+      "stadt": "wuerzburg",
+      "alle": 0.335717413516275,
+      "loesbar_anteil": 0.4551932627942129,
+      "hard": 0.3014726423753841,
+      "ohne_panorama": 0.3517525608194622,
+      "voll": 0.4763583295913785,
+      "dublette": 0.17891304347826087,
+      "median_tage": 626.9545186689816,
+      "halbbreite": 0.05857318768767242,
+      "n_sequenzen": 300,
+      "halbbreite_voll": 0.061408783350854534,
+      "abdeckung": 0.979,
+      "panorama": 0.087,
+      "seit_2022": 0.28,
+      "hard_abschlag": -0.03424477114089086
+    }
+  ],
+  "befunde": {
+    "abdeckung_intervall": {
+      "n": 5,
+      "rho": -0.7,
+      "p": 0.23333333333333334,
+      "art": "exakt"
+    },
+    "loesbar_intervall": {
+      "n": 5,
+      "rho": -0.6000000000000001,
+      "p": 0.35,
+      "art": "exakt"
+    },
+    "dublette_hard": {
+      "n": 4,
+      "rho": -0.6000000000000001,
+      "p": 0.4166666666666667,
+      "art": "exakt"
+    },
+    "jahre_hard": {
+      "n": 5,
+      "rho": 0.5,
+      "p": 0.45,
+      "art": "exakt"
+    }
+  }
+}
