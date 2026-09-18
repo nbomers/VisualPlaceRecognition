@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-18",
   "embedding_name": "megaloc",
   "threshold_m": 25.0,
   "n_loesbar": 34112,
@@ -100,5 +100,15 @@
         }
       ]
     }
-  ]
+  ],
+  "herkunft_top1": {
+    "n_korrekt": 19386,
+    "anteil_selbes_konto": 0.27530176415970287,
+    "anteil_dublette": 0.11802331579490354,
+    "median_tage": 317.1010070543981,
+    "anteil_unter_1_tag": 0.08975549365521511,
+    "anteil_ueber_1_jahr": 0.3987929433611885,
+    "median_blickwinkel_grad": 1.3656747138614378,
+    "min_days_apart": 180.0
+  }
 }

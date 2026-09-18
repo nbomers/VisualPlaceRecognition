@@ -10,13 +10,18 @@
       "hard": 0.5431902659084411,
       "loesbar_hard": 31477,
       "voll": 0.7976212715611184,
+      "dublette": 0.11802331579490354,
+      "median_tage": 317.1010070543981,
+      "n_korrekt": 19386,
       "halbbreite": 0.0957945447654627,
       "n_sequenzen": 198,
       "halbbreite_voll": 0.05487033083873116,
       "abdeckung": 0.437,
       "panorama": 0.0,
       "seit_2022": 0.84,
-      "hard_abschlag": -0.025114143097187402
+      "hard_abschlag": -0.025114143097187402,
+      "uebernutzung": 0.040777771704847296,
+      "rel_abschlag": -0.044191357130468206
     },
     {
       "stadt": "fuerth",
@@ -148,15 +153,15 @@
       "art": "exakt"
     },
     "dublette_hard": {
-      "n": 5,
-      "rho": -0.5,
-      "p": 0.45,
+      "n": 6,
+      "rho": -0.5428571428571429,
+      "p": 0.2972222222222222,
       "art": "exakt"
     },
     "uebernutzung_abschlag": {
-      "n": 5,
+      "n": 6,
       "rho": -1.0,
-      "p": 0.016666666666666666,
+      "p": 0.002777777777777778,
       "art": "exakt"
     },
     "jahre_hard": {
@@ -167,6 +172,16 @@
     }
   },
   "zerlegung": {
+    "osnabrueck": {
+      "r": 0.9227544559099438,
+      "erwartet": 0.5431902659084411,
+      "gemessen": 0.5431902659084411,
+      "rest": 0.0,
+      "erwarteter_abschlag": -0.025114143097187402,
+      "strukturell": 0.07724554409005624,
+      "uebernutzung": 0.040777771704847296,
+      "rel_abschlag": -0.044191357130468206
+    },
     "fuerth": {
       "r": 0.8132017034456059,
       "erwartet": 0.4078394033166707,
