@@ -69,7 +69,8 @@ zueinander passen.
 
 ## Ergebnisse auf einen Blick
 
-Zwei Protokolle, dieselben 53.414 Anfragen. **Volle Referenz**: alle
+Zwei Protokolle, dieselben 53.414 Anfragen aus **Osnabrück** (fünf weitere
+Städte weiter unten). **Volle Referenz**: alle
 279.453 Bilder außerhalb der Anfragen als Datenbank — das, was ein System
 mit dem ganzen Material leistet. **Benchmark**: nur 15 % der Sequenzen als
 Datenbank — das strengere Protokoll, auf dem alle 36 Zeilen inklusive
@@ -92,7 +93,7 @@ Absolute Zahlen sind deshalb nur auf eine Nachkommastelle belastbar.
 gepaart über dieselben Fahrten gemessen, und dort fällt heraus, was für
 alle Encoder gleich schwer ist.
 
-Sieben Befunde, jeder gemessen, sechs davon mit Intervall belegt:
+Acht Befunde, jeder gemessen, sechs davon mit Intervall belegt:
 
 1. **Der Encoder ist der größte Hebel.** CLIP → MegaLoc ist Faktor 7,8,
    +0.496 [+0.405, +0.590]. Jedes Nachbarpaar der Rangfolge clip < anyloc <
@@ -135,6 +136,15 @@ Sieben Befunde, jeder gemessen, sechs davon mit Intervall belegt:
    Darf MegaLoc die unsichersten 20 % der Anfragen ablehnen, steigt die
    Präzision von 0.568 auf 0.689; bei cos ≥ 0.30 sind 82 % der Antworten
    richtig. Marge und Geschlossenheit der Treffer taugen weniger.
+8. **Eine Zahl aus einer Stadt ist keine Zahl über das Verfahren.**
+   Dieselbe Pipeline über sechs Städte: R@1 spannt 0.336 bis 0.651, die
+   gepaarte Encoder-Differenz nur +0.072 bis +0.132. Und die Ground Truth
+   selbst wandert mit dem Datensatz — der „Hard"-Filter kostet zwischen
+   0.010 und 0.204 R@1, je nachdem, wie stark ein System Beinahe-Dubletten
+   über das hinaus nutzt, was der Datensatz erzwingt. Die Zerlegung dieses
+   Abschlags ist der einzige Zusammenhang im Städtevergleich, der über alle
+   sechs exakt aufgeht (siehe [Ergebnisse](#ergebnisse), Abschnitt *Sechs
+   Städte*).
 
 ## Über das Projekt
 
@@ -154,9 +164,11 @@ bedeuten. Die dritte Frage wurde die wichtigste.
 **Abgrenzung.** Kein Encoder wird trainiert. Alle fünf — CLIP, AnyLoc,
 MixVPR, EigenPlaces, MegaLoc — kommen mit den Gewichten ihrer Autoren. Was
 trainiert wird, ist ein linearer Adapter obendrauf, und der wird als
-Vergleichszeile geführt, nicht als Beitrag. Osnabrück ist die einzige Stadt;
-Generalisierung auf andere Städte war nicht Ziel. Das System ist ein
-Benchmark und eine Demo, kein Produkt.
+Vergleichszeile geführt, nicht als Beitrag. Osnabrück ist die Hauptstadt des
+Projekts — alle Varianten, Adapter und Nebenuntersuchungen laufen dort;
+fünf weitere Städte (Fürth, Karlsruhe, Kaiserslautern, Würzburg, Jena)
+dienen der Frage, was sich überträgt, und sind nur mit den Baselines
+gerechnet. Das System ist ein Benchmark und eine Demo, kein Produkt.
 
 ## Ziel
 
@@ -755,84 +767,135 @@ Fahrten für beide schwer sind:
 
 Alle 35 Paare in `experiments/results/<stadt>/bootstrap_ci.json`.
 
-### Fünf Städte — `python experiments/city_comparison.py`
+### Sechs Städte — `python experiments/city_comparison.py`
 
-Dieselbe Pipeline, derselbe Split-Seed, zwei Encoder, fünf Städte. Die
+Dieselbe Pipeline, derselbe Split-Seed, zwei Encoder, sechs Städte. Die
 Städte wurden aus 50 nach Mapillary-Metadaten vorausgewählt
 (`experiments/city_coverage.py`), bevor ein einziges Bild geladen war.
 
-MegaLoc, R@1 bei 25 m:
+MegaLoc, R@1 bei 25 m. `Dubl` ist der Anteil der korrekten Top-1-Treffer,
+die vom selben Konto aus demselben Zeitfenster stammen:
 
-| Stadt | Abdeckung | lösbar | Panorama | Fahrten | Alle | Hard | volle Ref. | ±boot |
-|---|---|---|---|---|---|---|---|---|
-| Osnabrück | 0,44 | 63,9 % | 0,0 % | 198 | 0.568 | **0.543** | 0.798 | ±0.096 |
-| Fürth | 0,72 | 62,0 % | 3,0 % | 239 | 0.549 | 0.408 | 0.699 | ±0.059 |
-| Karlsruhe | 0,75 | — | 17,9 % | 584 | 0.419 | 0.362 | 0.640 | ±0.058 |
-| Kaiserslautern | 0,80 | 85,6 % | 0,3 % | 249 | **0.651** | 0.447 | **0.810** | ±0.045 |
-| Würzburg | 0,98 | 45,5 % | 8,7 % | 300 | 0.336 | 0.301 | 0.476 | ±0.059 |
+| Stadt | Abd. | lösbar | Pano | Dubl. | Fahrten | Alle | Hard | volle Ref. | ±boot |
+|---|---|---|---|---|---|---|---|---|---|
+| Osnabrück | 0,44 | 63,9 % | 0,0 % | 11,8 % | 198 | 0.568 | **0.543** | 0.798 | ±0.096 |
+| Fürth | 0,72 | 62,0 % | 3,0 % | 39,6 % | 239 | 0.549 | 0.408 | 0.699 | ±0.059 |
+| Karlsruhe | 0,75 | 70,8 % | 17,9 % | 15,4 % | 584 | 0.419 | 0.362 | 0.640 | ±0.058 |
+| Kaiserslautern | 0,80 | 85,6 % | 0,3 % | 35,8 % | 249 | **0.651** | 0.447 | **0.810** | ±0.045 |
+| Würzburg | 0,98 | 45,5 % | 8,7 % | 17,9 % | 300 | 0.336 | 0.302 | 0.476 | ±0.059 |
+| Jena | 0,99 | 52,9 % | 0,3 % | 24,1 % | 677 | 0.417 | 0.407 | 0.622 | **±0.033** |
 
-Drei Aussagen, nach Härte getrennt.
+Vier Aussagen, nach Härte getrennt.
 
-**Belegt: Panoramen kosten den Encoder rund 0,17 R@1 je Anfrage.** 07
-berichtet „Alle Queries" und „Nur Nicht-Panorama-Queries" getrennt; die
-Differenz ist der Panoramaeffekt.
+**Erklärt: der Hard-Abschlag ist die Differenz zweier Dublettenmaße.** Der
+Hard-Filter (anderer `creator_id` **oder** > 180 Tage Abstand) kostet je
+nach Stadt 0.010 bis 0.204 R@1. Lange stand hier „belegt, aber unerklärt" —
+der Dublettenanteil allein sagt den Abschlag nämlich nicht vorher
+(ρ = −0,54, p = 0,30). Er sagt ihn deshalb nicht vorher, weil zwei
+verschiedene Größen denselben Namen tragen:
 
-| | Panoramaanteil | Differenz | je Panorama-Anfrage |
-|---|---|---|---|
-| Karlsruhe | 17,9 % | +0.030 | **0.168** |
-| Würzburg | 8,7 % | +0.016 | **0.184** |
+- **d** — Anteil der korrekten **Treffer**, die Dubletten sind
+- **1−r** — Anteil der lösbaren **Anfragen**, deren einzige Referenz eine
+  Dublette war: die *strukturelle* Abhängigkeit des Datensatzes
 
-Die Strafe je Anfrage reproduziert sich über zwei Städte mit doppelt so
-hohem Anteil — sie ist eine Eigenschaft des Encoders, nicht des
-Datensatzes. Der Wert für Würzburg war **vor** dem Lauf aus Karlsruhe
-vorhergesagt (+0.015 erwartet, +0.016 gemessen).
+Der Filter streicht beides zugleich, Zähler und Nenner. Daraus folgt eine
+Identität, kein Zusammenhang:
 
-**Belegt, aber unerklärt: „Alle Queries" wird durch Dubletten aufgebläht.**
-Der Hard-Filter (anderer `creator_id` **oder** >180 Tage Abstand) kostet je
-nach Stadt 0.025 bis 0.204 R@1. Die Lösbarkeit erklärt das nicht — in
-Kaiserslautern fallen nur 6,6 % der Anfragen heraus, aber 31 % des Recalls.
-Der Top-1-Treffer ist dort also häufig ein Bild derselben Kamera aus
-demselben Zeitfenster, eine Beinahe-Dublette aus derselben Befahrung.
-**Die Rangfolge der Städte kippt dadurch:**
+```
+R@1_hard = n_korrekt × (1 − d) / loesbar_hard     und damit
+Abschlag / R@1 = −(d − (1−r)) / r
+```
 
-| | Alle Queries | Hard |
-|---|---|---|
-| 1. | Kaiserslautern 0.651 | **Osnabrück 0.543** |
-| 2. | Osnabrück 0.568 | Kaiserslautern 0.447 |
-| 3. | Fürth 0.549 | Fürth 0.408 |
-| 4. | Karlsruhe 0.419 | Karlsruhe 0.362 |
-| 5. | Würzburg 0.336 | Würzburg 0.301 |
+| Stadt | d | 1−r | Differenz | rel. Abschlag |
+|---|---|---|---|---|
+| Kaiserslautern | 35,8 % | 6,6 % | **+0,292** | −0,313 |
+| Fürth | 39,6 % | 18,7 % | +0,209 | −0,257 |
+| Karlsruhe | 15,4 % | 2,0 % | +0,134 | −0,137 |
+| Würzburg | 17,9 % | 8,6 % | +0,093 | −0,102 |
+| Osnabrück | 11,8 % | 7,7 % | +0,041 | −0,044 |
+| Jena | 24,1 % | 22,3 % | **+0,018** | −0,023 |
 
-Welche Eigenschaft eines Datensatzes den Dublettenanteil vorhersagt, ist
-offen — geprüft und verworfen wurden Aufnahmejahr, Kontendominanz,
-Sequenzlänge und Abdeckung (alle p > 0,4 bei n = 5). Der Anteil selbst muss
-dafür nicht mehr aus der Differenz erschlossen werden:
-`experiments/recall_by_difficulty.py` zählt ihn direkt an den korrekten
-Top-1-Treffern (`herkunft_top1`), und `city_comparison.py` trägt ihn als
-Spalte `Dubl.` gegen den Hard-Abschlag auf. Sobald das Skript für alle fünf
-Städte gelaufen ist, ist die Erklärung selbst prüfbar statt nur plausibel.
+Jena ist der Fall, der es zeigt: mittlerer Dublettenanteil, praktisch kein
+Abschlag — weil dort 22 % der Anfragen ohne Dubletten unlösbar *wären* und
+24 % der Treffer welche *sind*. Das System nimmt, was der Datensatz
+hergibt, nicht mehr. Kaiserslautern dagegen braucht Dubletten nur bei 6,6 %
+der Anfragen, holt sich aber 36 % seiner Treffer von dort — Überausnutzung,
+und entsprechend der größte Abschlag.
 
-**Widerlegt: die Straßenabdeckung sagt die Messunsicherheit nicht vorher.**
-Mit vier Städten war der Zusammenhang perfekt monoton (rho = −1,00). Die
-fünfte wurde mit vorher festgelegter Vorhersage gerechnet — ±boot ≤ 0.045
-— und lieferte 0.059:
+**Der Hard-Abschlag misst also nicht, wie sehr ein System auf Dubletten
+beruht, sondern wie sehr es sie über das hinaus nutzt, was der Datensatz
+erzwingt.** Die Identität gilt in allen sechs Städten auf Maschinengenauig-
+keit (Spalte `Rest` = 0.000); dass Rangkorrelation ρ = −1,00 und p = 0,0028
+herauskommen, ist Folge der Algebra, nicht ein zweiter Befund.
+
+Geprüft wurde das vorab: Osnabrücks Dublettenanteil ließ sich aus der
+Auswertungs-JSON **vorhersagen, bevor** `recall_by_difficulty.py` dort lief
+— vorhergesagt 11,8 %, gemessen 11,8 %.
+
+**Korrigiert: Panoramen kosten viel, aber nicht überall gleich viel.** Hier
+stand bis 2026-09-18 ein Befund, der auf einem Rechenfehler beruhte. Die
+Strafe war als *Recall-Differenz geteilt durch Panoramaanteil* geschätzt,
+wobei der Anteil aus `city_coverage.json` stammte — dem Anteil an **allen
+Kachelbildern**, nicht an den **lösbaren Anfragen**. Beide Auswertungen aus
+07 erlauben stattdessen die exakte Rechnung:
+
+```
+R@1_pano = (R@1_alle × L − R@1_ohne × L_ohne) / (L − L_ohne)
+```
+
+| Stadt | Panorama-Anfragen | R@1 Panorama | R@1 ohne | Strafe | ±SE |
+|---|---|---|---|---|---|
+| Karlsruhe | 8.024 | 0.220 | 0.449 | **0.229** | ±0.005 |
+| Würzburg | 2.412 | 0.170 | 0.352 | **0.182** | ±0.008 |
+| Kaiserslautern | 253 | 0.055 | 0.654 | 0.599 | ±0.014 |
+| Fürth | 192 | 0.208 | 0.553 | 0.345 | ±0.029 |
+| Jena | 85 | 0.235 | 0.417 | 0.182 | ±0.046 |
+
+Die alte Behauptung war, die Strafe reproduziere sich über zwei Städte
+(0.168 und 0.184) und sei damit eine Eigenschaft des Encoders. Beides fällt:
+Karlsruhes echter Wert ist 0.229, nicht 0.168 — und die frühere
+Übereinstimmung entstand nur, weil Würzburgs Kachelanteil (8,7 %) zufällig
+fast genau seinem Anfragenanteil (8,8 %) entspricht, Karlsruhes aber nicht
+(17,9 % gegen 13,0 %). Die Reproduktion war ein Artefakt der falschen
+Bezugsgröße.
+
+Was bleibt: **Panoramen sind schwer.** R@1 auf ihnen liegt bei 0.06 bis
+0.24, gegen 0.35 bis 0.65 auf den übrigen Anfragen. Die Größenordnung ist
+robust, der genaue Wert ist datensatzabhängig und variiert selbst zwischen
+den beiden Städten mit vierstelligen Fallzahlen um den Faktor 1,26.
+
+**Widerlegt, dann wieder unklar: die Straßenabdeckung als Vorhersage der
+Messunsicherheit.** Mit vier Städten war der Zusammenhang perfekt monoton
+(ρ = −1,00). Die fünfte wurde mit vorher festgelegter Vorhersage gerechnet
+— ±boot ≤ 0.045 — und lieferte 0.059. Mit der sechsten sieht es wieder
+besser aus:
 
 ```
 n = 4:  rho = −1,00   p = 0,083
 n = 5:  rho = −0,40   p = 0,517
+n = 6:  rho = −0,83   p = 0,058
 ```
 
-Vier der fünf Städte liegen in einem Band von 0,014; der scheinbare
-Zusammenhang wurde von einem einzigen Ausreißer getragen. Würzburg zeigt
-auch, warum: es hat die **höchste Abdeckung und den niedrigsten lösbaren
-Anteil**. `abdeckung_gesamt` misst den Gesamtbestand gegen das Straßennetz,
-die Datenbank sind aber 15 % der Sequenzen — eine Straße mit nur einer
-Befahrung liegt zu 70 % in `train` und zählt trotzdem als abgedeckt.
+Das ist die eigentliche Lehre: **bei diesen Stichprobengrößen schwankt eine
+Rangkorrelation wild**, und die einzige vorab festgelegte Vorhersage hat sie
+verfehlt. Hinzu kommt eine Konfundierung, die sich mit sechs Städten nicht
+auflösen lässt: die Zahl der Fahrten liefert exakt dasselbe ρ = −0,83 und
+ist theoretisch der bessere Kandidat, weil der Bootstrap über Fahrten zieht.
+Jena hat die meisten Fahrten (677) **und** die höchste Abdeckung. Welche der
+beiden Größen wirkt, ist hier nicht entscheidbar.
+
+Würzburg zeigt außerdem, warum `abdeckung_gesamt` ohnehin die falsche Größe
+misst: es hat die **höchste Abdeckung und den niedrigsten lösbaren Anteil**.
+Die Kennzahl zählt den Gesamtbestand gegen das Straßennetz, die Datenbank
+sind aber 15 % der Sequenzen — eine Straße mit nur einer Befahrung liegt zu
+70 % in `train` und zählt trotzdem als abgedeckt. Der lösbare Anteil selbst
+sagt die Intervallbreite auch nicht vorher (ρ = −0,09).
 
 Ein Hinweis zu den p-Werten: `scipy.stats.spearmanr` liefert bei perfekter
 Monotonie eine 0, weil seine t-Näherung dort durch eine verschwindende
 Varianz teilt. `city_comparison.py` zählt deshalb die Permutationen durch.
-Bei n = 4 ist der exakte Wert 0,083 — nicht signifikant.
+Bei n = 4 ist der exakte Wert 0,083 — da ist überhaupt nichts signifikant zu
+bekommen, unabhängig von den Daten.
 
 **Was sich überträgt.** Der absolute R@1 spannt 0.336 bis 0.651. Die
 gepaarte Differenz EigenPlaces → MegaLoc spannt +0.072 bis +0.132 — rund
@@ -841,7 +904,6 @@ Referenz +0.077, Karlsruhe volle Referenz +0.132) haben keine überlappenden
 Intervalle. Über Städte hinweg lässt sich das **nicht gepaart** testen,
 weil die Anfragemengen disjunkt sind; es bleibt beim Vergleich unabhängiger
 Schätzer mit breiten Intervallen.
-
 ### Lokalisierung — `python compare.py --localization`
 
 ```
