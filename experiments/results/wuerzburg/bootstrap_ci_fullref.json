@@ -1,0 +1,157 @@
+{
+  "datum": "2026-09-17",
+  "reference": "full",
+  "split": "Alle Queries",
+  "threshold_m": 25.0,
+  "n_bootstrap": 1000,
+  "seed": 42,
+  "n_sequences": 300,
+  "n_queries": 60203,
+  "n_loesbar": 44540,
+  "encoder": {
+    "eigenplaces_fullref": {
+      "method": "eigenplaces",
+      "adapter": "none",
+      "variant": "fullref",
+      "dim": 2048,
+      "n_loesbar": 44540,
+      "recall": {
+        "1": {
+          "wert": 0.3843511450381679,
+          "ci": [
+            0.3186358849256348,
+            0.45038156386410033
+          ],
+          "halbbreite": 0.06587283946923275,
+          "halbbreite_naiv": 0.004517639714889205
+        },
+        "5": {
+          "wert": 0.467175572519084,
+          "ci": [
+            0.3947769354496408,
+            0.5407857465541903
+          ],
+          "halbbreite": 0.07300440555227475,
+          "halbbreite_naiv": 0.004633541869497983
+        },
+        "10": {
+          "wert": 0.497103726986978,
+          "ci": [
+            0.4241511770988644,
+            0.5692412861426993
+          ],
+          "halbbreite": 0.07254505452191745,
+          "halbbreite_naiv": 0.004643481110042738
+        },
+        "20": {
+          "wert": 0.5297709923664122,
+          "ci": [
+            0.4565453252966478,
+            0.6043616688470608
+          ],
+          "halbbreite": 0.07390817177520648,
+          "halbbreite_naiv": 0.004635320422256697
+        }
+      }
+    },
+    "megaloc_fullref": {
+      "method": "megaloc",
+      "adapter": "none",
+      "variant": "fullref",
+      "dim": 8448,
+      "n_loesbar": 44540,
+      "recall": {
+        "1": {
+          "wert": 0.4763583295913785,
+          "ci": [
+            0.4147946463486756,
+            0.5376122130503846
+          ],
+          "halbbreite": 0.061408783350854534,
+          "halbbreite_naiv": 0.004638365274488642
+        },
+        "5": {
+          "wert": 0.5692635832959138,
+          "ci": [
+            0.5050501213972519,
+            0.6311198826963053
+          ],
+          "halbbreite": 0.06303488064952667,
+          "halbbreite_naiv": 0.0045987887631456
+        },
+        "10": {
+          "wert": 0.5975752132914235,
+          "ci": [
+            0.5332205028988,
+            0.6590021425453698
+          ],
+          "halbbreite": 0.06289081982328493,
+          "halbbreite_naiv": 0.004554278805179919
+        },
+        "20": {
+          "wert": 0.6235069600359228,
+          "ci": [
+            0.5607096147056992,
+            0.6839762218499857
+          ],
+          "halbbreite": 0.06163330357214325,
+          "halbbreite_naiv": 0.0044996640896640275
+        }
+      }
+    }
+  },
+  "paare": [
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 1,
+      "recall_a": 0.3843511450381679,
+      "recall_b": 0.4763583295913785,
+      "differenz": 0.09200718455321061,
+      "ci": [
+        0.057104003436181515,
+        0.1295049307611557
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 5,
+      "recall_a": 0.467175572519084,
+      "recall_b": 0.5692635832959138,
+      "differenz": 0.10208801077682977,
+      "ci": [
+        0.06361480493659538,
+        0.14574017852187698
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 10,
+      "recall_a": 0.497103726986978,
+      "recall_b": 0.5975752132914235,
+      "differenz": 0.10047148630444547,
+      "ci": [
+        0.06186303127721155,
+        0.14569069425335235
+      ],
+      "schliesst_null_ein": false
+    },
+    {
+      "a": "eigenplaces_fullref",
+      "b": "megaloc_fullref",
+      "k": 20,
+      "recall_a": 0.5297709923664122,
+      "recall_b": 0.6235069600359228,
+      "differenz": 0.09373596766951053,
+      "ci": [
+        0.05339049438512669,
+        0.14145508823918584
+      ],
+      "schliesst_null_ein": false
+    }
+  ]
+}

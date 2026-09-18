@@ -643,11 +643,7 @@
   "fotografen": 40,
   "anteil_groesster_fotograf": 0.805,
   "anteil_seit_2022": 0.75,
-<<<<<<< Updated upstream
-  "datum": "2026-09-16",
-  "quelle": "Linux-Rechner, Terminalausgabe",
-  "wohnstrassen_km": 0,
-  "anteil_panorama": 0.067
+  "datum": "2026-09-16"
  },
  "Mannheim, Germany": {
   "stadt": "Mannheim",
@@ -699,10 +695,6 @@
   "anteil_groesster_fotograf": 0.196,
   "anteil_seit_2022": 0.25,
   "datum": "2026-09-16"
-=======
-  "datum": "2026-09-14",
-  "quelle": "Linux-Rechner, Terminalausgabe"
->>>>>>> Stashed changes
  },
  "Münster, Germany": {
   "stadt": "Münster",
@@ -726,25 +718,16 @@
   "km2": 173.3,
   "bilder": 607258,
   "bilder_pro_km2": 3504,
-<<<<<<< Updated upstream
-  "strassen_km": 0,
-  "abdeckung_gesamt": 0.748,
-  "abdeckung_grosse_strassen": 0.991,
-  "abdeckung_wohnstrassen": 0.679,
-  "wohnstrassen_km": 0,
-=======
   "strassen_km": 1606,
   "abdeckung_gesamt": 0.748,
   "abdeckung_grosse_strassen": 0.991,
   "abdeckung_wohnstrassen": 0.679,
   "wohnstrassen_km": 1249,
->>>>>>> Stashed changes
   "sequenzen": 3889,
   "median_sequenz": 45,
   "fotografen": 176,
   "anteil_groesster_fotograf": 0.068,
   "anteil_seit_2022": 0.72,
-<<<<<<< Updated upstream
   "datum": "2026-09-16",
   "anteil_panorama": 0.179
  },
@@ -904,8 +887,6 @@
   "anteil_groesster_fotograf": 0.507,
   "anteil_seit_2022": 0.31,
   "anteil_panorama": 0.043,
-=======
->>>>>>> Stashed changes
   "datum": "2026-09-16"
  }
 }
