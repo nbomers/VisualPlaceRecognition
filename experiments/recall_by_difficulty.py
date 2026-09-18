@@ -9,6 +9,10 @@ und deshalb sagen, welche Anfragen ein System ueberhaupt loesen kann:
   Blickrichtung   gibt es einen Nachbarn, der in dieselbe Richtung schaut?
   Fotograf        gibt es einen Nachbarn vom selben Fotografen am selben Tag?
 
+Dazu die HERKUNFT des Top-1-Treffers: vom selben Konto? wie lange her? wie
+weit gedreht? Das trennt "Ort wiedererkannt" von "dieselbe Befahrung
+wiedergefunden" -- der Anteil, den der Hard-Filter in 07 verwirft.
+
 R@1 je Klasse fuer die loesbaren Anfragen, als Balken mit n. Das ist der
 direkte Test fuer den Dichte-Befund: faellt R@1 bei wenigen Nachbarn ein,
 haengt der Recall an der Referenz vor Ort -- nicht am Stadtteil.
@@ -27,7 +31,7 @@ import pandas as pd
 from scipy.spatial import cKDTree
 
 from _common import CFG, RESULTS, ROOT
-from src.geo import heading_matches, to_metric_xy
+from src.geo import haversine_distance, heading_difference, heading_matches, to_metric_xy
 from src.retrieval import hits_at_k, load_retrieval, localizable
 
 NACHBAR_KLASSEN = [(1, 2), (3, 5), (6, 10), (11, 20), (21, 50), (51, 10**9)]
@@ -72,6 +76,50 @@ def query_properties(query, database, threshold, max_heading_diff):
     return laengen, tage_min, blick_ok, gleicher_tag
 
 
+def treffer_herkunft(query, database, indices, loesbar, threshold, min_days_apart):
+    """
+    Woher kommt der Top-1-Treffer?
+
+    Der Hard-Filter in 07 verwirft Paare, die vom selben Konto UND aus
+    demselben Zeitfenster stammen -- Beinahe-Dubletten derselben Befahrung.
+    Hier wird ihr Anteil an den KORREKTEN Treffern gezaehlt. Das misst
+    direkt, wieviel von R@1 "Ort wiedererkannt" ist und wieviel "dieselbe
+    Fahrt noch einmal gefunden".
+
+    Dieselbe Sequenz kann es nicht sein: src/split.py wuerfelt Sequenzen,
+    Query- und Datenbanksequenzen sind disjunkt. Was bleibt, ist derselbe
+    Fahrer, der dieselbe Strasse in zwei Sequenzen kurz hintereinander
+    befahren hat -- und genau das faengt der Filter.
+    """
+    top1 = indices[:, 0]
+    d = haversine_distance(query["lat"].to_numpy(), query["lon"].to_numpy(),
+                           database["lat"].to_numpy()[top1],
+                           database["lon"].to_numpy()[top1])
+    richtig = loesbar & (d <= threshold)
+    if not richtig.any():
+        return None
+
+    selbes_konto = (query["creator_id"].to_numpy()[richtig]
+                    == database["creator_id"].to_numpy()[top1[richtig]])
+    tage = np.abs(query["captured_at"].to_numpy()[richtig].astype("int64")
+                  - database["captured_at"].to_numpy()[top1[richtig]].astype("int64")) / 86_400_000.0
+    dublette = selbes_konto & (tage <= min_days_apart)
+    winkel = heading_difference(query["compass_angle"].to_numpy()[richtig],
+                                database["compass_angle"].to_numpy()[top1[richtig]])
+    bekannt = ~np.isnan(winkel)
+
+    return {
+        "n_korrekt": int(richtig.sum()),
+        "anteil_selbes_konto": float(selbes_konto.mean()),
+        "anteil_dublette": float(dublette.mean()),
+        "median_tage": float(np.median(tage)),
+        "anteil_unter_1_tag": float((tage < 1).mean()),
+        "anteil_ueber_1_jahr": float((tage > 365).mean()),
+        "median_blickwinkel_grad": float(np.median(winkel[bekannt])) if bekannt.any() else None,
+        "min_days_apart": float(min_days_apart),
+    }
+
+
 def klassen_tabelle(werte, klassen, hit, loesbar, name):
     zeilen = []
     for lo, hi in klassen:
@@ -98,6 +146,8 @@ def main():
     hit = hits_at_k(query, database, indices, loesbar, args.threshold, [1])[1]
     nachbarn, tage, blick_ok, gleicher_tag = query_properties(
         query, database, args.threshold, float(CFG["vpr"]["max_heading_diff_deg"]))
+    herkunft = treffer_herkunft(query, database, indices, loesbar, args.threshold,
+                                float(CFG["retrieval"]["min_days_apart"]))
 
     tabellen = [
         klassen_tabelle(nachbarn, NACHBAR_KLASSEN, hit, loesbar, "Nachbarn im Umkreis"),
@@ -113,12 +163,25 @@ def main():
             r = f"{z['recall_1']:.3f}" if z["recall_1"] is not None else "-"
             print(f"  {z['klasse']:<10}{z['n']:>8,}   R@1 {r}")
 
+    if herkunft:
+        h = herkunft
+        print(f"\nHerkunft des Top-1-Treffers  ({h['n_korrekt']:,} korrekte Treffer)")
+        print(f"  vom selben Konto                      {h['anteil_selbes_konto']:>7.1%}")
+        print(f"  davon unter {h['min_days_apart']:.0f} Tagen (Dublette)      "
+              f"{h['anteil_dublette']:>7.1%}")
+        print(f"  Zeitabstand: Median                   {h['median_tage']:>7.0f} Tage")
+        print(f"               unter 1 Tag              {h['anteil_unter_1_tag']:>7.1%}")
+        print(f"               ueber 1 Jahr             {h['anteil_ueber_1_jahr']:>7.1%}")
+        if h["median_blickwinkel_grad"] is not None:
+            print(f"  Blickrichtung: Median                 {h['median_blickwinkel_grad']:>7.0f} Grad")
+
     RESULTS.mkdir(parents=True, exist_ok=True)
     out = RESULTS / f"recall_by_difficulty_{name}.json"
     out.write_text(json.dumps({
         "datum": pd.Timestamp.now().strftime("%Y-%m-%d"),
         "embedding_name": name, "threshold_m": args.threshold,
         "n_loesbar": int(loesbar.sum()), "recall_1": gesamt, "merkmale": tabellen,
+        "herkunft_top1": herkunft,
     }, indent=2))
 
     import matplotlib
