@@ -600,8 +600,9 @@ Und was zählt sonst?
 
 Je Anfrage vier Eigenschaften aus den Metadaten — Nachbarn im Umkreis von
 25 m, Tage zum nächsten Referenzbild, ob ein Nachbar in dieselbe Richtung
-schaut, ob ein Nachbar vom selben Fotografen am selben Tag stammt — und
-R@1 je Klasse über die lösbaren Anfragen.
+schaut, ob ein Nachbar vom selben Konto am selben Tag stammt — und
+R@1 je Klasse über die lösbaren Anfragen. Dazu die **Herkunft des
+Top-1-Treffers** (unten).
 
 ```bash
 python experiments/recall_by_difficulty.py --method megaloc
@@ -628,6 +629,10 @@ Gemessen 2026-09-14, MegaLoc, R@1 gesamt 0.568:
 | Selber Fotograf, selber Tag | ja | 3,164 | 0.690 |
 | | nein | 30,948 | 0.556 |
 
+„Selber Fotograf" heißt hier wie überall: selbes hochladendes **Konto**
+(`creator_id`). Die Beschriftung steht so in den bereits gerechneten JSONs
+und ist deshalb nicht nachträglich geändert worden.
+
 EigenPlaces (pcaw512) zeigt dieselben Muster auf niedrigerem Niveau
 (`recall_by_difficulty_eigenplaces_pcaw512.json`).
 
@@ -645,6 +650,40 @@ EigenPlaces (pcaw512) zeigt dieselben Muster auf niedrigerem Niveau
    schlechter als bei 11–20. Die Dichtekurve (+0.22 mit `train`) gewinnt
    nicht nur Nachbarn, sondern auch Blickrichtungen und Zeitpunkte.
 
+**Herkunft des Top-1-Treffers** (`herkunft_top1` in der JSON). Die vier
+Merkmale oben fragen, was eine Anfrage *schwer* macht. Diese Zählung fragt
+das Gegenstück: woher kommen die Treffer, die gelungen sind? Über alle
+korrekten Top-1-Treffer — lösbar und innerhalb der Schwelle:
+
+| Feld | Bedeutung |
+|---|---|
+| `anteil_selbes_konto` | Treffer vom selben Mapillary-Konto wie die Anfrage |
+| `anteil_dublette` | davon zusätzlich innerhalb `min_days_apart` (180 Tage) |
+| `median_tage`, `anteil_unter_1_tag`, `anteil_ueber_1_jahr` | Zeitabstand |
+| `median_blickwinkel_grad` | Winkel zwischen Anfrage und Treffer |
+
+`anteil_dublette` ist genau die Menge, die der Hard-Filter in 07 verwirft
+(anderer `creator_id` **oder** > 180 Tage). Damit lässt sich prüfen, ob der
+Hard-Abschlag wirklich der Dubletteneffekt ist, statt es aus der Differenz
+zu erschließen — `city_comparison.py` zieht die Zahl als Spalte `Dubl.`
+heran.
+
+Zwei Dinge, die das **nicht** ist. Erstens keine Selbstfindung: `src/split.py`
+würfelt **Sequenzen**, Query- und Datenbanksequenzen sind disjunkt, dasselbe
+Bild kann nie auf beiden Seiten stehen. Was bleibt, ist derselbe Fahrer, der
+dieselbe Straße in zwei Sequenzen kurz hintereinander befahren hat. Zweitens
+kein Fotografenbefund: `creator_id` ist das hochladende **Konto**. Fährt eine
+Stadt ihre Straßen von einer Agentur abfahren, sind das viele Kameras unter
+einem Konto — und zwei Kameras derselben Firma sind einander trotzdem
+ähnlicher als zwei fremde.
+
+Für eine Stadt muss das Skript einmal gelaufen sein, sonst bleibt die Spalte
+in `city_comparison.py` leer:
+
+```bash
+python experiments/recall_by_difficulty.py --method megaloc   # je Stadt (VPR_CITY)
+```
+
 ---
 
 ## Stadtwahl — welche Stadt taugt als nächste?
@@ -660,11 +699,22 @@ Holt die Bildpunkte einer Stadt über dieselben Vector Tiles wie 01 und
 misst die **Straßenabdeckung**: Anteil des OSM-Fahrnetzes (nach Länge) mit
 einem Bild im Umkreis von 25 m, getrennt nach großen Straßen (bis
 secondary) und Wohnstraßen (tertiary, residential, living_street,
-unclassified). Dazu Sequenzen, Fotografen-Konzentration, Anteil seit 2022.
+unclassified). Dazu Sequenzen, Kontenkonzentration, Anteil seit 2022 und
+der **Panoramaanteil** — 360°-Aufnahmen sind der einzige Kacheleintrag, der
+später direkt im Recall auftaucht (07 rechnet „Nur Nicht-Panorama-Queries"
+getrennt aus).
 
 ```bash
 python experiments/city_coverage.py "Mainz, Germany" "Würzburg, Germany"
+python experiments/city_coverage.py --tiles-only "Krefeld, Germany"   # ohne Overpass
 ```
+
+`--tiles-only` ergänzt eine bekannte Stadt, ohne ihre Straßenwerte zu
+verlieren: Felder, die ohne Straßennetz nicht messbar sind, stehen als
+`null` in der JSON, und der Merge überschreibt einen vorhandenen Wert nur
+mit einem, der nicht `null` ist. Vorher standen dort Nullen, und ein
+`--tiles-only --force` hat die Straßenlängen von acht Städten damit
+überschrieben.
 
 Gemessen 2026-09-14/15. Straßenabdeckung für sechs Kandidaten und
 Osnabrück; 30 weitere Städte nur über die Kacheln (`--tiles-only`, ohne
@@ -704,11 +754,93 @@ andere Frage — wie stark Recall an der Kamera hängt, Query-Sequenzen des
 Top-Fotografen gegen die übrigen — nicht für „funktioniert es in einer
 zweiten Stadt".
 
-**Für die zweite Stadt** bleiben Würzburg (98 %, 1,3× Osnabrück, 92
-Fotografen, aber 72 % der Bilder älter als 2022 — großer Zeitabstand),
-Jena (99 %, 2,1× Osnabrück, 4.516 Sequenzen und damit engere Intervalle)
-und Halle (91 %, kein Fotograf über 30 %, 87 % frisch, 2,7× Osnabrück).
-Gütersloh ist als drittes Experiment zur Kamerafrage vorgemerkt.
+**Gerechnet wurden** Würzburg (98 %, 92 Konten, aber 72 % der Bilder älter
+als 2022 — großer Zeitabstand), Kaiserslautern, Karlsruhe und Fürth; die
+Auswertung steht im nächsten Abschnitt. Offen bleiben Jena (99 %, 4.516
+Sequenzen und damit engere Intervalle; die Bilder liegen bereits auf
+Platte) und Halle (91 %, kein Konto über 30 %, 87 % frisch). Gütersloh ist
+als Experiment zur Kamerafrage vorgemerkt — dort wäre ein besseres Ergebnis
+nicht von der Kamera zu trennen, und genau das macht es zur Messung.
+
+**Die Vorauswahl hat gehalten, die Vorhersage nicht.** Alle fünf Städte
+liefen ohne Eingriff durch dieselbe Pipeline; keine musste wegen fehlender
+Daten abgebrochen werden. Welche Zahl aus dieser Tabelle den Recall
+vorhersagt, ist eine andere Frage — und die Antwort ist bisher: keine
+(nächster Abschnitt).
+
+---
+
+## Städtevergleich — was sich überträgt
+
+**Frage:** Ist ein Ergebnis aus Osnabrück ein Ergebnis über das Verfahren
+oder eines über Osnabrück?
+
+### `city_comparison.py`
+
+`compare.py` stellt Encoder **innerhalb** einer Stadt gegenüber, gepaart
+über dieselben Anfragen. Dieses Skript stellt **Städte** gegenüber, und das
+ist eine andere Rechnung: zwei Städte haben disjunkte Anfragemengen, es gibt
+nichts zu paaren. Übrig bleibt der Vergleich unabhängiger Schätzer, jeder
+mit seinem eigenen, breiten Sequenz-Bootstrap-Intervall.
+
+```bash
+python experiments/city_comparison.py                        # megaloc
+python experiments/city_comparison.py --method eigenplaces --plot
+```
+
+Gelesen wird **ausschließlich Versioniertes** — die vier Auswertungs-JSONs,
+die Bootstrap-Intervalle, das Schwierigkeitsprofil und `city_coverage.json`:
+
+```
+results/<stadt>/evaluation/<encoder>.json          R@1 je Auswertung
+results/<stadt>/evaluation/<encoder>_fullref.json  dasselbe, volle Referenz
+experiments/results/<stadt>/bootstrap_ci*.json     Intervalle
+experiments/results/<stadt>/recall_by_difficulty_<encoder>.json
+                                                   Herkunft des Top-1-Treffers
+experiments/results/city_coverage.json             Abdeckung, Panorama, Jahre
+```
+
+Embeddings und Trefferlisten braucht es nicht. Das Skript läuft damit in
+jedem frischen Klon und auf jedem Rechner — als einziges hier unter
+`experiments/`. Was fehlt, erscheint als `—`; eine Stadt fällt nur heraus,
+wenn ihre Haupt-JSON fehlt. Ergebnis: `results/city_comparison.json`.
+
+MegaLoc, R@1 bei 25 m, Stand 2026-09-17:
+
+| Stadt | Abd. | lösbar | Pano | Dubl. | Tage | Alle | Hard Δ | volle Ref. | ±boot |
+|---|---|---|---|---|---|---|---|---|---|
+| Osnabrück | 0,44 | 63,9 % | 0,0 % | — | — | 0.568 | **−0.025** | 0.798 | ±0.096 |
+| Fürth | 0,72 | 62,0 % | 3,0 % | — | — | 0.549 | −0.141 | 0.699 | ±0.059 |
+| Karlsruhe | 0,75 | — | 17,9 % | — | — | 0.419 | −0.057 | 0.640 | ±0.058 |
+| Kaiserslautern | 0,80 | 85,6 % | 0,3 % | — | — | **0.651** | −0.204 | **0.810** | ±0.045 |
+| Würzburg | 0,98 | 45,5 % | 8,7 % | — | — | 0.336 | −0.035 | 0.476 | ±0.059 |
+
+`Hard Δ` ist die Differenz zu „Alle Queries", nicht der absolute
+Wert — so steht der Abschlag da, um den es geht. Die Spalten `Dubl.` und
+`Tage` stehen auf `—`, solange
+`recall_by_difficulty.py` für die Stadt nicht gelaufen ist — sie kommen aus
+`herkunft_top1` (siehe „Schwierigkeitsprofil"). Sie sind der direkte Test
+für den Hard-Abschlag: ist er wirklich der Dubletteneffekt, muss der Anteil
+der Top-1-Treffer vom selben Konto aus demselben Zeitfenster mit dem
+Abschlag mitwandern.
+
+Die drei Befunde — Panoramastrafe (belegt), Dublettenaufblähung (belegt,
+unerklärt) und die **widerlegte** Vorhersage „Abdeckung sagt die
+Messunsicherheit vorher" — stehen ausführlich im README unter „Fünf
+Städte", weil sie dort zur Ergebnisliste gehören.
+
+**Warum das Skript die Permutationen zählt.** `scipy.stats.spearmanr`
+liefert bei perfekter Monotonie einen p-Wert von 0 — seine t-Näherung
+dividiert dort durch eine verschwindende Varianz. Der exakte Wert ist der
+Anteil der Permutationen mit mindestens so großem |rho|, und der ist bei
+vier Städten **0,083**, also nicht signifikant. Genau das war der Fehler,
+der die Abdeckungs-Vorhersage plausibel aussehen ließ. Das Skript rechnet
+ihn bis n = 8 aus (8! = 40.320 Permutationen, Sekundenbruchteile) und gibt
+darüber lieber gar keinen p-Wert aus.
+
+Die Schranke dazu steht mit in der Ausgabe: bei n < 5 ist selbst perfekte
+Monotonie nicht signifikant (p = 2/n! > 0,05). Wer mit vier Städten einen
+Zusammenhang „zeigen" will, kann das nicht — unabhängig von den Daten.
 
 ---
 
