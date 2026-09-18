@@ -288,7 +288,10 @@ schwer; in der gepaarten Differenz fällt das heraus. Halbbreiten von
 | megaloc → megaloc_linear | −0.126 | [−0.179, −0.073] | nein |
 | megaloc_pca512 → megaloc_pca512_linear | −0.127 | [−0.160, −0.099] | nein |
 
-Alle Paare stehen in `results/bootstrap_ci.json`, auch für R@5/10/20.
+`seq3` ist die Kurzform von `eigenplaces_pcaw512_seq3` — dieselbe
+Trefferliste, über ±3 Nachbarframes aufsummiert (siehe unten,
+„`sequence_retrieval.py`"). Alle Paare stehen in
+`results/bootstrap_ci.json`, auch für R@5/10/20.
 
 **Was die Intervalle überlebt — die sieben Befunde des Projekts (README, „Ergebnisse auf einen Blick"):**
 
@@ -663,10 +666,11 @@ korrekten Top-1-Treffer — lösbar und innerhalb der Schwelle:
 | `median_blickwinkel_grad` | Winkel zwischen Anfrage und Treffer |
 
 `anteil_dublette` ist genau die Menge, die der Hard-Filter in 07 verwirft
-(anderer `creator_id` **oder** > 180 Tage). Damit lässt sich prüfen, ob der
-Hard-Abschlag wirklich der Dubletteneffekt ist, statt es aus der Differenz
-zu erschließen — `city_comparison.py` zieht die Zahl als Spalte `Dubl.`
-heran.
+(anderer `creator_id` **oder** > 180 Tage). `city_comparison.py` rechnet
+daraus den Hard-Recall exakt nach — `R@1_hard = n_korrekt × (1 − d) /
+loesbar_hard`, siehe „Städtevergleich". Damit ist die Zahl hier nicht nur
+beschreibend: **stimmt sie nicht, geht die Identität dort nicht auf.** In
+allen sechs gerechneten Städten geht sie auf.
 
 Zwei Dinge, die das **nicht** ist. Erstens keine Selbstfindung: `src/split.py`
 würfelt **Sequenzen**, Query- und Datenbanksequenzen sind disjunkt, dasselbe
@@ -755,18 +759,25 @@ Top-Fotografen gegen die übrigen — nicht für „funktioniert es in einer
 zweiten Stadt".
 
 **Gerechnet wurden** Würzburg (98 %, 92 Konten, aber 72 % der Bilder älter
-als 2022 — großer Zeitabstand), Kaiserslautern, Karlsruhe und Fürth; die
-Auswertung steht im nächsten Abschnitt. Offen bleiben Jena (99 %, 4.516
-Sequenzen und damit engere Intervalle; die Bilder liegen bereits auf
-Platte) und Halle (91 %, kein Konto über 30 %, 87 % frisch). Gütersloh ist
-als Experiment zur Kamerafrage vorgemerkt — dort wäre ein besseres Ergebnis
-nicht von der Kamera zu trennen, und genau das macht es zur Messung.
+als 2022 — großer Zeitabstand), Kaiserslautern, Karlsruhe, Fürth und Jena;
+die Auswertung steht im nächsten Abschnitt. Offen bleibt Halle (91 %, kein
+Konto über 30 %, 87 % frisch). Gütersloh ist als Experiment zur Kamerafrage
+vorgemerkt — dort wäre ein besseres Ergebnis nicht von der Kamera zu
+trennen, und genau das macht es zur Messung.
 
-**Die Vorauswahl hat gehalten, die Vorhersage nicht.** Alle fünf Städte
+**Eine Erwartung ist eingetroffen.** Jena wurde unter anderem wegen seiner
+vielen Fahrten ausgewählt — „4.516 Sequenzen und damit engere Intervalle".
+Es hat mit 677 Query-Fahrten die meisten der sechs Städte und mit ±0.033 das
+engste Bootstrap-Intervall. Als Beleg für den Mechanismus taugt das nur
+bedingt: Jena hat zugleich die höchste Straßenabdeckung, und beide Größen
+liefern in dieser Stichprobe dasselbe ρ = −0,83.
+
+**Die Vorauswahl hat gehalten, die Vorhersage nicht.** Alle sechs Städte
 liefen ohne Eingriff durch dieselbe Pipeline; keine musste wegen fehlender
 Daten abgebrochen werden. Welche Zahl aus dieser Tabelle den Recall
-vorhersagt, ist eine andere Frage — und die Antwort ist bisher: keine
-(nächster Abschnitt).
+vorhersagt, ist eine andere Frage — und die Antwort ist bisher: keine. Auch
+die Straßenabdeckung nicht: Würzburg hat mit 98 % die zweithöchste und mit
+0.336 den niedrigsten Recall, Jena mit 99 % die höchste und 0.417.
 
 ---
 
@@ -805,29 +816,115 @@ jedem frischen Klon und auf jedem Rechner — als einziges hier unter
 `experiments/`. Was fehlt, erscheint als `—`; eine Stadt fällt nur heraus,
 wenn ihre Haupt-JSON fehlt. Ergebnis: `results/city_comparison.json`.
 
-MegaLoc, R@1 bei 25 m, Stand 2026-09-17:
+MegaLoc, R@1 bei 25 m, Stand 2026-09-18:
 
 | Stadt | Abd. | lösbar | Pano | Dubl. | Tage | Alle | Hard Δ | volle Ref. | ±boot |
 |---|---|---|---|---|---|---|---|---|---|
-| Osnabrück | 0,44 | 63,9 % | 0,0 % | — | — | 0.568 | **−0.025** | 0.798 | ±0.096 |
-| Fürth | 0,72 | 62,0 % | 3,0 % | — | — | 0.549 | −0.141 | 0.699 | ±0.059 |
-| Karlsruhe | 0,75 | — | 17,9 % | — | — | 0.419 | −0.057 | 0.640 | ±0.058 |
-| Kaiserslautern | 0,80 | 85,6 % | 0,3 % | — | — | **0.651** | −0.204 | **0.810** | ±0.045 |
-| Würzburg | 0,98 | 45,5 % | 8,7 % | — | — | 0.336 | −0.035 | 0.476 | ±0.059 |
+| Osnabrück | 0,44 | 63,9 % | 0,0 % | 11,8 % | 317 | 0.568 | −0.025 | 0.798 | ±0.096 |
+| Fürth | 0,72 | 62,0 % | 3,0 % | 39,6 % | 291 | 0.549 | −0.141 | 0.699 | ±0.059 |
+| Karlsruhe | 0,75 | 70,8 % | 17,9 % | 15,4 % | 408 | 0.419 | −0.057 | 0.640 | ±0.058 |
+| Kaiserslautern | 0,80 | 85,6 % | 0,3 % | 35,8 % | 279 | **0.651** | **−0.204** | **0.810** | ±0.045 |
+| Würzburg | 0,98 | 45,5 % | 8,7 % | 17,9 % | 627 | 0.336 | −0.034 | 0.476 | ±0.059 |
+| Jena | 0,99 | 52,9 % | 0,3 % | 24,1 % | 2188 | 0.417 | **−0.010** | 0.622 | **±0.033** |
 
-`Hard Δ` ist die Differenz zu „Alle Queries", nicht der absolute
-Wert — so steht der Abschlag da, um den es geht. Die Spalten `Dubl.` und
-`Tage` stehen auf `—`, solange
-`recall_by_difficulty.py` für die Stadt nicht gelaufen ist — sie kommen aus
-`herkunft_top1` (siehe „Schwierigkeitsprofil"). Sie sind der direkte Test
-für den Hard-Abschlag: ist er wirklich der Dubletteneffekt, muss der Anteil
-der Top-1-Treffer vom selben Konto aus demselben Zeitfenster mit dem
-Abschlag mitwandern.
+`Hard Δ` ist die Differenz zu „Alle Queries", nicht der absolute Wert — so
+steht der Abschlag da, um den es geht. `Dubl.` und `Tage` kommen aus
+`herkunft_top1` und stehen auf `—`, solange `recall_by_difficulty.py` für
+die Stadt nicht gelaufen ist; `Abd.` und `Pano` aus `city_coverage.json`,
+die als einzige Datei stadtübergreifend ist.
 
-Die drei Befunde — Panoramastrafe (belegt), Dublettenaufblähung (belegt,
-unerklärt) und die **widerlegte** Vorhersage „Abdeckung sagt die
-Messunsicherheit vorher" — stehen ausführlich im README unter „Fünf
-Städte", weil sie dort zur Ergebnisliste gehören.
+### Der Hard-Abschlag, zerlegt
+
+Der Block „Hard-Abschlag zerlegt" ist der methodische Kern des Skripts. Er
+prüft eine **Identität**, keinen Zusammenhang, und ist deshalb schon bei
+einer einzigen Stadt aussagekräftig.
+
+Der Hard-Filter ändert nicht die Trefferliste, sondern die Ground Truth: ein
+Datenbankbild zählt nur, wenn es von einem anderen Konto stammt **oder** mehr
+als `min_days_apart` entfernt ist (`src/evaluation.py`, `disjoint`). Daraus
+folgt beides:
+
+*Zähler* — ein korrekter Top-1-Treffer fällt genau dann weg, wenn er eine
+Dublette ist. Das ist die Negation von `disjoint` und damit exakt
+`anteil_dublette` aus `treffer_herkunft`.
+
+*Nenner* — wer einen korrekten, nicht-dublettigen Treffer hat, ist
+automatisch auch hard-lösbar: dieses Bild ist ja selbst eine gültige
+Referenz im Umkreis. Es fällt also nichts aus dem Zähler, was nicht schon
+gezählt wäre — aber der Nenner schrumpft eigenständig, um Anfragen, deren
+einzige Referenz eine Dublette war.
+
+```
+R@1_hard = n_korrekt × (1 − d) / loesbar_hard
+Abschlag / R@1 = −(d − (1−r)) / r        mit r = loesbar_hard / loesbar
+```
+
+Damit stehen zwei Größen nebeneinander, die beide „Dublette" heißen und
+Verschiedenes zählen:
+
+| | | |
+|---|---|---|
+| **d** | Anteil der korrekten **Treffer**, die Dubletten sind | `herkunft_top1.anteil_dublette` |
+| **1−r** | Anteil der lösbaren **Anfragen**, die nur durch Dubletten lösbar waren | aus den beiden `loesbar`-Zahlen in 07 |
+
+| Stadt | d | 1−r | Differenz | rel. Abschlag | Rest |
+|---|---|---|---|---|---|
+| Kaiserslautern | 35,8 % | 6,6 % | +0,292 | −0,313 | 0.000 |
+| Fürth | 39,6 % | 18,7 % | +0,209 | −0,257 | 0.000 |
+| Karlsruhe | 15,4 % | 2,0 % | +0,134 | −0,137 | 0.000 |
+| Würzburg | 17,9 % | 8,6 % | +0,093 | −0,102 | 0.000 |
+| Osnabrück | 11,8 % | 7,7 % | +0,041 | −0,044 | 0.000 |
+| Jena | 24,1 % | 22,3 % | +0,018 | −0,023 | 0.000 |
+
+Die Spalte `Rest` ist der eigentliche Test: **weicht sie von 0 ab, messen
+`recall_by_difficulty.py` und 07 nicht dasselbe** — verschiedene Schwelle,
+verschiedenes `min_days_apart` oder eine veraltete Trefferliste. Das Skript
+sagt das dann ausdrücklich. Über alle sechs Städte ist der größte Rest
+0.0000.
+
+Inhaltlich: der Abschlag misst nicht, wie sehr ein System auf Dubletten
+beruht, sondern **wie sehr es sie über das hinaus nutzt, was der Datensatz
+erzwingt**. Jena ist der Lehrfall — mittleres d, fast kein Abschlag, weil
+1−r fast genauso groß ist.
+
+Die Rangkorrelation „Übernutzung gegen relativen Abschlag" (ρ = −1,00,
+p = 0,0028) steht mit in der Ausgabe, ist aber **kein zweiter Befund**: sie
+folgt aus der Algebra. Sie taugt als Konsistenzprüfung, nicht als Evidenz.
+Die schwache Fassung — roher Dublettenanteil gegen Abschlag — bleibt
+daneben stehen und ist bei ρ = −0,54, p = 0,30 erwartungsgemäß flach.
+
+### Panorama-Anfragen
+
+07 wertet „Alle Queries" und „Nur Nicht-Panorama-Queries" getrennt aus, aber
+nie die Panoramen allein. Aus den beiden Auswertungen lässt sich ihr R@1
+exakt zurückrechnen:
+
+```
+R@1_pano = (R@1_alle × L − R@1_ohne × L_ohne) / (L − L_ohne)
+```
+
+| Stadt | n | R@1 Panorama | R@1 ohne | Strafe | ±SE (binomial) |
+|---|---|---|---|---|---|
+| Karlsruhe | 8.024 | 0.220 | 0.449 | 0.229 | ±0.005 |
+| Würzburg | 2.412 | 0.170 | 0.352 | 0.182 | ±0.008 |
+| Kaiserslautern | 253 | 0.055 | 0.654 | 0.599 | ±0.014 |
+| Fürth | 192 | 0.208 | 0.553 | 0.345 | ±0.029 |
+| Jena | 85 | 0.235 | 0.417 | 0.182 | ±0.046 |
+
+Der Standardfehler ist binomial gerechnet und damit **optimistisch** —
+Panorama-Anfragen derselben Fahrt scheitern gemeinsam, der wahre Fehler ist
+größer (der Sequenz-Bootstrap zeigt Design-Effekte von 100 bis 330). Er
+steht trotzdem in der Tabelle, weil er schon genügt, um zu sehen, wann n zu
+klein ist: bei Jena mit 85 Anfragen ist allein der binomiale Fehler ±0.046.
+
+**Diese Rechnung ersetzt eine frühere, die falsch war.** Bis 2026-09-18 war
+die Strafe als *Recall-Differenz geteilt durch Panoramaanteil* geschätzt,
+mit dem Anteil aus `city_coverage.json` — dem Anteil an allen Kachelbildern
+statt an den lösbaren Anfragen. In Karlsruhe sind das 17,9 % gegen
+tatsächlich 13,0 %, und der berichtete Wert war 0.168 statt 0.229. Die
+damals als Beleg geführte Übereinstimmung mit Würzburg (0.184) entstand
+nur, weil dort Kachel- und Anfragenanteil zufällig fast gleich sind. Details
+im README unter „Sechs Städte".
 
 **Warum das Skript die Permutationen zählt.** `scipy.stats.spearmanr`
 liefert bei perfekter Monotonie einen p-Wert von 0 — seine t-Näherung
@@ -871,9 +968,9 @@ bringt also nichts. Deshalb läuft die Suche hier über dieselbe
 Block, danach wieder frei. Spitze damit rund 8 GB statt 23,6.
 
 Whitening **und** Dichte zusammen (`--method eigenplaces_pcaw512` bzw.
-`megaloc_pcaw512`, volle train-Referenz): EigenPlaces **0.715**, MegaLoc
-**0.778**, R@5 0.845. Das sind die höchsten Zahlen im Projekt — ohne ein
-einziges Modell zu ändern.
+`megaloc_pcaw512`, volle train-Referenz): EigenPlaces **0.715** (R@5 0.794),
+MegaLoc **0.778** (R@5 0.845). Das sind die höchsten Zahlen im Projekt — ohne
+ein einziges Modell zu ändern.
 
 ---
 
