@@ -505,8 +505,8 @@ Wert aus der Datei.
 Dasselbe gilt für die Stadt: **`VPR_CITY`** sticht `city` aus der Datei.
 
 ```bash
-VPR_CITY="Würzburg, Germany" jupyter lab notebooks/01_mapillary_coverage.ipynb
-VPR_CITY="Würzburg, Germany" python run.py --bestand
+VPR_CITY="Kaiserslautern, Germany" jupyter lab notebooks/01_mapillary_coverage.ipynb
+VPR_CITY="Kaiserslautern, Germany" python run.py --bestand
 ```
 
 Das ist nicht nur Bequemlichkeit: die Notebooks lesen `config.yaml` bei
@@ -572,7 +572,8 @@ python experiments/sequence_hmm.py --method eigenplaces_pcaw512        # dieselb
 python experiments/geometric_verification.py --method eigenplaces_megaloc_concat   # SuperPoint + LightGlue, GPU
 python experiments/detection_rerank.py      # Mapillary-Detections als Re-Ranking-Signal
 python experiments/detection_probe.py       # liefert Mapillary ueberhaupt brauchbare Detections?
-python experiments/city_coverage.py "Würzburg, Germany"   # Strassenabdeckung einer Stadt, nur Metadaten
+python experiments/city_coverage.py "Heidelberg, Germany"  # Strassenabdeckung einer Stadt, nur Metadaten
+python experiments/city_comparison.py       # dieselbe Pipeline ueber alle gerechneten Staedte
 ```
 
 ### Ein eigenes Foto verorten
@@ -753,6 +754,93 @@ Fahrten für beide schwer sind:
 | clip_pcaw512 → clip_pcaw512_linear | +0.009 | [−0.002, +0.021] | nein |
 
 Alle 35 Paare in `experiments/results/<stadt>/bootstrap_ci.json`.
+
+### Fünf Städte — `python experiments/city_comparison.py`
+
+Dieselbe Pipeline, derselbe Split-Seed, zwei Encoder, fünf Städte. Die
+Städte wurden aus 50 nach Mapillary-Metadaten vorausgewählt
+(`experiments/city_coverage.py`), bevor ein einziges Bild geladen war.
+
+MegaLoc, R@1 bei 25 m:
+
+| Stadt | Abdeckung | lösbar | Panorama | Fahrten | Alle | Hard | volle Ref. | ±boot |
+|---|---|---|---|---|---|---|---|---|
+| Osnabrück | 0,44 | 63,9 % | 0,0 % | 198 | 0.568 | **0.543** | 0.798 | ±0.096 |
+| Fürth | 0,72 | 62,0 % | 3,0 % | 239 | 0.549 | 0.408 | 0.699 | ±0.059 |
+| Karlsruhe | 0,75 | — | 17,9 % | 584 | 0.419 | 0.362 | 0.640 | ±0.058 |
+| Kaiserslautern | 0,80 | 85,6 % | 0,3 % | 249 | **0.651** | 0.447 | **0.810** | ±0.045 |
+| Würzburg | 0,98 | 45,5 % | 8,7 % | 300 | 0.336 | 0.301 | 0.476 | ±0.059 |
+
+Drei Aussagen, nach Härte getrennt.
+
+**Belegt: Panoramen kosten den Encoder rund 0,17 R@1 je Anfrage.** 07
+berichtet „Alle Queries" und „Nur Nicht-Panorama-Queries" getrennt; die
+Differenz ist der Panoramaeffekt.
+
+| | Panoramaanteil | Differenz | je Panorama-Anfrage |
+|---|---|---|---|
+| Karlsruhe | 17,9 % | +0.030 | **0.168** |
+| Würzburg | 8,7 % | +0.016 | **0.184** |
+
+Die Strafe je Anfrage reproduziert sich über zwei Städte mit doppelt so
+hohem Anteil — sie ist eine Eigenschaft des Encoders, nicht des
+Datensatzes. Der Wert für Würzburg war **vor** dem Lauf aus Karlsruhe
+vorhergesagt (+0.015 erwartet, +0.016 gemessen).
+
+**Belegt, aber unerklärt: „Alle Queries" wird durch Dubletten aufgebläht.**
+Der Hard-Filter (anderer `creator_id` **oder** >180 Tage Abstand) kostet je
+nach Stadt 0.025 bis 0.204 R@1. Die Lösbarkeit erklärt das nicht — in
+Kaiserslautern fallen nur 6,6 % der Anfragen heraus, aber 31 % des Recalls.
+Der Top-1-Treffer ist dort also häufig ein Bild derselben Kamera aus
+demselben Zeitfenster, eine Beinahe-Dublette aus derselben Befahrung.
+**Die Rangfolge der Städte kippt dadurch:**
+
+| | Alle Queries | Hard |
+|---|---|---|
+| 1. | Kaiserslautern 0.651 | **Osnabrück 0.543** |
+| 2. | Osnabrück 0.568 | Kaiserslautern 0.447 |
+| 3. | Fürth 0.549 | Fürth 0.408 |
+| 4. | Karlsruhe 0.419 | Karlsruhe 0.362 |
+| 5. | Würzburg 0.336 | Würzburg 0.301 |
+
+Welche Eigenschaft eines Datensatzes den Dublettenanteil vorhersagt, ist
+offen — geprüft und verworfen wurden Aufnahmejahr, Kontendominanz,
+Sequenzlänge und Abdeckung (alle p > 0,4 bei n = 5). Der Anteil selbst muss
+dafür nicht mehr aus der Differenz erschlossen werden:
+`experiments/recall_by_difficulty.py` zählt ihn direkt an den korrekten
+Top-1-Treffern (`herkunft_top1`), und `city_comparison.py` trägt ihn als
+Spalte `Dubl.` gegen den Hard-Abschlag auf. Sobald das Skript für alle fünf
+Städte gelaufen ist, ist die Erklärung selbst prüfbar statt nur plausibel.
+
+**Widerlegt: die Straßenabdeckung sagt die Messunsicherheit nicht vorher.**
+Mit vier Städten war der Zusammenhang perfekt monoton (rho = −1,00). Die
+fünfte wurde mit vorher festgelegter Vorhersage gerechnet — ±boot ≤ 0.045
+— und lieferte 0.059:
+
+```
+n = 4:  rho = −1,00   p = 0,083
+n = 5:  rho = −0,40   p = 0,517
+```
+
+Vier der fünf Städte liegen in einem Band von 0,014; der scheinbare
+Zusammenhang wurde von einem einzigen Ausreißer getragen. Würzburg zeigt
+auch, warum: es hat die **höchste Abdeckung und den niedrigsten lösbaren
+Anteil**. `abdeckung_gesamt` misst den Gesamtbestand gegen das Straßennetz,
+die Datenbank sind aber 15 % der Sequenzen — eine Straße mit nur einer
+Befahrung liegt zu 70 % in `train` und zählt trotzdem als abgedeckt.
+
+Ein Hinweis zu den p-Werten: `scipy.stats.spearmanr` liefert bei perfekter
+Monotonie eine 0, weil seine t-Näherung dort durch eine verschwindende
+Varianz teilt. `city_comparison.py` zählt deshalb die Permutationen durch.
+Bei n = 4 ist der exakte Wert 0,083 — nicht signifikant.
+
+**Was sich überträgt.** Der absolute R@1 spannt 0.336 bis 0.651. Die
+gepaarte Differenz EigenPlaces → MegaLoc spannt +0.072 bis +0.132 — rund
+siebenmal stabiler, aber nicht konstant: die Extreme (Kaiserslautern volle
+Referenz +0.077, Karlsruhe volle Referenz +0.132) haben keine überlappenden
+Intervalle. Über Städte hinweg lässt sich das **nicht gepaart** testen,
+weil die Anfragemengen disjunkt sind; es bleibt beim Vergleich unabhängiger
+Schätzer mit breiten Intervallen.
 
 ### Lokalisierung — `python compare.py --localization`
 
@@ -953,22 +1041,31 @@ Absicht: `anyloc` soll bleiben, was seine Autoren veröffentlicht haben,
 und was Whitening bringt, sagt die abgeleitete Zeile sauberer als ein
 verändertes Original.
 
-**Eine zweite Stadt.** Seit `src/paths.py` hat jede Stadt ihren eigenen
-Zweig in `data/`, `results/` und `experiments/results/`. Der ganze Weg,
-am Beispiel Würzburg:
+**Weitere Städte.** Seit `src/paths.py` hat jede Stadt ihren eigenen
+Zweig in `data/`, `results/` und `experiments/results/`. Gerechnet sind
+Osnabrück (Standard), Jena, Fürth, Kaiserslautern, Karlsruhe und Würzburg;
+die Auswertung darüber steht unter [Ergebnisse](#ergebnisse). Der ganze Weg
+für eine weitere:
 
 ```bash
-export VPR_CITY="Würzburg, Germany"      # sticht city, ohne die Datei zu ändern
-python run.py --from 01                  # 01 Kacheln + Split, 02 Audit, 03 Bilder
-python run.py --method all               # danach der übliche Durchgang
+export VPR_CITY="Kaiserslautern, Germany"  # sticht city, ohne die Datei zu ändern
+python run.py --from 01                    # 01 Kacheln + Split, 02 Audit, 03 Bilder
+python run.py --method all                 # danach der übliche Durchgang
 ```
+
+Vorher lohnt `python experiments/city_coverage.py "Stadt, Land"`: eine
+Minute je Stadt, kein Bilddownload, und die Metadaten sagen schon, ob sich
+der Durchgang lohnt — Panoramaanteil, Sequenzstruktur, Straßenabdeckung.
 
 Drei Dinge lohnen dabei den Blick:
 
 1. **Die Stadtgrenze.** 01 druckt Fläche, `osm_type/osm_id` und die
-   Kachelzahl. Passt die Fläche nicht (Würzburg 87,6 km², der gleichnamige
-   Landkreis knapp 1.000), hat Nominatim den Kreis geliefert — dann `city`
-   präziser angeben, etwa `"Stadt Würzburg, Bayern, Germany"`.
+   Kachelzahl. Passt die Fläche nicht (Stadt Osnabrück 119,7 km², der
+   gleichnamige Landkreis rund 2.100), hat Nominatim den Kreis geliefert —
+   dann `city` präziser angeben, etwa `"Stadt Osnabrück, Niedersachsen,
+   Germany"`. Kopenhagen liefert über `"Copenhagen, Denmark"` ein
+   3,1-km²-Objekt statt der Stadt; dänische Städte hängen als *Kommune* in
+   OSM.
 2. **Der Split entsteht neu.** `data/<stadt>/processed/*_sequences.txt`
    existiert für eine neue Stadt noch nicht, also würfelt `src/split.py`
    mit `split_seed`. Ab dem zweiten Lauf werden die Listen übernommen —
