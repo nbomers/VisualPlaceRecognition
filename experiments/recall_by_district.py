@@ -58,7 +58,11 @@ def district_table(query, database, districts, loesbar, hits, k_values):
         q_mask = pd.isna(q_bezirk) if name is None else (q_bezirk == name)
         db_mask = pd.isna(db_bezirk) if name is None else (db_bezirk == name)
         n_loesbar = int(loesbar[q_mask].sum())
-        km2 = float(flaeche[name]) if name is not None else float("nan")
+        # None, nicht float("nan"): json.dumps schreibt NaN als bares `NaN`,
+        # und das ist nach RFC 8259 kein gueltiges JSON. Pythons Parser
+        # nimmt es (allow_nan ist standardmaessig an), jeder strenge nicht --
+        # jq, JavaScript, Go. Die Recall-Werte unten machen es laengst so.
+        km2 = float(flaeche[name]) if name is not None else None
         zeilen.append({
             "stadtteil": name if name is not None else "(ohne Stadtteil)",
             "km2": km2,
@@ -68,9 +72,9 @@ def district_table(query, database, districts, loesbar, hits, k_values):
             # Sequenz-Bootstrap.
             "n_sequences": int(len(np.unique(q_seq[q_mask]))),
             "n_loesbar": n_loesbar,
-            "anteil_loesbar": float(n_loesbar / q_mask.sum()) if q_mask.sum() else float("nan"),
+            "anteil_loesbar": float(n_loesbar / q_mask.sum()) if q_mask.sum() else None,
             "n_database": int(db_mask.sum()),
-            "database_pro_km2": float(db_mask.sum() / km2) if km2 == km2 and km2 > 0 else float("nan"),
+            "database_pro_km2": float(db_mask.sum() / km2) if km2 else None,
             "recall": {
                 str(k): (float(hits[k][q_mask].sum() / n_loesbar) if n_loesbar else None)
                 for k in k_values
@@ -152,7 +156,7 @@ def main():
         "spearman_r1_dichte": {"rho": float(rho), "p": float(p), "n": len(gut)},
         "spearman_r1_anteil_loesbar": float(rho_loesbar),
         "stadtteile": zeilen,
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
     plot(districts, city_polygon, zeilen, name, args.threshold, args.min_solvable,
          out.with_suffix(".png"))
 
@@ -166,9 +170,10 @@ def main():
         r1 = f"{z['recall']['1']:.3f}" if z["recall"]["1"] is not None else "-"
         r5 = f"{z['recall']['5']:.3f}" if z["recall"]["5"] is not None else "-"
         markierung = "  (grau)" if z["n_loesbar"] < args.min_solvable else ""
-        dichte = f"{z['database_pro_km2']:,.0f}" if z["database_pro_km2"] == z["database_pro_km2"] else "-"
+        dichte = f"{z['database_pro_km2']:,.0f}" if z["database_pro_km2"] is not None else "-"
+        anteil = f"{z['anteil_loesbar']:.1%}" if z["anteil_loesbar"] is not None else "-"
         print(f"{z['stadtteil']:<28}{z['n_queries']:>7,}{z['n_sequences']:>6}{z['n_loesbar']:>9,}"
-              f"{z['anteil_loesbar']:>7.1%}{r1:>7}{r5:>7}{dichte:>9}{markierung}")
+              f"{anteil:>7}{r1:>7}{r5:>7}{dichte:>9}{markierung}")
     print(f"\nSpearman R@1 gegen Datenbankbilder/km2: rho = {rho:+.2f} (p = {p:.3f}, "
           f"{len(gut)} Stadtteile); gegen Anteil loesbar: rho = {rho_loesbar:+.2f}")
     print(f"geschrieben: {out.relative_to(ROOT)} und .png")

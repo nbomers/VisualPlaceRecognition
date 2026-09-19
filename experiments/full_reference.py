@@ -27,6 +27,7 @@ results/<stadt>/evaluation/<name>_fullref.json (Variante "fullref").
 """
 
 import argparse
+import json
 import time
 
 import numpy as np
@@ -35,7 +36,8 @@ import pandas as pd
 from _common import CFG, PATHS, ROOT
 from src.evaluation import standard_evaluations, write_evaluation
 from src.retrieval import blockwise_search
-from src.run_guard import embedding_fingerprint, require_fingerprint, write_fingerprint
+from src.run_guard import (code_version, embedding_fingerprint, require_fingerprint,
+                           write_fingerprint)
 
 EMB_DIR = PATHS.embeddings
 REFERENZ = ("database", "train")
@@ -55,6 +57,17 @@ def encoders_with_npy():
     return [m for m in CFG["vpr"]["models"] if (EMB_DIR / m / f"{m}_embeddings.npy").exists()]
 
 
+def _auswertung_veraltet(eval_json):
+    """Wurde die JSON mit einem anderen Auswertungscode gerechnet als dem hier?"""
+    try:
+        gespeichert = json.loads(eval_json.read_text(encoding="utf-8")).get("code_version") or {}
+    except (ValueError, OSError):
+        return True
+    if not gespeichert.get("evaluation"):
+        return True        # alte Datei ohne Kennung -- lieber neu rechnen
+    return gespeichert["evaluation"] != code_version(ROOT)["evaluation"]
+
+
 def run_one(method, force):
     name = f"{method}_fullref"
     meta = pd.read_parquet(EMB_DIR / method / f"{method}_metadata.parquet")
@@ -72,7 +85,11 @@ def run_one(method, force):
             npz_passt = True
         except Exception:
             pass
-    if npz_passt and eval_json.exists():
+    # Auch die Kennung des Auswertungscodes pruefen, nicht nur die Existenz.
+    # run.py macht das in _result_current laengst so; hier fehlte es, und die
+    # fullref-Zeilen blieben nach einer Aenderung an src/evaluation.py mit
+    # veralteter Kennung liegen -- ohne dass irgendwo etwas rot wurde.
+    if npz_passt and eval_json.exists() and not _auswertung_veraltet(eval_json):
         print(f"  liegt vor und passt: {name}")
         return
 

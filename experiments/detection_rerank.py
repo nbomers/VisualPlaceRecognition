@@ -93,7 +93,7 @@ def load_cache():
     if not CACHE_PATH.exists():
         return {}
     cache = {}
-    for line in CACHE_PATH.read_text().splitlines():
+    for line in CACHE_PATH.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         eintrag = json.loads(line)
@@ -112,7 +112,7 @@ def fetch_missing(image_ids, cache, token, workers):
     schreibsperre = threading.Lock()
     n_fehler = 0
 
-    with CACHE_PATH.open("a") as datei, \
+    with CACHE_PATH.open("a", encoding="utf-8") as datei, \
             ThreadPoolExecutor(max_workers=workers) as pool:
         aufgaben = {
             pool.submit(fetch_counts, i, token, workers): i for i in fehlend
@@ -378,7 +378,7 @@ def main():
     # Zahl nur im README und niemand kann sie nachrechnen.
     out = RESULTS / f"detection_rerank_{name}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(befund, indent=2, ensure_ascii=False))
+    out.write_text(json.dumps(befund, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print()
     print("Lesart: liegt die AUC bei 0.50 und faellt R@1 mit steigendem")

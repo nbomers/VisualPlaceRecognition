@@ -210,7 +210,7 @@ def main():
              "median_m": float(p["median_m"])}
             for _, p in paare.iterrows()
         ],
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
     plot(G, city_polygon, districts, df, paare, name, args.threshold, args.n_arrows,
          out.with_suffix(".png"), rng)
 

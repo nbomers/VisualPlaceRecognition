@@ -132,7 +132,7 @@ def main():
         "embedding_name": name, "top_k": args.top_k, "eps_m": EPS_M,
         "min_samples": MIN_SAMPLES, "gate_share": GATE_SHARE,
         "n_queries": int(len(query)), "verfahren": tabelle,
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
 
     import matplotlib
     matplotlib.use("Agg")

@@ -15,7 +15,6 @@ in detections_probe.json daneben; ein zweiter Aufruf gibt es nur aus.
 import argparse
 import collections
 import json
-from pathlib import Path
 
 import pandas as pd
 import requests
@@ -23,7 +22,10 @@ from tqdm import tqdm
 
 from _common import CFG, PATHS, ROOT
 from src.mapillary import load_token, make_session
-PROBE_PATH = Path(__file__).resolve().parent / "detections_probe.json"
+# Unter experiments/results/<stadt>/ wie jedes andere Ergebnis: die Probe
+# zieht aus den Metadaten EINER Stadt, im experiments/-Wurzelordner haette
+# eine zweite Stadt die erste ueberschrieben.
+PROBE_PATH = PATHS.experiments / "detections_probe.json"
 
 
 def _args():
@@ -102,14 +104,15 @@ def main():
     args = _args()
 
     if PROBE_PATH.exists() and not args.neu:
-        befund = json.loads(PROBE_PATH.read_text())
+        befund = json.loads(PROBE_PATH.read_text(encoding="utf-8"))
         print(f"Gespeicherter Befund vom {befund['datum']} "
               f"({PROBE_PATH.name}), --neu misst erneut.\n")
         show_summary(befund)
         return
 
     befund = messen(args, load_token(ROOT))
-    PROBE_PATH.write_text(json.dumps(befund, indent=2))
+    PROBE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    PROBE_PATH.write_text(json.dumps(befund, indent=2), encoding="utf-8")
     show_summary(befund)
     print(f"\nGespeichert unter {PROBE_PATH}")
 

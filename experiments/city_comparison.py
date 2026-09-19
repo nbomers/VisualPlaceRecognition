@@ -99,7 +99,7 @@ def _stadt(slug, method, schwelle):
     haupt = ev / f"{method}.json"
     if not haupt.exists():
         return None
-    a = json.loads(haupt.read_text())["auswertungen"]
+    a = json.loads(haupt.read_text(encoding="utf-8"))["auswertungen"]
     d["alle"] = _recall(a["Alle Queries"], schwelle)
     # Der Anteil der Anfragen mit ueberhaupt einem Datenbankbild im Umkreis.
     # Das ist die Groesse, die abdeckung_gesamt zu messen VORGIBT: jene zaehlt
@@ -126,7 +126,7 @@ def _stadt(slug, method, schwelle):
 
     voll = ev / f"{method}_fullref.json"
     if voll.exists():
-        d["voll"] = _recall(json.loads(voll.read_text())["auswertungen"]["Alle Queries"], schwelle)
+        d["voll"] = _recall(json.loads(voll.read_text(encoding="utf-8"))["auswertungen"]["Alle Queries"], schwelle)
 
     # Herkunft des Top-1-Treffers, falls recall_by_difficulty.py gelaufen ist.
     # Das ist die direkte Messung des Dubletteneffekts: wieviele korrekte
@@ -134,7 +134,7 @@ def _stadt(slug, method, schwelle):
     # derselben Befahrung, nur in einer anderen Sequenz.
     hk = bo / f"recall_by_difficulty_{method}.json"
     if hk.exists():
-        h = json.loads(hk.read_text()).get("herkunft_top1")
+        h = json.loads(hk.read_text(encoding="utf-8")).get("herkunft_top1")
         if h:
             d["dublette"] = h["anteil_dublette"]
             d["median_tage"] = h["median_tage"]
@@ -145,7 +145,7 @@ def _stadt(slug, method, schwelle):
         p = bo / datei
         if not p.exists():
             continue
-        roh = json.loads(p.read_text())
+        roh = json.loads(p.read_text(encoding="utf-8"))
         name = method if datei.endswith("ci.json") else f"{method}_fullref"
         eintrag = roh["encoder"].get(name)
         if eintrag:
@@ -160,7 +160,7 @@ def _eigenschaften():
     p = ROOT / "experiments" / "results" / "city_coverage.json"
     if not p.exists():
         return {}
-    return {city_slug(name): s for name, s in json.loads(p.read_text()).items()}
+    return {city_slug(name): s for name, s in json.loads(p.read_text(encoding="utf-8")).items()}
 
 
 # -- Ausgabe ---------------------------------------------------------------
@@ -412,7 +412,7 @@ def main():
     OUT.write_text(json.dumps({"method": args.method, "schwelle_m": float(schwelle),
                                "staedte": zeilen, "befunde": befunde,
                                "zerlegung": zerlegt,
-                               "panorama": panoramen}, indent=2))
+                               "panorama": panoramen}, indent=2), encoding="utf-8")
     print(f"\ngeschrieben: {OUT.relative_to(ROOT)}")
 
     if args.plot:

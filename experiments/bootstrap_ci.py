@@ -34,12 +34,13 @@ from tqdm import tqdm
 
 from _common import CFG, PATHS, RESULTS, ROOT
 from src.retrieval import hits_at_k, load_retrieval, localizable, retrieval_inputs
+from src.sequence_hmm import hmm_rerank
 
 EVAL_DIR = PATHS.evaluation
 OUT = RESULTS / "bootstrap_ci.json"
 SPLIT = "Alle Queries"
 
-# Die Paare, die in docs/STAND.md und experiments/README.md verglichen werden.
+# Die Paare, die im README und in experiments/README.md verglichen werden.
 # Differenz = b - a. Jeder Encoder gegen seine _linear-Variante kommt dazu.
 PAARE = [
     ("eigenplaces", "eigenplaces_pca512"),
@@ -51,6 +52,8 @@ PAARE = [
     ("megaloc", "megaloc_pcaw512"),
     ("megaloc", "eigenplaces_megaloc_concat"),
     ("eigenplaces_pcaw512", "eigenplaces_pcaw512_seq3"),
+    ("eigenplaces", "eigenplaces_hmm30-25"),
+    ("megaloc", "megaloc_hmm30-25"),
     # Rangfolge auf voller Breite und auf 512 gewhitent, je Nachbarpaar.
     ("clip", "anyloc"),
     ("anyloc", "mixvpr"),
@@ -82,14 +85,33 @@ def _args():
 
 
 def load_run(record):
-    """Trefferliste und Metadaten zu einer Recall-JSON aus 07 -- seq-Varianten
-    tragen ihr Fenster in der JSON und werden aus der Basis nachgerechnet,
-    fullref-Zeilen ihre Referenzsplits."""
-    query, database, indices, _ = load_retrieval(
+    """
+    Trefferliste und Metadaten zu einer Recall-JSON aus 07.
+
+    Drei Sorten Zeile haben keine eigene .npz und werden aus der Basis
+    nachgerechnet -- jede traegt dafuer alles Noetige in ihrer eigenen JSON:
+
+      seq-Zeilen     sequence_window          (experiments/sequence_retrieval.py)
+      fullref-Zeilen reference_splits         (experiments/full_reference.py)
+      hmm-Zeilen     hmm_beta/_sigma_m/_speed_ms  (experiments/sequence_hmm.py)
+
+    Die Geschwindigkeit steht mit in der JSON und wird NICHT neu geschaetzt:
+    sie haengt an den Datenbanksequenzen, und eine zweite Schaetzung koennte
+    minimal abweichen -- die Kontrolle gegen 07 unten wuerde das zu Recht als
+    Abweichung melden.
+    """
+    query, database, indices, similarities = load_retrieval(
         ROOT, CFG, record["method"], record["adapter"],
         sequence_window=record.get("sequence_window"),
         reference_splits=record.get("reference_splits"),
     )
+    if record.get("hmm_beta") is not None:
+        indices, _, _ = hmm_rerank(
+            indices, similarities, query, database,
+            float(record["hmm_speed_ms"]),
+            beta=float(record["hmm_beta"]),
+            sigma_m=float(record["hmm_sigma_m"]),
+        )
     return query, database, indices
 
 
@@ -130,7 +152,7 @@ def main():
     schwelle = args.threshold
     schwelle_key = str(int(schwelle)) if float(schwelle).is_integer() else str(schwelle)
 
-    records = [json.loads(p.read_text()) for p in sorted(EVAL_DIR.glob("*.json"))]
+    records = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(EVAL_DIR.glob("*.json"))]
     records = [r for r in records if "auswertungen" in r]
     voll = [r for r in records if r.get("variant") == "fullref"]
     records = voll if args.reference == "full" else [r for r in records if r not in voll]
@@ -259,7 +281,7 @@ def main():
         "n_loesbar": n_loesbar,
         "encoder": eintraege,
         "paare": differenzen,
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
 
     # ------------------------------------------------------------------
     # Tabellen

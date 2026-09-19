@@ -112,7 +112,7 @@ def main():
         "datum": pd.Timestamp.now().strftime("%Y-%m-%d"),
         "embedding_name": name, "threshold_m": args.threshold, "top_k": args.top_k,
         "sichten": ergebnis,
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
 
     import matplotlib
     matplotlib.use("Agg")
