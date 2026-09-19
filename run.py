@@ -29,7 +29,7 @@ from nbclient import NotebookClient
 
 ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "config.yaml"
-CONFIG_ORIGINAL = CONFIG_PATH.read_text()
+CONFIG_ORIGINAL = CONFIG_PATH.read_text(encoding="utf-8")
 
 sys.path.insert(0, str(ROOT))
 from src.config import apply_env, paths  # noqa: E402
@@ -235,21 +235,37 @@ def _download_stand(cfg):
     if not pfad.exists():
         return None
     try:
-        return json.loads(pfad.read_text())
+        return json.loads(pfad.read_text(encoding="utf-8"))
     except ValueError:
         return None
 
 
-def _nicht_auf_diesem_rechner(cfg, method, adapter):
+def _nicht_auf_diesem_rechner(cfg, method, adapter, start=None):
     """
-    Fehlen die Eingaben einer spaeten Stufe ganz, liegt der Encoder auf dem
+    Fehlen die EINGABEN der Startstufe ganz, liegt der Encoder auf dem
     anderen Rechner -- das ist kein Fehlschlag, sondern Arbeitsteilung.
 
     Gibt den fehlenden Pfad zurueck oder None. Nur bei --from ausgewertet:
     ohne --from ist "Datei fehlt" die normale Aufforderung, die Stufe zu
     rechnen.
+
+    Welche Datei die Eingabe ist, haengt an der Startstufe -- und genau das
+    fehlte hier:
+
+      --from 01..04   04 erzeugt die Embeddings selbst; es gibt nichts zu
+                      pruefen, sonst haette "--from 04" nie laufen koennen.
+      --from 05       05 liest die BASIS-Embeddings und schreibt die
+                      adaptierten. Auf die adaptierten zu pruefen hiess:
+                      "--from 05 --adapter linear" ging auf einem Rechner,
+                      der 05 noch nie gerechnet hatte, grundsaetzlich nicht.
+      --from 06..08   lesen die Embeddings des konfigurierten Adapters.
     """
+    if start is not None and start[:2] <= "04":
+        return None
     p = paths(cfg, ROOT)
+    # 05 macht aus der Basis die adaptierte Variante -- es braucht die Basis.
+    if start is not None and start[:2] == "05":
+        adapter = "none"
     name = method if adapter in ("none", "None") else f"{method}_{adapter}"
     for pfad in (p.metadata_file(name, method), p.embedding_file(name, method)):
         if not pfad.exists():
@@ -262,7 +278,7 @@ def _result_current(ergebnis, treffer, cfg, method, adapter):
     if not (ergebnis.exists() and treffer.exists()):
         return False
     try:
-        json_inhalt = json.loads(ergebnis.read_text())
+        json_inhalt = json.loads(ergebnis.read_text(encoding="utf-8"))
     except ValueError:
         return False
     if json_inhalt.get("fingerprint_hash") and json_inhalt.get("code_version"):
@@ -405,6 +421,24 @@ def main():
         bestand(BASIS_CFG)
         return
 
+    # Ein Tippfehler in VPR_CITY sah bisher aus wie "der Encoder liegt auf dem
+    # anderen Rechner": jede Kombination wurde uebersprungen, Exit-Code 0. Die
+    # Stadt hat aber einen eigenen Zweig unter data/, und ohne ihre Metadaten
+    # gibt es dort ueberhaupt nichts -- ausser 01 soll sie gerade erst anlegen.
+    stadt_meta = paths(BASIS_CFG, ROOT).processed / "metadata.parquet"
+    if not stadt_meta.exists() and (args.start or "01")[:2] > "01":
+        bekannt = sorted(d.name for d in (ROOT / "data").iterdir()
+                         if (d / "processed" / "metadata.parquet").exists()) \
+            if (ROOT / "data").is_dir() else []
+        raise SystemExit(
+            f"Keine Metadaten fuer {BASIS_CFG['city']!r}:\n"
+            f"  {stadt_meta.relative_to(ROOT)} fehlt.\n"
+            + (f"  Gerechnete Staedte: {', '.join(bekannt)}\n" if bekannt else "")
+            + "Entweder ist city / VPR_CITY vertippt, oder die Stadt ist neu --\n"
+            "dann holt 01 ihre Metadaten:\n"
+            "  python run.py --from 01"
+        )
+
     methoden = _liste(args.method,
                       _modelle(BASIS_CFG, abgeleitet=False),
                       BASIS_CFG["vpr"]["method"],
@@ -445,7 +479,7 @@ def main():
         # gerechnet sind. Sind ihre Ergebnisse gar nicht da, gehoert dieser
         # Encoder auf den anderen Rechner -- uebersprungen, nicht gescheitert.
         if args.start:
-            fehlt = _nicht_auf_diesem_rechner(cfg, method, adapterwert)
+            fehlt = _nicht_auf_diesem_rechner(cfg, method, adapterwert, args.start)
             if fehlt is not None:
                 print(f"uebersprungen: liegt nicht auf diesem Rechner "
                       f"({fehlt.relative_to(ROOT)} fehlt)\n")
