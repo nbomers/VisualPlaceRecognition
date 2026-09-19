@@ -77,7 +77,7 @@ python experiments/detection_rerank.py --n-queries 2000 --top-k 10
 python experiments/detection_rerank.py --no-fetch      # nur aus dem Cache
 ```
 
-Ergebnis in `results/detection_rerank_{verfahren}.json` — AUC beider Signale,
+Ergebnis in `results/<stadt>/detection_rerank_{verfahren}.json` — AUC beider Signale,
 Klassenzahl, auswertbare Paare und R@1 je Mischgewicht. Ein Negativergebnis
 ist auch eins: ohne versionierte Datei stünde die Zahl nur hier und ließe sich
 nicht nachrechnen.
@@ -102,7 +102,7 @@ python experiments/detection_probe.py          # gespeicherten Befund zeigen
 python experiments/detection_probe.py --neu    # neu messen
 ```
 
-Ergebnis in `detections_probe.json`: 500 Datenbankbilder, 94 % mit
+Ergebnis in `results/<stadt>/detections_probe.json`: 500 Datenbankbilder, 94 % mit
 Detections, Median 145 je Bild, 165 verschiedene Klassen. Die 94 % waren
 leicht optimistisch — die größere Stichprobe oben kam auf 85 bis 90 %.
 
@@ -291,7 +291,7 @@ schwer; in der gepaarten Differenz fällt das heraus. Halbbreiten von
 `seq3` ist die Kurzform von `eigenplaces_pcaw512_seq3` — dieselbe
 Trefferliste, über ±3 Nachbarframes aufsummiert (siehe unten,
 „`sequence_retrieval.py`"). Alle Paare stehen in
-`results/bootstrap_ci.json`, auch für R@5/10/20.
+`results/<stadt>/bootstrap_ci.json`, auch für R@5/10/20.
 
 **Was die Intervalle überlebt — die sieben Befunde des Projekts (README, „Ergebnisse auf einen Blick"):**
 
@@ -348,7 +348,7 @@ python experiments/timing.py --methods anyloc,megaloc   # auf dem GPU-Rechner
 Encodieren: 200 feste Bilder aus dem Query-Split (Seed), inklusive Laden
 und Dekodieren wie in 04, Aufwärmlauf ausgeschlossen. Suche: FAISS-Flat
 über die 48.321 Datenbankzeilen, 1.000 Anfragen in Blöcken von 256, Median
-aus fünf Runden. Die JSON (`results/timing.json`) ist mergefähig — je
+aus fünf Runden. Die JSON (`results/<stadt>/timing.json`) ist mergefähig — je
 Encoder ein Eintrag mit Hostname und Gerät, Einträge anderer Rechner
 bleiben stehen.
 
@@ -410,7 +410,7 @@ python experiments/recall_by_district.py --method eigenplaces_pcaw512
 ```
 
 Gemessen 2026-09-14, 23 Stadtteile, alle 53.414 Anfragen zugeordnet.
-Ergebnis in `results/recall_by_district_<name>.json` und `.png`.
+Ergebnis in `results/<stadt>/recall_by_district_<name>.json` und `.png`.
 
 | Stadtteil | Anfragen | Seq. | lösbar | R@1 megaloc | R@1 eigenpl._pcaw512 | DB/km² |
 |---|---|---|---|---|---|---|
@@ -637,7 +637,7 @@ Gemessen 2026-09-14, MegaLoc, R@1 gesamt 0.568:
 und ist deshalb nicht nachträglich geändert worden.
 
 EigenPlaces (pcaw512) zeigt dieselben Muster auf niedrigerem Niveau
-(`recall_by_difficulty_eigenplaces_pcaw512.json`).
+(`results/<stadt>/recall_by_difficulty_eigenplaces_pcaw512.json`).
 
 **Befund — drei Faktoren, in dieser Reihenfolge.**
 
@@ -957,7 +957,7 @@ der Adapter wurde auf `train` trainiert, dort wäre es Leakage.
 python experiments/database_density.py --method eigenplaces
 ```
 
-Ergebnis in `results/database_density_{method}.json` und `.png`.
+Ergebnis in `results/<stadt>/database_density_{method}.json` und `.png`.
 
 Die letzte Stufe ist `database` plus ganz `train`: bei MegaLoc auf Jena
 584.388 Bilder oder 19,8 GB. Ein `IndexFlatIP` darüber hätte sie ein
@@ -1042,23 +1042,52 @@ python experiments/sequence_hmm.py --method eigenplaces_pcaw512
 python experiments/sequence_hmm.py --method megaloc --beta 3,30,300 --sigma 5,25,200
 ```
 
-**Noch nicht auf echten Daten gemessen.** Was der Code kann, ist geprüft:
-Forward-Backward und Viterbi gegen die Summe bzw. das Maximum über alle
-27 Pfade eines 3×3-Falls einzeln nachgerechnet, und ein konstruierter Fall,
-in dem `aggregate_sequence` den Ausreißer stehen lässt und das HMM ihn
-zurückstuft. Was der Code **nicht** kann, steht schon im Befund oben: wenn
-eine ganze Fahrt geschlossen auf die falsche Straße zeigt, ist dieser Pfad
-genauso konsistent wie der richtige. Die Erwartung ist deshalb klein — das
-HMM greift nur bei *unzusammenhängenden* Ausreißern, und 88 % der Fehlgriffe
-sind kohärente Verwechslungen.
+**Gemessen, mit den voreingestellten Parametern.** `beta` und `sigma` sind
+Hyperparameter, und die Tabelle wird auf den Anfragen ausgewertet — die beste
+Zeile herauszugreifen wäre Tuning auf der Testmenge. Deshalb druckt das
+Skript den ganzen Durchlauf, und berichtet wird die Voreinstellung β = 30,
+σ = 25 m, die seit dem ersten Commit des Skripts unverändert dort steht.
+Geschwindigkeit 12,5 m/s, aus den Datenbanksequenzen geschätzt.
 
-Wie die geometrische Verifikation sortiert es die Top-k nur um: R@20 bleibt
-bei Top-20 unverändert, bewegen können sich R@1 bis R@10.
+| | R@1 | R@5 | R@10 | R@20 | Viterbi-Pfad |
+|---|---|---|---|---|---|
+| MegaLoc | 0.568 | 0.676 | 0.719 | 0.763 | — |
+| MegaLoc, HMM | **0.598** | **0.690** | **0.725** | **0.764** | 0.603 |
+| EigenPlaces | 0.484 | **0.608** | **0.650** | **0.695** | — |
+| EigenPlaces, HMM | **0.501** | 0.603 | 0.633 | 0.675 | 0.511 |
 
-`beta` und `sigma` sind Hyperparameter. Die Tabelle wird auf den Anfragen
-ausgewertet — die beste Zeile herauszugreifen wäre Tuning auf der Testmenge.
-Deshalb druckt das Skript den ganzen Durchlauf; für eine berichtete Zahl legt
-man die Parameter vorher fest.
+Das ist die **einzige Nachbearbeitung im Projekt, die Top-1 schlägt** — und
+die einzige, deren Gewinn den Sequenz-Bootstrap überlebt:
+
+| Vergleich | Differenz | 95 % | belegt |
+|---|---|---|---|
+| megaloc → megaloc_hmm30-25 | **+0.030** | [+0.020, +0.041] | ja |
+| eigenplaces → eigenplaces_hmm30-25 | **+0.017** | [+0.006, +0.030] | ja |
+
+`bootstrap_ci.py` rekonstruiert die hmm-Zeilen dafür aus der Basis-Trefferliste
+— β, σ und die Geschwindigkeit stehen in ihrer eigenen Ergebnis-JSON und
+werden nicht neu geschätzt, sonst schlüge die Kontrolle gegen 07 an.
+
+Dass die Intervalle der Differenz (±0.01) so viel enger sind als die der
+Einzelzahl (±0.10), liegt an der Paarung über dieselben Fahrten: es ist
+dieselbe Trefferliste, nur anders sortiert.
+
+Eine Einschränkung bleibt. Ein Re-Ranking sortiert die Liste nur um: was nach oben rutscht,
+verdrängt anderes. Bei EigenPlaces kostet das R@5 bis R@20 (0.650 → 0.633 bei
+k = 10), bei MegaLoc nicht. Wer Top-1 braucht, gewinnt; wer eine
+Kandidatenliste braucht, verliert womöglich. R@20 bleibt bei Top-20
+unverändert — es wird nichts hinzugefügt, nur umgeordnet.
+
+Die Erwartung war klein und ist eingetroffen: das HMM greift nur bei
+*unzusammenhängenden* Ausreißern, und 88 % der Fehlgriffe sind kohärente
+Verwechslungen — eine ganze Fahrt, die geschlossen auf die falsche Straße
+zeigt, ist als Pfad genauso konsistent wie die richtige.
+
+Was der Code kann, ist zusätzlich geprüft: Forward-Backward und Viterbi gegen
+die Summe bzw. das Maximum über alle 27 Pfade eines 3×3-Falls einzeln
+nachgerechnet, und ein konstruierter Fall, in dem `aggregate_sequence` den
+Ausreißer stehen lässt und das HMM ihn zurückstuft
+(`tests/test_sequence_hmm.py`).
 
 ### `geometric_verification.py` — Top-k lokal nachprüfen
 

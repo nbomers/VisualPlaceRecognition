@@ -8,7 +8,7 @@ zurück. Der Eigenanteil ist nicht das Modell — die Encoder kommen fertig
 vortrainiert — sondern der **Benchmark**: ein sequenzbasierter Split ohne
 Leakage, vier Ground-Truth-Definitionen, eine Zufallsbasis, Fingerabdrücke
 gegen vertauschte Artefakte, Konfidenzintervalle über Fahrten statt über
-Bilder, und 36 vergleichbare Zeilen über fünf Encoder und ihre Varianten.
+Bilder, und 39 vergleichbare Zeilen über fünf Encoder und ihre Varianten.
 
 **Eingabe:** ein Straßenfoto aus dem Stadtgebiet
 **Ausgabe:** geschätzte Koordinate, eine Konfidenz, und die ähnlichsten
@@ -73,7 +73,7 @@ Zwei Protokolle, dieselben 53.414 Anfragen aus **Osnabrück** (fünf weitere
 Städte weiter unten). **Volle Referenz**: alle
 279.453 Bilder außerhalb der Anfragen als Datenbank — das, was ein System
 mit dem ganzen Material leistet. **Benchmark**: nur 15 % der Sequenzen als
-Datenbank — das strengere Protokoll, auf dem alle 36 Zeilen inklusive
+Datenbank — das strengere Protokoll, auf dem alle 39 Zeilen inklusive
 Adapter und Varianten verglichen werden. R@1 bei 25 m über die lösbaren
 Anfragen (90,2 % bzw. 63,9 %); in Klammern das 95-%-Intervall aus 1.000
 Ziehungen der 198 Query-Fahrten. Raten trifft 0,05 %.
@@ -122,11 +122,19 @@ Acht Befunde, jeder gemessen, sechs davon mit Intervall belegt:
    0.023 [0.017, 0.031]. Der Adapterschaden bei MegaLoc ist auf 8448 und
    512 gleich groß (−0.126 / −0.127) — die Intervalle decken sich, ein
    Beweis für Gleichheit ist das nicht.
-5. **Nichts schlägt die Position des besten Treffers.** Schwerpunkt,
-   Clustering, zwei Hybride, Sequenz-Aggregation über Nachbarframes
-   (−0.009 [−0.017, −0.001]) und semantisches Re-Ranking mit
+5. **Nachbearbeitung holt wenig, und was sie holt, zahlt sie anderswo.**
+   Schwerpunkt, Clustering, zwei Hybride, Sequenz-Aggregation über
+   Nachbarframes (−0.009 [−0.017, −0.001]) und semantisches Re-Ranking mit
    Mapillary-Detections — alle gemessen, alle schlechter oder gleich. Auch
-   die Verkettung schlägt MegaLoc nicht: +0.004 [−0.005, +0.014].
+   die Verkettung schlägt MegaLoc nicht: +0.004 [−0.005, +0.014]. Die
+   einzige Ausnahme ist das **Sequenz-HMM**, das die Fahrt als Pfad liest
+   statt als Folge von Einzelentscheidungen: R@1 steigt bei MegaLoc von
+   0.568 auf 0.598 (+0.030 [+0.020, +0.041]) und bei EigenPlaces von 0.484
+   auf 0.501 (+0.017 [+0.006, +0.030]) — beides gepaart belegt. Umsonst ist
+   das nicht — bei EigenPlaces fällt R@10 dabei von 0.650 auf 0.633, weil ein
+   Re-Ranking die Liste nur umsortiert: was nach oben rutscht, verdrängt
+   anderes. Details unter [Ergebnisse](#ergebnisse), Abschnitt *Die Fahrt
+   als Pfad*.
 6. **Fehler sind bimodal.** Unter den 14.726 Fehlgriffen von MegaLoc liegen
    45 % unter 100 m (dieselbe Straße, knapp jenseits der Schwelle) und
    44 % über 1 km (ein anderes Viertel); nur 11 % dazwischen. Ein Median
@@ -184,7 +192,7 @@ Open-Source-VPR auf einer fremden Stadt".
 | Reproduzierbarer Split ohne Leakage zwischen train / database / query | erfüllt — Sequenzen sind die Split-Einheit, Split-Listen und Metadaten im Git, ein Test rechnet den Split aus dem Seed nach |
 | Jede Zeile der Tabelle unter identischen Bedingungen | erfüllt — Fingerabdrücke prüfen jedes Artefakt gegen die config, ein zweiter Rechenweg reproduziert jede 07-Zahl |
 | Recall gegen mehrere Ground-Truth-Definitionen, nicht nur eine | erfüllt — Standard, Hard (anderer Fotograf oder > 180 Tage), Blickrichtung, plus Zufallsbasis |
-| Unterschiede statistisch belegt | erfüllt — Sequenz-Bootstrap mit gepaarten Differenzen für 35 Vergleiche |
+| Unterschiede statistisch belegt | erfüllt — Sequenz-Bootstrap mit gepaarten Differenzen für 38 Vergleiche |
 | Ergebnisse erklären, nicht nur berichten | erfüllt — Dichtekurve, Whitening-Vergleich, Fehlerstruktur, Stadtteilkarte, Verwechslungsatlas, sechs Negativergebnisse |
 | Ein System, das man vorführen kann | erfüllt — `locate.py` und `demo/demo.ipynb`: ein eigenes Foto durch jeden Encoder inklusive PCA-, Whitening- und Verkettungsvarianten, mit Konfidenz und Karte |
 
@@ -273,7 +281,7 @@ Adapter und Whitening reagieren.
 |---|---|
 | **Quelle** | [Mapillary](https://www.mapillary.com) — Straßenbilder von Nutzern, per Vector Tiles (Zoom 14) über das OSM-Stadtpolygon von Osnabrück ermittelt, Thumbnails mit 1024 px Breite |
 | **Lizenz** | CC BY-SA 4.0; Gesichter und Kennzeichen sind von Mapillary automatisch unkenntlich gemacht |
-| **Umfang** | 332.868 Bilder aus 120 km² Stadtgebiet, alle innerhalb der administrativen Grenze; ein Bild ist beim Download gescheitert und dokumentiert |
+| **Umfang** | 332.868 Bilder aus 120 km² Stadtgebiet, alle innerhalb der administrativen Grenze. Ein Bild ist auf dem einen Rechner beim Download gescheitert, zwei auf dem anderen — deshalb hat MegaLoc zwei `train`-Bilder weniger als die übrigen Encoder (siehe [Reproduzierbarkeit](#reproduzierbarkeit)) |
 | **Aufteilung** | nach **Sequenzen** (Fahrten), nie nach Einzelbildern: train 231.133 · database 48.321 · query 53.414 (70 / 15 / 15 %). Keine Sequenz in zwei Splits, keine Panoramen, keine fehlenden Werte |
 | **Query-Struktur** | 198 Sequenzen, Median 176 Bilder, die längste 3.156; 0,17 s und 3,3 m zwischen Frames |
 | **Fotografen** | 57; einer stellt 47,8 % aller Bilder, die drei größten zusammen 65,2 % |
@@ -281,7 +289,7 @@ Adapter und Whitening reagieren.
 | **Nähe zur Referenz** | 63,9 % der Anfragen haben ein Datenbankbild im Umkreis von 25 m (Median 22 Nachbarn, Median 107 Tage Abstand); 9,3 % davon eines vom selben Fotografen am selben Tag, 83,3 % eines von einem anderen Fotografen |
 | **Ground Truth** | ein Datenbankbild zählt als richtig, wenn es höchstens 25 m entfernt liegt (Standard); Varianten: anderer Fotograf oder > 180 Tage Abstand („Hard"), Kompassabweichung ≤ 90° („Blickrichtung"; eine unbekannte Blickrichtung schließt nicht aus — Mapillary kodiert sie als −1, und roh verglichen läse sich das als 359°) |
 | **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `image_root/<stadt>` (Standard `~/Downloads/mapillary/osnabrueck`; je Rechner per `VPR_IMAGE_ROOT`) und legt daneben `test/` für eigene Fotos an. Metadaten und Split-Listen liegen im Git |
-| **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,3 GB je Encoder (alle Varianten zusammen 77 GB), Ergebnisse 1,1 GB |
+| **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,3 GB je Encoder (`Bilder × Dimension × 4 Byte`); für alle 39 Varianten zusammen ergibt die Formel rund 84 GB. Ergebnisse 1,1 GB |
 
 **Warum 25 Meter.** Die Schwelle muss über dem GPS-Rauschen der Aufnahmen
 liegen, sonst misst der Recall die Ortung der Kamera statt die Leistung des
@@ -302,7 +310,7 @@ als Referenz heißt, dass 36 % der Anfragen kein Referenzbild im Umkreis von
 25 m haben. Diese Anfragen zählen im Recall nicht mit („lösbar" = 34.112),
 aber die Dichtekurve unter [Ergebnisse](#ergebnisse) zeigt, was mehr
 Referenz bringen würde. Alle Zahlen dieser Tabelle stehen in
-`results/dataset_audit.json` (aus `02`).
+`results/<stadt>/dataset_audit.json` (aus `02`).
 
 ## Projektstruktur
 
@@ -378,7 +386,7 @@ gegen die `config.yaml` geprüft.
 
 | | |
 |---|---|
-| **Python** | 3.14 (`environment.yml`) |
+| **Python** | ab 3.11 (`src/config.py` prüft es beim Laden der config). Entwickelt wird mit 3.14; unter 3.11 läuft die Testsuite ebenfalls durch, und beide Versionen laufen im CI |
 | **Paketmanager** | conda (empfohlen) oder uv |
 | **GPU** | nicht nötig, aber: 04 encodiert jedes Bild der Stadt — in Osnabrück 332.868, in Jena 699.120. Auf einem M1 Pro sind CLIP, MixVPR und EigenPlaces in Stunden fertig; AnyLoc (ViT-G, 1,14 Mrd. Parameter) und MegaLoc gehören auf eine CUDA-GPU, dort mit `fp16` und kleinen Batches auf 8 GB VRAM |
 | **Arbeitsspeicher** | hängt an der Stadt, nicht am Projekt: ein Encodersatz ist `Bilder × Dimension × 4 Byte` groß. Bei MegaLoc (8448 d) sind das in Osnabrück 11,2 GB, in Jena 23,6 GB. 16 GB reichen für Osnabrück durchgehend; für eine Stadt in Jenas Größe braucht 05 rund 16 GB frei, 04 und die Experimente arbeiten blockweise und kommen mit 8 GB aus. Zahlen und Messung unter [Ergebnisse](#ergebnisse), Abschnitt *Laufzeit und Speicher* |
@@ -410,6 +418,23 @@ uv venv --python 3.14 && source .venv/bin/activate && uv pip install -r requirem
 
 Die passende PyTorch-Variante (CUDA, MPS, CPU) gibt der Konfigurator aus:
 https://pytorch.org/get-started/locally/
+
+**Welche Versionen.** `requirements.txt` und `environment.yml` nennen untere
+Grenzen, keine festen Versionen — so löst dieselbe Datei auf beiden
+Plattformen auf und veraltet nicht. Welche Kombination tatsächlich
+nachgemessen ist, steht im Kopf von `requirements.txt`; gemessen wurde unter
+anderem, dass der Fingerabdruck (`pd.util.hash_pandas_object`) unter pandas
+2.2 bis 3.0 denselben Wert liefert — ein Major-Sprung entwertet die
+vorhandenen Artefakte also nicht. Wer eine exakte Umgebung will:
+
+```bash
+uv pip install -r requirements.lock.txt
+```
+
+`requirements.lock.txt` ist die eingefrorene Auflösung **eines** Laufs, in
+dem Tests, Linter und Pipeline nachweislich durchliefen. Sie ist nicht die
+Umgebung, in der die Zahlen unter `results/` entstanden sind — die entstanden
+auf zwei anderen Rechnern, siehe [Reproduzierbarkeit](#reproduzierbarkeit).
 
 ## Fremd-Repositories und Gewichte
 
@@ -613,15 +638,24 @@ Anfragebild.
 pytest tests/
 ```
 
-Acht Dateien, drei Sekunden, kein Torch: die Recall-Auswertung gegen eine
+Zehn Dateien, drei Sekunden, kein Torch: die Recall-Auswertung gegen eine
 handgerechnete Erwartung (Standard, Hard, Blickrichtung, Panorama), der Split gegen
 die versionierten Listen, die Paarbildung, `validate_config` gegen die
 echte `config.yaml` und gegen Tippfehler, die PCA-Projektion gegen sklearn,
 `localizable` gegen die volle Distanzmatrix, und die versionierten
 Ergebnis-JSONs gegen beide Bootstraps. Ein Test prüft außerdem, dass der in
 jeder Ergebnis-JSON vermerkte Commit im Repository auffindbar ist — sonst ist
-die Kennung wertlos. Dieselben Tests laufen bei jedem Push
-(`.github/workflows/check.yml`).
+die Kennung wertlos. Dazu die Schutzmechanismen selbst: dass eine geänderte
+`config.yaml` den Fingerabdruck wirklich zum Abbruch bringt und den
+abweichenden Schlüssel nennt, und dass ein Encoder aus einer anderen Stadt
+auffällt.
+
+Dieselben Tests laufen bei jedem Push (`.github/workflows/check.yml`), unter
+Python 3.11 **und** 3.14. `faiss-cpu` ist dort installiert, obwohl es das
+schwerste Paket ist: ohne es übersprünge der CI das blockweise FAISS-Merging
+still, und das ist die Stelle, an der ein Fehler falsche Zahlen statt eines
+Absturzes ergäbe. Was im CI dennoch übersprungen wird (Torch, OSMnx), sagt
+`pytest -rs` in jedem Lauf.
 
 ## Reproduzierbarkeit
 
@@ -722,8 +756,10 @@ anyloc        linear      4096      0.335  [0.277, 0.400]   0.504   0.570   0.63
 clip          none         512      0.073  [0.044, 0.108]   0.106   0.129   0.158
 clip          linear       512      0.123  [0.092, 0.161]   0.221   0.281   0.353
 eigenplaces   none        2048      0.484  [0.405, 0.574]   0.608   0.650   0.695
+eigenplaces   hmm30-25    2048      0.501  [0.415, 0.596]   0.603   0.633   0.675
 eigenplaces   linear      2048      0.444  [0.372, 0.523]   0.593   0.648   0.696
 megaloc       none        8448      0.568  [0.475, 0.666]   0.676   0.719   0.763
+megaloc       hmm30-25    8448      0.598  [0.500, 0.699]   0.690   0.725   0.764
 megaloc       linear      8448      0.442  [0.372, 0.517]   0.580   0.628   0.667
 mixvpr        none        4096      0.426  [0.354, 0.509]   0.543   0.590   0.642
 mixvpr        linear      4096      0.363  [0.302, 0.433]   0.508   0.568   0.624
@@ -734,10 +770,11 @@ Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.
 ```
 
 Spalte „Variante": `none` = Encoder wie veröffentlicht, `linear` = mit
-trainiertem linearem Adapter. `--derived` zeigt alle 36 Zeilen: Namen mit
-`_pca512` sind per PCA auf 512 reduziert, `_pcaw512` zusätzlich gewhitent,
-`_pcaw4096` / `_pcaw2048` gewhitent ohne Reduktion, `_concat` verkettet,
-`seq3` = Trefferlisten über ±3 Nachbarframes aufsummiert.
+trainiertem linearem Adapter, `hmm30-25` = Trefferlisten einer Fahrt über
+ein HMM umsortiert (β = 30, σ = 25 m). `--derived` zeigt alle 39 Zeilen:
+Namen mit `_pca512` sind per PCA auf 512 reduziert, `_pcaw512` zusätzlich
+gewhitent, `_pcaw4096` / `_pcaw2048` gewhitent ohne Reduktion, `_concat`
+verkettet, `seq3` = Trefferlisten über ±3 Nachbarframes aufsummiert.
 
 Weitere Sichten: `--threshold 5` bis `100`, `--split "Hard: …"` und
 `--split "Blickrichtung: …"` für die strengeren Ground Truths. Bei MegaLoc
@@ -762,10 +799,11 @@ Fahrten für beide schwer sind:
 | eigenplaces → eigenplaces_pcaw2048 | −0.025 | [−0.042, −0.010] | ja |
 | anyloc → anyloc_pcaw4096 | +0.117 | [+0.078, +0.162] | ja |
 | megaloc → eigenplaces_megaloc_concat | +0.004 | [−0.005, +0.014] | nein — gleichauf |
+| megaloc → megaloc_hmm30-25 | +0.030 | [+0.020, +0.041] | ja |
 | megaloc → megaloc_linear | −0.126 | [−0.179, −0.073] | ja |
 | clip_pcaw512 → clip_pcaw512_linear | +0.009 | [−0.002, +0.021] | nein |
 
-Alle 35 Paare in `experiments/results/<stadt>/bootstrap_ci.json`.
+Alle 38 Paare in `experiments/results/<stadt>/bootstrap_ci.json`.
 
 ### Sechs Städte — `python experiments/city_comparison.py`
 
@@ -1018,6 +1056,56 @@ zusammen erklärt, warum Aggregation scheitert: bei einer groben
 Verwechslung liegen die Nachbarn geschlossen am falschen Ort, und bei einem
 knappen Fehlgriff ist der beste Treffer schon die beste Antwort.
 
+### Die Fahrt als Pfad — `python experiments/sequence_hmm.py`
+
+Der Abschnitt darüber erklärt, warum Aggregation scheitert: die Fehler
+benachbarter Frames sind kohärent. Das Aufsummieren der Nachbarlisten
+(`seq3`, −0.009) scheitert aber aus **zwei** Gründen, die es nicht trennt —
+kohärente Fehler *und* die Forderung, dasselbe Datenbankbild in mehreren
+Listen zu finden, was bei 15 % Referenz selten vorkommt.
+
+Ein HMM braucht das zweite nicht. Zustände sind die Top-k *eines* Frames,
+die Kandidaten dürfen je Frame andere sein; ein Übergang fragt nur, ob der
+Abstand zweier Kandidaten zur verstrichenen Zeit passt. Ein Kandidat sechs
+Kilometer abseits fällt, weil man in 0,17 s keine sechs Kilometer fährt.
+Die Geschwindigkeit (12,5 m/s) kommt aus den **Datenbank**sequenzen — die
+Query-Positionen sind die Ground Truth und gehen nirgends ein.
+
+β = 30 und σ = 25 m sind die Voreinstellungen des Skripts und standen vor
+dem Lauf fest (σ ist die Schwelle der Ground Truth, β eine
+Ähnlichkeitsskala); berichtet wird diese eine Zeile, nicht die beste aus
+einem Sweep.
+
+| | R@1 | R@5 | R@10 | R@20 | Viterbi-Pfad |
+|---|---|---|---|---|---|
+| MegaLoc | 0.568 | 0.676 | 0.719 | 0.763 | — |
+| MegaLoc, HMM | **0.598** | **0.690** | **0.725** | **0.764** | 0.603 |
+| EigenPlaces | 0.484 | **0.608** | **0.650** | **0.695** | — |
+| EigenPlaces, HMM | **0.501** | 0.603 | 0.633 | 0.675 | 0.511 |
+
+**Das ist die einzige Nachbearbeitung im Projekt, die Top-1 schlägt** —
+und die einzige, deren Gewinn das Intervall überlebt:
+
+| Vergleich | Differenz | 95 % | belegt |
+|---|---|---|---|
+| megaloc → megaloc_hmm30-25 | **+0.030** | [+0.020, +0.041] | ja |
+| eigenplaces → eigenplaces_hmm30-25 | **+0.017** | [+0.006, +0.030] | ja |
+
+Dass diese Intervalle so viel enger sind als die ±0.10 der Einzelzahl, ist
+kein Widerspruch: die Differenz wird **gepaart über dieselben Fahrten**
+gemessen, und es ist ja dieselbe Trefferliste, nur anders sortiert — was für
+beide Varianten gleich schwer ist, fällt heraus.
+
+Und der Gewinn ist nicht umsonst. Ein Re-Ranking sortiert die Liste nur um:
+was nach oben rutscht, verdrängt anderes nach unten. Bei EigenPlaces kostet
+das R@5 bis R@20 (0.650 → 0.633 bei k = 10), bei MegaLoc nicht. Wer Top-1
+braucht, gewinnt; wer eine Kandidatenliste braucht, verliert womöglich.
+
+Die Erwartung war klein und ist eingetroffen: das HMM greift nur bei
+*unzusammenhängenden* Ausreißern, und 88 % der Fehlgriffe sind kohärente
+Verwechslungen — eine ganze Fahrt, die geschlossen auf die falsche Straße
+zeigt, ist als Pfad genauso konsistent wie die richtige.
+
 ### Laufzeit und Speicher — `experiments/timing.py`
 
 Suche im FAISS-Flat-Index über 48.321 Datenbankbilder (M1 Pro, CPU):
@@ -1087,7 +1175,7 @@ Bootstrap-Intervall, liegende Balken nach Wert sortiert, Farbe = Encoder),
 `vergleich_recall_k_25m.png` und `vergleich_schwellen.png` (Kurven, Farbe =
 Encoder, gestrichelt = Adapter). Mit `--derived` heißen sie `_derived` und
 werden zu kleinen Vielfachen: ein Feld je Encoder, Farbe und Markerform =
-Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 37 Zeilen in eine
+Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 39 Zeilen in eine
 Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde. `results/<stadt>/figures/localization/` —
 je Encoder die Fehlerverteilung. `results/<stadt>/figures/demo/` — Trefferreihen,
 Karten auf dem Straßennetz, Encoder-Vergleich. `experiments/results/` —
@@ -1224,8 +1312,32 @@ veröffentlicht, muss das beachten.
 
 ## Lizenz
 
-Der Code in diesem Repository steht unter der [MIT-Lizenz](LICENSE).
+Der **Code** steht unter der [MIT-Lizenz](LICENSE).
 
-Nicht darunter fallen die Mapillary-Daten (CC BY-SA 4.0), die geklonten
-Fremd-Repositories unter `external/` und die Modellgewichte unter `weights/`
-— deren Lizenzen stehen oben unter Credits.
+Nicht darunter fallen die Mapillary-Daten, die OSM-Geodaten, die geklonten
+Fremd-Repositories unter `external/` und die Modellgewichte unter
+`weights/`. Was genau davon im Repository liegt, unter welcher Lizenz, und
+welche Namensnennung dazugehört, steht in [NOTICE.md](NOTICE.md).
+
+**Kurz:** Die Bilder liegen nicht hier, die **Metadaten schon** —
+`data/<stadt>/processed/metadata.parquet`, rund 66 MB über sechs Städte,
+unter CC BY-SA 4.0. Wer daraus abgeleitete Datensätze veröffentlicht, muss
+sie unter denselben Bedingungen weitergeben und Mapillary nennen. Die Karten
+enthalten OSM-Daten (ODbL, © OpenStreetMap-Mitwirkende).
+
+### Personenbezug
+
+Gesichter und Kennzeichen macht Mapillary vor der Veröffentlichung
+automatisch unkenntlich — das betrifft die **Bilder**. Die **Metadaten**
+enthalten `creator_id`, eine pseudonyme Konto-ID, zusammen mit `lat`, `lon`
+und `captured_at`: je Konto also eine Aufnahmespur durch die Stadt.
+
+Das steht nicht zum Schmuck dort. Die „Hard"-Ground-Truth (*anderer
+Fotograf oder mehr als 180 Tage Abstand*) braucht genau diesen Vergleich,
+und ohne ihn ließe sich der Dubletteneffekt im Städtevergleich — der
+größte einzelne Messeffekt des Projekts, bis zu 0.204 R@1 — nicht messen.
+Gebraucht wird dabei nur, **ob** zwei Bilder vom selben Konto stammen, nie
+wessen Konto es ist; die IDs werden nirgends aufgelöst oder verknüpft.
+
+Wer das Repository weiterverwendet, sollte das wissen: es ist ein
+Benchmark-Datensatz, kein anonymisierter.
