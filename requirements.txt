@@ -1,31 +1,71 @@
-numpy
-pandas
-scikit-learn
-torch
-torchvision
-jupyterlab
-matplotlib
-osmnx
-folium
-faiss-cpu
-geopandas
-shapely
-requests
-scipy
-pyyaml
-mapbox-vector-tile
-einops
-Pillow
-transformers
-pyarrow
-tqdm
-nbformat
-nbclient
-timm
-fast_pytorch_kmeans
-gdown
-huggingface_hub
-nbstripout
-ruff
-pytest
+# pip-/uv-Variante der Umgebung. Fuer conda siehe environment.yml.
+#
+#   uv venv --python 3.14 && source .venv/bin/activate
+#   uv pip install -r requirements.txt
+#
+# 3.14 ist die Version, mit der entwickelt wird; 3.11 ist das Minimum
+# (src/config.py -> MIN_PYTHON) und laeuft ebenfalls.
+#
+# VERSIONSPOLITIK -- zwei Dateien, zwei Zwecke:
+#
+#   requirements.txt       untere Grenzen. Laeuft weiter, wenn eine Library
+#                          nachzieht. Das ist die Datei fuer "einmal
+#                          anschauen" und fuer die CI.
+#   requirements.lock.txt  exakte Versionen eines Laufs, der nachweislich
+#                          durchlief. Das ist die Datei fuer "dieselben
+#                          Zahlen noch einmal rechnen".
+#
+# Was an den unteren Grenzen NACHGEMESSEN ist und was nicht:
+#
+#   gemessen   numpy 2.0.0, pandas 2.2.2, scipy 1.13.0, scikit-learn 1.4.2,
+#              pyarrow 16.0.0, shapely 2.0, geopandas 1.0, faiss-cpu 1.8.0.post1,
+#              pyyaml 6.0, tqdm 4.66, pytest 8.0, ruff 0.5 unter Python 3.11:
+#              `pytest tests/` und `ruff check .` laufen durch.
+#              faiss-cpu 1.8.0 (ohne .post1) ist gegen numpy 1.x gebaut und
+#              bricht beim Import -- daher diese eine genauere Grenze.
+#   gemessen   Der Fingerabdruck (pd.util.hash_pandas_object in
+#              src/run_guard.py) liefert unter pandas 2.2.2 / 2.3.3 / 3.0.6
+#              und numpy 2.0 / 2.2 / 2.4 denselben Wert. Ein Major-Sprung
+#              entwertet die vorhandenen Artefakte also nicht.
+#   NICHT      torch, torchvision, transformers, timm, einops,
+#   gemessen   fast_pytorch_kmeans, lightglue -- die Encoder brauchen
+#              Modellgewichte und wurden an den unteren Grenzen nie
+#              ausgefuehrt. Die Zahlen darunter sind das, womit entwickelt
+#              wurde, keine geprueften Minima.
+
+numpy>=2.0
+pandas>=2.2
+scikit-learn>=1.4
+scipy>=1.13
+pyarrow>=16.0
+faiss-cpu>=1.8.0.post1   # 1.8.0 ist gegen numpy 1.x gebaut und bricht unter numpy>=2
+
+torch>=2.2
+torchvision>=0.17
+transformers>=4.40
+timm>=1.0
+einops>=0.7
+fast_pytorch_kmeans>=0.2
+
+geopandas>=1.0
+shapely>=2.0
+osmnx>=2.0
+folium>=0.15
+
+jupyterlab>=4.0
+nbformat>=5.9
+nbclient>=0.9
+nbstripout>=0.7
+matplotlib>=3.8
+tqdm>=4.66
+pyyaml>=6.0
+requests>=2.31
+Pillow>=10.0
+mapbox-vector-tile>=2.0
+gdown>=5.0
+huggingface_hub>=0.23
+ruff>=0.5
+pytest>=8.0
+
+# nur fuer experiments/geometric_verification.py; bringt kornia und opencv mit
 lightglue @ git+https://github.com/cvg/LightGlue.git
