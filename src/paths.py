@@ -24,12 +24,28 @@ import re
 import unicodedata
 from pathlib import Path
 
-_UMLAUTE = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss", "Ä": "ae", "Ö": "oe", "Ü": "ue"})
+# Was die NFKD-Zerlegung unten NICHT aufloest, weil es keine Grundform mit
+# Akzent ist, sondern ein eigener Buchstabe: deutsche Umlaute wuerden sonst
+# zu "o"/"u" statt "oe"/"ue", und aeltere Staebe wie ø, æ, ł, đ fielen beim
+# ascii-ignore ersatzlos heraus -- "Ærøskøbing" wurde so zu "rskbing", und
+# zwei verschiedene Staedte koennten auf denselben Slug fallen.
+_SONDERZEICHEN = str.maketrans({
+    "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss",
+    "Ä": "ae", "Ö": "oe", "Ü": "ue",
+    "ø": "oe", "Ø": "oe", "æ": "ae", "Æ": "ae", "å": "aa", "Å": "aa",
+    "ł": "l", "Ł": "l", "đ": "d", "Đ": "d", "ð": "d", "Ð": "d",
+    "þ": "th", "Þ": "th", "ı": "i", "İ": "i", "œ": "oe", "Œ": "oe",
+})
 
 
 def city_slug(city):
-    """'Osnabrück, Germany' -> 'osnabrueck', 'Halle (Saale), Germany' -> 'halle-saale'."""
-    name = str(city).split(",")[0].strip().translate(_UMLAUTE)
+    """'Osnabrück, Germany' -> 'osnabrueck', 'Halle (Saale), Germany' -> 'halle-saale'.
+
+    Nicht-deutsche Sonderzeichen gehen ueber _SONDERZEICHEN, alles Uebrige
+    ueber NFKD + ascii-ignore (é -> e). Ein Name, von dem nichts uebrig
+    bleibt, ist ein Fehler und keine leere Ablage.
+    """
+    name = str(city).split(",")[0].strip().translate(_SONDERZEICHEN)
     name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     if not name:

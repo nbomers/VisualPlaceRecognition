@@ -23,7 +23,7 @@ from tqdm.auto import tqdm
 
 from .geo import haversine_distance, to_metric_xy
 from .paths import Paths
-from .run_guard import embedding_fingerprint, require_fingerprint
+from .run_guard import embedding_fingerprint, require_city_match, require_fingerprint
 
 
 def retrieval_inputs(root, cfg, method, adapter="none", reference_splits=None):
@@ -71,6 +71,8 @@ def load_retrieval(root, cfg, method, adapter="none", sequence_window=None,
             f"  python run.py --method {method}   rechnet ihn hier"
         )
     meta = pd.read_parquet(meta_datei)
+    # Der Fingerabdruck deckt die Stadt nicht ab -- siehe require_city_match.
+    require_city_match(root, cfg, meta, what=f"Encoder {name!r}")
     fingerprint = embedding_fingerprint(cfg, method, adapter, meta)
     if reference_splits:
         fingerprint = {**fingerprint, "reference_splits": list(reference_splits)}
@@ -113,7 +115,7 @@ def descriptor_dim(root, cfg, method, adapter="none"):
     js = pfade.evaluation / f"{name}.json"
     if js.exists():
         try:
-            return int(json.loads(js.read_text())["dim"])
+            return int(json.loads(js.read_text(encoding="utf-8"))["dim"])
         except (ValueError, KeyError, OSError):
             pass                        # unbrauchbar -> unten sauber melden
 

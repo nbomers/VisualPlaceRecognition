@@ -145,6 +145,55 @@ def _hinweis(artifact_path):
     return "-> die erzeugende Stufe mit dieser config.yaml neu laufen lassen"
 
 
+def require_city_match(root, cfg, metadata, what="Artefakt", min_overlap=0.5):
+    """
+    Gehoert dieses Encoder-Artefakt ueberhaupt zur konfigurierten Stadt?
+
+    Die Luecke, die das schliesst: der Fingerabdruck beschreibt Verfahren,
+    Modellkonfiguration, Split-Parameter und einen Hash der Metadaten -- aber
+    nicht die Stadt. Die Metadaten liegen NEBEN den Embeddings und wandern
+    beim Kopieren mit. Landet ein ganzer data/<stadt>/embeddings/-Baum beim
+    rsync zwischen den beiden Projektrechnern im falschen Stadt-Zweig, passt
+    er zu sich selbst, und jede Stufe rechnet bereitwillig weiter -- mit den
+    Bildern der einen Stadt und den Ergebnisordnern der anderen.
+
+    Deshalb hier eine Pruefung gegen etwas, das NICHT mitwandert: die
+    versionierte data/<stadt>/processed/metadata.parquet. Verglichen werden
+    die image_id-Mengen, nicht ihre Hashes -- ein Encoder darf Bilder fehlen
+    haben (in Osnabrueck ist ein Download gescheitert, bei MegaLoc zwei), er
+    darf nur keine FREMDEN enthalten.
+
+    Dasselbe Muster wie min_overlap in src/split.py, das dort Split-Listen
+    aus einer anderen Stadt abfaengt.
+
+    Ohne data/<stadt>/processed/metadata.parquet (01 noch nicht gelaufen)
+    passiert nichts -- es gibt dann nichts, wogegen man pruefen koennte.
+    """
+    from .paths import Paths
+
+    pfad = Paths(cfg, root).processed / "metadata.parquet"
+    if not pfad.exists():
+        return
+    stadt = set(pd.read_parquet(pfad, columns=["image_id"])["image_id"].to_numpy().tolist())
+    eigene = set(pd.Index(metadata["image_id"]).to_numpy().tolist())
+    if not eigene:
+        return
+    anteil = len(eigene & stadt) / len(eigene)
+    if anteil >= min_overlap:
+        return
+    raise RuntimeError(
+        f"{what} gehoert nicht zu {cfg['city']!r}.\n"
+        f"  Nur {anteil:.0%} seiner {len(eigene):,} Bilder kommen in\n"
+        f"  {pfad} vor ({len(stadt):,} Bilder).\n"
+        "Die Metadaten eines Encoders liegen neben seinen Embeddings und "
+        "wandern beim\nKopieren mit -- der Fingerabdruck allein kann das "
+        "nicht bemerken.\n"
+        "-> Liegt der Encoder im falschen data/<stadt>/embeddings/-Zweig? "
+        "Oder ist\n   VPR_CITY / config.yaml -> city auf die falsche Stadt "
+        "gesetzt?"
+    )
+
+
 def _sidecar(artifact_path):
     artifact_path = Path(artifact_path)
     return artifact_path.with_name(artifact_path.name + ".fingerprint.json")
@@ -153,7 +202,7 @@ def _sidecar(artifact_path):
 def write_fingerprint(artifact_path, fingerprint, **extra):
     """Legt <artefakt>.fingerprint.json ab. Nach dem Schreiben aufrufen."""
     payload = {"hash": short_hash(fingerprint), "fingerprint": fingerprint, **extra}
-    _sidecar(artifact_path).write_text(json.dumps(payload, indent=2, default=str))
+    _sidecar(artifact_path).write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
     return payload["hash"]
 
 
@@ -176,7 +225,7 @@ def require_fingerprint(artifact_path, fingerprint, what="Artefakt"):
             f"{_hinweis(artifact_path)}"
         )
 
-    stored = json.loads(side.read_text())
+    stored = json.loads(side.read_text(encoding="utf-8"))
     want = short_hash(fingerprint)
     if stored.get("hash") == want:
         return stored

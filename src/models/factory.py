@@ -49,6 +49,7 @@ def _anyloc(cfg, model_id, device, root):
         num_clusters=a["num_clusters"],
         image_size=a["image_size"],
         pca_dim=a.get("pca_dim"),
+        seed=int(cfg["vpr"]["split_seed"]),
     )
     # AnyLoc reduziert seine 49.152 VLAD-Dimensionen mit einer PCA, die 04 auf
     # den train-Bildern anpasst und neben die Embeddings legt. Ohne sie liefert

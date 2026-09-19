@@ -47,12 +47,36 @@ def read_split_lists(processed_dir):
     pfade = [processed_dir / name for name in LISTEN]
     if not all(p.exists() for p in pfade):
         return None
-    return tuple(p.read_text().split() for p in pfade)
+    return tuple(p.read_text(encoding="utf-8").split() for p in pfade)
+
+
+def require_split_lists(processed_dir):
+    """
+    Wie read_split_lists, aber mit einer Fehlermeldung statt None.
+
+    Fuer Aufrufer, die die drei Listen brauchen und nichts wuerfeln duerfen
+    (02 prueft den Split, es darf keinen erfinden). Ohne diese Funktion
+    entpackt der Aufrufer ein None und bekommt
+
+        TypeError: cannot unpack non-iterable NoneType object
+
+    -- eine Meldung, die nicht sagt, welche Datei fehlt und wer sie erzeugt.
+    """
+    listen = read_split_lists(processed_dir)
+    if listen is not None:
+        return listen
+    fehlend = [n for n in LISTEN if not (processed_dir / n).exists()]
+    raise FileNotFoundError(
+        "Split-Listen fehlen in {}:\n  {}\n"
+        "Sie entstehen in 01 (und liegen fuer die gerechneten Staedte im Git).\n"
+        "-> python run.py --from 01".format(
+            processed_dir, "\n  ".join(fehlend))
+    )
 
 
 def write_split_lists(processed_dir, train, database, query):
     for name, liste in zip(LISTEN, (train, database, query)):
-        (processed_dir / name).write_text("\n".join(liste) + "\n")
+        (processed_dir / name).write_text("\n".join(liste) + "\n", encoding="utf-8")
 
 
 def split_sequences(sequence_ids, processed_dir, cfg, min_overlap=0.5):

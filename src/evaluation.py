@@ -248,5 +248,5 @@ def write_evaluation(path, cfg, embedding_name, dim, n_database, befunde,
         **extra,
         "auswertungen": befunde,
     }
-    path.write_text(json.dumps(payload, indent=2))
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path

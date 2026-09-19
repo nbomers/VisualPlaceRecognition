@@ -38,7 +38,7 @@ STANDARD_SCHWELLE = int(float(CFG["vpr"]["uncertain_radius_m"]))
 def load(reference="database"):
     if not EVAL_DIR.exists():
         return []
-    laeufe = [json.loads(p.read_text()) for p in sorted(EVAL_DIR.glob("*.json"))]
+    laeufe = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(EVAL_DIR.glob("*.json"))]
     # In die Recall-Tabelle gehoeren nur Auswertungen aus 07. Ueber den Inhalt
     # filtern, nicht ueber den Dateinamen -- haelt auch fuer alles Weitere,
     # was spaeter einmal in dem Verzeichnis landet.
@@ -55,6 +55,25 @@ def load(reference="database"):
 
 
 FIGURE_DIR = PATHS.figures / "evaluation"
+
+
+def _derived_hinweis(args, ordner):
+    """
+    Ohne --derived filtert compare.py die abgeleiteten Encoder heraus. Wer
+    nur PCA-Varianten gerechnet hat, sieht sonst "keine Daten" und haelt das
+    fuer einen leeren Ordner -- dabei liegen die JSONs da.
+    """
+    if args.derived or not ordner.exists():
+        return ""
+    versteckt = sorted(p.stem for p in ordner.glob("*.json")
+                       if _abgeleitet(p.stem) and not p.stem.endswith("_fullref"))
+    if not versteckt:
+        return ""
+    wieviele = ("einer liegt vor" if len(versteckt) == 1
+                else f"{len(versteckt)} liegen vor")
+    return ("\n\nOhne --derived werden die abgeleiteten Encoder ausgeblendet; "
+            f"{wieviele}\n(z.B. {versteckt[0]}). "
+            "Mit ihnen:\n  python compare.py --derived")
 
 
 def _abgeleitet(method):
@@ -121,7 +140,7 @@ def bootstrap_intervals(args, still=False):
             print(f"Keine Intervalle: {ci_path.relative_to(ROOT)} fehlt "
                   f"-> python experiments/bootstrap_ci.py --reference {args.reference}\n")
         return {}
-    ci = json.loads(ci_path.read_text())
+    ci = json.loads(ci_path.read_text(encoding="utf-8"))
     if int(ci["threshold_m"]) != args.threshold or ci["split"] != args.split:
         if not still:
             print(f"Keine Intervalle: {ci_path.relative_to(ROOT)} gilt fuer "
@@ -139,13 +158,13 @@ def localization_table(args):
     """
     if not LOC_DIR.exists():
         raise SystemExit(f"Keine Lokalisierung in {LOC_DIR.relative_to(ROOT)}. 08 laufen lassen.")
-    laeufe = [json.loads(p.read_text()) for p in sorted(LOC_DIR.glob("*.json"))]
+    laeufe = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(LOC_DIR.glob("*.json"))]
     laeufe = [r for r in laeufe if "verfahren" in r]
     if not args.derived:
         laeufe = [r for r in laeufe if not _abgeleitet(r["method"])]
     laeufe.sort(key=lambda r: (r["method"], r["adapter"] != "none"))
     if not laeufe:
-        raise SystemExit("Keine Lokalisierungsergebnisse.")
+        raise SystemExit("Keine Lokalisierungsergebnisse." + _derived_hinweis(args, LOC_DIR))
 
     schluessel = f"unter_{args.threshold}m"
     # Alle Verfahren, die 08 geschrieben hat -- die zwei Vergleichswerte
@@ -531,7 +550,7 @@ def main():
         vorhanden = {n for r in laeufe for n in r["auswertungen"]}
         raise SystemExit(
             f'Keine Daten fuer --split "{args.split}" bei {args.threshold} m.\n'
-            f"Vorhanden: {sorted(vorhanden)}"
+            f"Vorhanden: {sorted(vorhanden)}" + _derived_hinweis(args, EVAL_DIR)
         )
 
     loesbar = zeilen[0][1]["loesbar"]

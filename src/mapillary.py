@@ -39,7 +39,7 @@ def load_token(root):
     """
     env_file = root / ".env"
     if env_file.exists():
-        for line in env_file.read_text().splitlines():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
@@ -51,6 +51,35 @@ def load_token(root):
             "  MAPILLARY_TOKEN=MLY|dein|token"
         )
     return token
+
+
+def bild_ist_heil(pfad):
+    """
+    Ist die JPG-Datei vollstaendig, oder brach der Download mittendrin ab?
+
+    Wichtig ist hier LOAD, nicht VERIFY. Image.verify() liest nur den Kopf
+    und die Struktur; ein bei 50 % abgeschnittenes JPEG haelt es fuer heil.
+    Gemessen an einem 2.529-Byte-JPEG:
+
+        Anteil der Bytes   verify()   load()
+            10 %           OSError    OSError
+            50 %           OK         OSError
+            90 %           OK         OSError
+            99 %           OK         OSError
+
+    Genau die 50-bis-99-%-Faelle entstehen beim Abbruch eines Downloads --
+    also die, die diese Pruefung finden soll. load() dekodiert das ganze
+    Bild und ist dadurch langsamer; bei verify_all_images: true ueber
+    330.000 Dateien ist das der Preis fuer eine Pruefung, die etwas prueft.
+    """
+    from PIL import Image
+
+    try:
+        with Image.open(pfad) as im:
+            im.load()
+        return True
+    except Exception:
+        return False
 
 
 def make_session(pool_size=16):

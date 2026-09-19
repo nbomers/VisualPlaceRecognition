@@ -155,7 +155,7 @@ class BaseEmbedder:
     def _schreibe_fortschritt(cls, path, done, n):
         datei = cls._fortschritt_datei(path)
         tmp = datei.with_name(datei.name + ".tmp")
-        tmp.write_text(json.dumps({"done": int(done), "n": int(n)}))
+        tmp.write_text(json.dumps({"done": int(done), "n": int(n)}), encoding="utf-8")
         tmp.replace(datei)          # atomar: ein Absturz beim Schreiben laesst
                                     # keine halbe JSON zurueck
 
@@ -178,7 +178,7 @@ class BaseEmbedder:
                 datei = self._fortschritt_datei(path)
                 if datei.exists():
                     try:
-                        done = int(json.loads(datei.read_text())["done"])
+                        done = int(json.loads(datei.read_text(encoding="utf-8"))["done"])
                     except (ValueError, KeyError, OSError):
                         done = 0    # unlesbar -> lieber neu encodieren als
                                     # auf halben Daten aufsetzen
