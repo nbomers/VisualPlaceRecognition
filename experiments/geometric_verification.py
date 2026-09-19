@@ -204,7 +204,7 @@ def main():
             "n_queries": int(len(auswahl)), "stichprobe": True,
             "vorher": vorher, "nachher": nachher,
             "anteil_verifiziert": float((inlier_stat >= args.min_inliers).mean()),
-        }, indent=2))
+        }, indent=2), encoding="utf-8")
     print(f"-> {pfad.relative_to(ROOT)}")
 
 

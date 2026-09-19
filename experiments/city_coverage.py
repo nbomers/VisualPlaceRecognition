@@ -143,7 +143,7 @@ def main():
     # Einstellungen, mit denen 01 Strassennetz und Stadtteile holt.
     configure_osmnx(CFG, PATHS.cache)
     token = load_token(ROOT)
-    done = json.loads(OUT.read_text()) if OUT.exists() else {}
+    done = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     for i, name in enumerate(args.staedte):
         if name in done and not args.force:
             continue
@@ -170,7 +170,7 @@ def main():
               f"{r['anteil_groesster_fotograf']:.0%} | seit 2022: {r['anteil_seit_2022']:.0%} | "
               f"{pano}  ({time.time() - t0:.0f} s)", flush=True)
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        OUT.write_text(json.dumps(done, indent=1, ensure_ascii=False))
+        OUT.write_text(json.dumps(done, indent=1, ensure_ascii=False), encoding="utf-8")
     if done:
         print(f"\n{'Stadt':<16}{'Bilder':>10}{'/km2':>7}{'gedeckt':>9}{'Wohn':>7}{'seit22':>8}"
               f"{'Fotogr.':>9}{'Pano':>7}")

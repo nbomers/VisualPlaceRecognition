@@ -144,7 +144,7 @@ def main():
         "radius_m": args.radius,
         "n_queries": int(len(q_rows)),
         "stufen": zeilen,
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
 
     import matplotlib
     matplotlib.use("Agg")

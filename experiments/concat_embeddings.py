@@ -100,7 +100,7 @@ def concat_one(name, force):
 
     if ziel_npy.exists() and not force:
         sidecar = ziel_npy.with_name(ziel_npy.name + ".fingerprint.json")
-        if sidecar.exists() and json.loads(sidecar.read_text()).get("fingerprint") == fingerprint:
+        if sidecar.exists() and json.loads(sidecar.read_text(encoding="utf-8")).get("fingerprint") == fingerprint:
             print(f"  liegt vor und passt: {ziel_npy.name}")
             return True
         print("  vorhanden, passt aber nicht -- wird neu geschrieben")

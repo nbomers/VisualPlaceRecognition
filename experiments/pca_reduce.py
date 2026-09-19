@@ -108,7 +108,7 @@ def reduce_one(name, force, projection_only=False):
     if ziel_npy.exists() and not force and not projection_only:
         vorhanden = ziel_npy.with_name(ziel_npy.name + ".fingerprint.json")
         if vorhanden.exists():
-            gespeichert = json.loads(vorhanden.read_text()).get("fingerprint")
+            gespeichert = json.loads(vorhanden.read_text(encoding="utf-8")).get("fingerprint")
             if gespeichert == fingerprint:
                 print(f"  liegt vor und passt: {ziel_npy.name}")
                 return True

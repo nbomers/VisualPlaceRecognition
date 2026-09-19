@@ -252,11 +252,11 @@ def search_all(args):
 
 
 def merge(neu_encode, neu_search):
-    alt = json.loads(OUT.read_text()) if OUT.exists() else {}
+    alt = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     alt.setdefault("encodieren", {}).update(neu_encode)
     alt.setdefault("suche", {}).update(neu_search)
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(alt, indent=2))
+    OUT.write_text(json.dumps(alt, indent=2), encoding="utf-8")
     return alt
 
 

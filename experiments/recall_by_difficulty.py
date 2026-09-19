@@ -182,7 +182,7 @@ def main():
         "embedding_name": name, "threshold_m": args.threshold,
         "n_loesbar": int(loesbar.sum()), "recall_1": gesamt, "merkmale": tabellen,
         "herkunft_top1": herkunft,
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
 
     import matplotlib
     matplotlib.use("Agg")
