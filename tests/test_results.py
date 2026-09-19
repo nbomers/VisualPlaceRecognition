@@ -20,7 +20,7 @@ BOOT_FULL = PATHS.experiments / "bootstrap_ci_fullref.json"
 
 
 def _laeufe():
-    return [json.loads(p.read_text()) for p in sorted(EVAL.glob("*.json"))]
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(EVAL.glob("*.json"))]
 
 
 def _alle_ergebnis_jsons():
@@ -50,7 +50,7 @@ def test_alle_laeufe_auf_demselben_split():
 
 @pytest.mark.skipif(not BOOT.exists(), reason="kein Bootstrap")
 def test_bootstrap_reproduziert_07():
-    boot = json.loads(BOOT.read_text())
+    boot = json.loads(BOOT.read_text(encoding="utf-8"))
     schwelle = str(int(boot["threshold_m"]))
     for r in _laeufe():
         if "auswertungen" not in r or r.get("variant") == "fullref":
@@ -82,7 +82,7 @@ def test_code_version_zeigt_auf_einen_auffindbaren_commit():
     """
     unauffindbar = {}
     for pfad in _alle_ergebnis_jsons():
-        commit = (json.loads(pfad.read_text()).get("code_version") or {}).get("commit")
+        commit = (json.loads(pfad.read_text(encoding="utf-8")).get("code_version") or {}).get("commit")
         if not commit:
             continue
         if _git("cat-file", "-e", f"{commit}^{{commit}}").returncode != 0:
@@ -103,7 +103,7 @@ def test_code_version_zeigt_auf_einen_auffindbaren_commit():
 @pytest.mark.skipif(not BOOT_FULL.exists(), reason="kein Bootstrap fuer die volle Referenz")
 def test_bootstrap_fullref_reproduziert_07():
     """Dasselbe fuer das zweite Protokoll -- bisher pruefte es niemand."""
-    boot = json.loads(BOOT_FULL.read_text())
+    boot = json.loads(BOOT_FULL.read_text(encoding="utf-8"))
     schwelle = str(int(boot["threshold_m"]))
     geprueft = 0
     for r in _laeufe():

@@ -145,7 +145,7 @@ def test_descriptor_dim_nimmt_die_npy_wenn_sie_da_ist(tmp_path):
     # Eine JSON mit ABWEICHENDEM Wert daneben: die Datei muss gewinnen.
     js = pfade.evaluation / "megaloc.json"
     js.parent.mkdir(parents=True, exist_ok=True)
-    js.write_text('{"dim": 99}')
+    js.write_text('{"dim": 99}', encoding="utf-8")
 
     assert descriptor_dim(tmp_path, cfg, "megaloc") == 8448
 
@@ -162,7 +162,7 @@ def test_descriptor_dim_faellt_auf_die_evaluations_json_zurueck(tmp_path):
     pfade = Paths(cfg, tmp_path)
     js = pfade.evaluation / "megaloc_linear.json"
     js.parent.mkdir(parents=True, exist_ok=True)
-    js.write_text('{"embedding_name": "megaloc_linear", "dim": 8448}')
+    js.write_text('{"embedding_name": "megaloc_linear", "dim": 8448}', encoding="utf-8")
 
     assert descriptor_dim(tmp_path, cfg, "megaloc", "linear") == 8448
 
@@ -184,6 +184,6 @@ def test_descriptor_dim_ueberspringt_eine_kaputte_json(tmp_path):
     cfg = _mini_cfg(tmp_path)
     js = Paths(cfg, tmp_path).evaluation / "megaloc.json"
     js.parent.mkdir(parents=True, exist_ok=True)
-    js.write_text("{kein json")
+    js.write_text("{kein json", encoding="utf-8")
     with pytest.raises(FileNotFoundError):
         descriptor_dim(tmp_path, cfg, "megaloc")
