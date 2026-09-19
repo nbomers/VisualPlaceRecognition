@@ -8,8 +8,9 @@
 # pycodestyle. Formatierung bleibt Sache des Autors.
 
 line-length = 100
-# docs/history haelt Callback-Ruempfe fuer git-filter-repo, keine Module.
-extend-exclude = ["external", "cache", "data", "results", "weights", "docs"]
+# Alles, was nicht Quelltext dieses Projekts ist: geklonte Fremd-Repos,
+# Caches und generierte Artefakte.
+extend-exclude = ["external", "cache", "data", "results", "weights"]
 
 [lint]
 select = ["F", "B", "E7", "E9", "E402"]

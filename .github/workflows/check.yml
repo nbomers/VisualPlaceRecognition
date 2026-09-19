@@ -1,5 +1,14 @@
 # Linter und Tests bei jedem Push. Kein Torch, keine Bilder, keine Embeddings:
 # die Tests laufen auf synthetischen Daten und den versionierten JSONs.
+#
+# faiss-cpu ist dabei, obwohl es das schwerste Paket hier ist: ohne es
+# ueberspringt tests/test_retrieval.py das blockweise FAISS-Merging still,
+# und genau das ist die Stelle, an der ein Fehler falsche Zahlen statt eines
+# Absturzes ergaebe.
+#
+# Zwei Versionen, weil requirements.txt untere Grenzen nennt: 3.11 ist die
+# aelteste unterstuetzte (src/config.py -> MIN_PYTHON), 3.14 die, mit der
+# entwickelt wird.
 name: check
 
 on: [push, pull_request]
@@ -7,6 +16,10 @@ on: [push, pull_request]
 jobs:
   check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.14"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -15,7 +28,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
-      - run: pip install ruff pytest numpy pandas pyyaml tqdm scipy scikit-learn pyarrow shapely pyproj geopandas
+          python-version: ${{ matrix.python-version }}
+      - run: pip install ruff pytest numpy pandas pyyaml tqdm scipy scikit-learn pyarrow shapely pyproj geopandas "faiss-cpu>=1.8.0.post1"
       - run: ruff check .
-      - run: pytest tests/ -q
+      - run: pytest tests/ -q -rs
