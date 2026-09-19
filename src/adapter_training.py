@@ -13,6 +13,20 @@ Bandaufteilung um jeden Anchor (Radien aus config.yaml -> vpr):
 database und query werden hier nie angefasst: Anchor, Positive und
 Negative kommen aus dem fit-Teil von train, die val-Metrik aus dem
 val-Teil.
+
+ZUM SEED: split_fit_val bekommt ihn als Argument, das Negative-Sampling in
+TripletDataset.sample_negative zieht dagegen aus dem GLOBALEN numpy-RNG,
+und make_loader mischt ueber den globalen torch-RNG. Reproduzierbar ist das
+Training deshalb nur, wenn der Aufrufer vorher beide setzt -- 05 tut das in
+seiner ersten Zelle:
+
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+
+Das bleibt bewusst so: auf einen eigenen Generator umzustellen wuerde die
+Ziehungsreihenfolge aendern, und damit waeren die Adapter-Zahlen unter
+results/ nicht mehr die, die dieser Code erzeugt. Wer das Modul ausserhalb
+von 05 benutzt, setzt die beiden Zeilen selbst.
 """
 
 import random

@@ -18,6 +18,7 @@ Bootstrap in einem Notebook -- vier Zeilen, mehr braucht es nicht:
 """
 
 import os
+import sys
 from pathlib import Path
 
 import yaml
@@ -56,10 +57,36 @@ def apply_env(cfg):
     return cfg
 
 
+# Aelteste Version, unter der die Testsuite hier durchlief. Darunter faellt
+# es sonst irgendwo weiter unten auseinander -- bei einem Notebook, das
+# run.py ohne Konsole ausfuehrt, mit einem SyntaxError aus einem Modul, das
+# mit dem eigentlichen Problem nichts zu tun hat.
+MIN_PYTHON = (3, 11)
+
+
+def require_python(min_version=MIN_PYTHON):
+    """Frueh und mit Namen abbrechen statt spaet und kryptisch."""
+    if sys.version_info[:2] >= min_version:
+        return
+    ist = ".".join(str(x) for x in sys.version_info[:3])
+    soll = ".".join(str(x) for x in min_version)
+    raise RuntimeError(
+        f"Python {ist} ist zu alt -- gebraucht wird mindestens {soll}.\n"
+        f"  Interpreter: {sys.executable}\n"
+        "  conda env create -f environment.yml && conda activate vpr\n"
+        f"  oder:  uv venv --python {soll} && uv pip install -r requirements.txt"
+    )
+
+
 def load_config(root=None):
-    """config.yaml lesen, dann die Umgebung darueberlegen (siehe apply_env)."""
+    """config.yaml lesen, dann die Umgebung darueberlegen (siehe apply_env).
+
+    Jede Stufe geht hier durch -- deshalb steht die Versionspruefung hier und
+    nicht in jedem Notebook einzeln.
+    """
+    require_python()
     root = Path(root) if root else find_project_root()
-    return apply_env(yaml.safe_load((root / "config.yaml").read_text()))
+    return apply_env(yaml.safe_load((root / "config.yaml").read_text(encoding="utf-8")))
 
 
 def paths(cfg, root=None):

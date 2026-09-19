@@ -43,8 +43,16 @@ def main():
         if pfad.is_dir():
             bilder += sorted(str(x) for x in pfad.iterdir()
                              if x.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"))
-        else:
+        elif pfad.exists():
             bilder.append(str(pfad))
+        else:
+            # Sonst faellt der Tippfehler erst auf, nachdem der Encoder
+            # geladen und der FAISS-Index gebaut ist -- und dann mit einer
+            # Meldung ueber ein fehlendes Artefakt statt ueber die Datei.
+            raise SystemExit(
+                f"Kein Bild und kein Ordner: {pfad}\n"
+                f"Eigene Fotos gehoeren nach {paths(cfg, ROOT).own_images}"
+            )
     if not bilder:
         raise SystemExit(f"Keine Bilder in {args.bild} -- Standardordner: {paths(cfg, ROOT).own_images}")
     locator = Locator(cfg, ROOT, args.method, args.adapter, verbose=not args.json)

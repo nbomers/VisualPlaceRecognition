@@ -59,6 +59,9 @@ class AnyLocEmbedder(BaseEmbedder):
         fit_fallback_paths=None,
         fit_sample_images=5000,
         fit_sample_patches=500_000,
+        # Nur fuer das Fallback-Vokabular gebraucht (siehe
+        # _load_or_fit_vocabulary); die Factory reicht vpr.split_seed durch.
+        seed=42,
         num_workers=8,
         use_amp=True,
     ):
@@ -111,6 +114,7 @@ class AnyLocEmbedder(BaseEmbedder):
             fit_fallback_paths,
             fit_sample_images,
             fit_sample_patches,
+            seed,
         )
 
         self.vlad_dim = num_clusters * self.desc_dim
@@ -134,6 +138,7 @@ class AnyLocEmbedder(BaseEmbedder):
         fallback_paths,
         n_imgs,
         n_patches,
+        seed=42,
     ):
         ordner = (
             Path(repo_path).expanduser()
@@ -187,7 +192,10 @@ class AnyLocEmbedder(BaseEmbedder):
             f"{min(n_imgs, len(fallback_paths)):,} Trainingsbildern. "
             "Ergebnisse sind dann nicht mehr mit dem Paper vergleichbar."
         )
-        rng = np.random.default_rng(42)
+        # Derselbe Seed wie ueberall sonst: vpr.split_seed. Stand hier als
+        # feste 42 -- dieselbe Zahl, aber eben nicht dieselbe Quelle, und
+        # damit eine Stelle, die ein geaendertes split_seed nicht erreicht.
+        rng = np.random.default_rng(int(seed))
         sample = [
             fallback_paths[i]
             for i in rng.choice(
