@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-19",
   "embedding_name": "eigenplaces_pcaw512",
   "threshold_m": 25.0,
   "n_loesbar": 34112,
@@ -100,5 +100,15 @@
         }
       ]
     }
-  ]
+  ],
+  "herkunft_top1": {
+    "n_korrekt": 17279,
+    "anteil_selbes_konto": 0.2849701950344349,
+    "anteil_dublette": 0.12674344580126165,
+    "median_tage": 330.91896707175925,
+    "anteil_unter_1_tag": 0.09734359627293246,
+    "anteil_ueber_1_jahr": 0.4296544938943226,
+    "median_blickwinkel_grad": 1.389672380836231,
+    "min_days_apart": 180.0
+  }
 }
