@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-19",
   "embedding_name": "megaloc",
   "threshold_m": 25.0,
   "min_solvable": 100,
@@ -173,13 +173,13 @@
     },
     {
       "stadtteil": "Hafen",
-      "km2": 3.9923822094905117,
+      "km2": 3.992382067220417,
       "n_queries": 2014,
       "n_sequences": 20,
       "n_loesbar": 1078,
       "anteil_loesbar": 0.535253227408143,
       "n_database": 2433,
-      "database_pro_km2": 609.4105905532746,
+      "database_pro_km2": 609.4106122698591,
       "recall": {
         "1": 0.2949907235621521,
         "5": 0.3404452690166976,
@@ -221,13 +221,13 @@
     },
     {
       "stadtteil": "Sonnenh\u00fcgel",
-      "km2": 3.2188071401760907,
+      "km2": 3.2188072824461855,
       "n_queries": 1634,
       "n_sequences": 12,
       "n_loesbar": 114,
       "anteil_loesbar": 0.06976744186046512,
       "n_database": 1296,
-      "database_pro_km2": 402.6336290310018,
+      "database_pro_km2": 402.6336112347439,
       "recall": {
         "1": 0.18421052631578946,
         "5": 0.21929824561403508,
@@ -289,7 +289,7 @@
       "n_queries": 0,
       "n_sequences": 0,
       "n_loesbar": 0,
-      "anteil_loesbar": NaN,
+      "anteil_loesbar": null,
       "n_database": 119,
       "database_pro_km2": 41.57530023306292,
       "recall": {
@@ -381,13 +381,13 @@
     },
     {
       "stadtteil": "(ohne Stadtteil)",
-      "km2": NaN,
+      "km2": null,
       "n_queries": 0,
       "n_sequences": 0,
       "n_loesbar": 0,
-      "anteil_loesbar": NaN,
+      "anteil_loesbar": null,
       "n_database": 0,
-      "database_pro_km2": NaN,
+      "database_pro_km2": null,
       "recall": {
         "1": null,
         "5": null,
