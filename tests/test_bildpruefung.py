@@ -11,11 +11,15 @@ import io
 
 import pytest
 
-# src.mapillary importiert PIL erst in der Funktion -- der Import hier geht
-# also auch ohne Pillow, und importorskip darf darunter stehen.
-from src.mapillary import bild_ist_heil
-
+# Erst die Abhaengigkeiten, dann der Import. src.mapillary zieht auf
+# Modulebene `requests` nach (es ist das HTTP-Modul des Projekts), und
+# bild_ist_heil braucht Pillow. Fehlt eines, soll dieser Test uebersprungen
+# werden -- nicht die ganze Sammlung abbrechen, wie es passiert, wenn der
+# Import oben ohne Schutz steht.
+pytest.importorskip("requests")
 Image = pytest.importorskip("PIL.Image")
+
+from src.mapillary import bild_ist_heil          # noqa: E402
 
 
 def _jpeg_bytes(groesse=(400, 300)):
