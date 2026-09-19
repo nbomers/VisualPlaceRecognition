@@ -4,7 +4,8 @@
 # faiss-cpu ist dabei, obwohl es das schwerste Paket hier ist: ohne es
 # ueberspringt tests/test_retrieval.py das blockweise FAISS-Merging still,
 # und genau das ist die Stelle, an der ein Fehler falsche Zahlen statt eines
-# Absturzes ergaebe.
+# Absturzes ergaebe. requests und pillow aus demselben Grund: ohne sie
+# uebersprungen die Tests, die einen abgebrochenen Download erkennen.
 #
 # Zwei Versionen, weil requirements.txt untere Grenzen nennt: 3.11 ist die
 # aelteste unterstuetzte (src/config.py -> MIN_PYTHON), 3.14 die, mit der
@@ -29,6 +30,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install ruff pytest numpy pandas pyyaml tqdm scipy scikit-learn pyarrow shapely pyproj geopandas "faiss-cpu>=1.8.0.post1"
+      - run: pip install ruff pytest numpy pandas pyyaml tqdm scipy scikit-learn pyarrow shapely pyproj geopandas "faiss-cpu>=1.8.0.post1" requests pillow
       - run: ruff check .
       - run: pytest tests/ -q -rs
