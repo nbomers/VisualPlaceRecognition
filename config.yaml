@@ -122,7 +122,8 @@ vpr:
   # den Mechanismus belegen sie nicht. Dafuer braeuchte es Shrinkage
   # (durch sqrt(lambda + eps * lambda_max) teilen); ungemessen.
   #
-  # Die Bloecke teilen sich ihre Werte ueber YAML-Anker (_vorlagen unten);
+  # Die Bloecke teilen sich ihre Werte ueber YAML-Anker (_vorlagen am
+  # Dateianfang);
   # <<: fuegt den Anker ein, source kommt je Variante dazu.
 
   clip_pca512:        {source: "clip",        <<: *pca512}

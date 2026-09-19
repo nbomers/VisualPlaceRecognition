@@ -10,8 +10,11 @@
 #             CUDA auf Linux und MPS auf dem Mac von selbst; ueber conda
 #             muesste man das je Plattform getrennt pflegen.
 #
-# Versionen sind bewusst nicht festgenagelt, damit dieselbe Datei auf beiden
-# Plattformen aufloest. Fuer ein exaktes Abbild einer Maschine:
+# Untere Grenzen statt fester Versionen, damit dieselbe Datei auf beiden
+# Plattformen aufloest. Welche Kombination nachgemessen ist, steht im Kopf
+# von requirements.txt; requirements.lock.txt haelt eine exakte Aufloesung
+# fest, die nachweislich durchlief. Fuer ein exaktes conda-Abbild einer
+# Maschine:
 #   conda env export --no-builds > environment.lock.yml
 
 name: vpr
@@ -20,47 +23,48 @@ channels:
   - conda-forge
 
 dependencies:
-  - python=3.14
+  # 3.11 ist die aelteste Version, unter der die Testsuite hier durchlief.
+  - python>=3.11
 
   # Rechnen
-  - numpy
-  - pandas
-  - scipy
-  - scikit-learn
-  - pyarrow
-  - faiss-cpu
+  - numpy>=2.0
+  - pandas>=2.2
+  - scipy>=1.13
+  - scikit-learn>=1.4
+  - pyarrow>=16.0
+  - faiss-cpu>=1.8.0.post1
 
   # Geodaten
-  - geopandas
-  - shapely
-  - osmnx
-  - folium
+  - geopandas>=1.0
+  - shapely>=2.0
+  - osmnx>=2.0
+  - folium>=0.15
 
   # Notebooks und Ablauf
-  - jupyterlab
-  - nbformat
-  - nbclient
+  - jupyterlab>=4.0
+  - nbformat>=5.9
+  - nbclient>=0.9
   # Entfernt Zellenausgaben beim Commit. Einmal je Rechner aktivieren:
   #   nbstripout --install --attributes .gitattributes
-  - nbstripout
-  - ruff
-  - pytest
-  - matplotlib
-  - tqdm
-  - pyyaml
-  - requests
-  - pillow
-  - einops
+  - nbstripout>=0.7
+  - ruff>=0.5
+  - pytest>=8.0
+  - matplotlib>=3.8
+  - tqdm>=4.66
+  - pyyaml>=6.0
+  - requests>=2.31
+  - pillow>=10.0
+  - einops>=0.7
 
   - pip
   - pip:
-      - torch
-      - torchvision
-      - transformers
-      - timm
-      - fast_pytorch_kmeans
-      - mapbox-vector-tile
-      - gdown
-      - huggingface_hub
+      - torch>=2.2
+      - torchvision>=0.17
+      - transformers>=4.40
+      - timm>=1.0
+      - fast_pytorch_kmeans>=0.2
+      - mapbox-vector-tile>=2.0
+      - gdown>=5.0
+      - huggingface_hub>=0.23
       # fuer experiments/geometric_verification.py; bringt kornia und opencv mit
       - git+https://github.com/cvg/LightGlue.git
