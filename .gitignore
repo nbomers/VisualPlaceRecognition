@@ -124,8 +124,14 @@ $RECYCLE.BIN/
 # ---------- Ergebnisse ----------
 # Je Stadt ein Zweig: results/<stadt>/... (src/paths.py). Versioniert sind
 # die Recall- und Lokalisierungs-JSONs (KB), der Datensatz-Audit und die
-# Auswertungsabbildungen (~67 KB je Bild); Trefferlisten und die grossen
-# Karten unter figures/coverage bleiben draussen.
+# Abbildungen (~67 KB je Bild); Trefferlisten, Embeddings und Gewichte
+# bleiben draussen.
+#
+# figures/coverage und figures/dataset sind seit dem README-Umbau nicht mehr
+# pauschal ausgeschlossen -- der Daten-Abschnitt zeigt sie. Die Karten unter
+# coverage/ koennen je nach Stadt mehrere MB gross werden: vor dem Hinzufuegen
+# `du -sh results/<stadt>/figures/coverage` pruefen und im Zweifel nur die
+# Hauptstadt des Projekts aufnehmen, nicht alle sechs.
 /results/*
 !/results/*/
 /results/*/*
@@ -147,6 +153,12 @@ $RECYCLE.BIN/
 !/results/*/figures/demo/
 /results/*/figures/demo/*
 !/results/*/figures/demo/*.png
+!/results/*/figures/dataset/
+/results/*/figures/dataset/*
+!/results/*/figures/dataset/*.png
+!/results/*/figures/coverage/
+/results/*/figures/coverage/*
+!/results/*/figures/coverage/*.png
 
 # ---------- Sonstiges ----------
 .cache/
