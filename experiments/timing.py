@@ -283,6 +283,86 @@ def print_table(daten):
         print(f"  {n}: {h}")
 
 
+def recall_je_encoder(schwelle="25"):
+    """embedding_name -> Recall@1 aus den Auswertungen von 07 (Baseline-Zeilen)."""
+    raus = {}
+    for pfad in sorted(PATHS.evaluation.glob("*.json")):
+        r = json.loads(pfad.read_text(encoding="utf-8"))
+        if "auswertungen" not in r or r.get("variant", r.get("adapter")) != "none":
+            continue
+        befund = r["auswertungen"].get("Standard") or next(iter(r["auswertungen"].values()))
+        wert = befund["schwellen"][schwelle]["recall"]["1"]
+        if wert is not None:
+            raus[r["embedding_name"]] = wert
+    return raus
+
+
+def plot_pareto(daten, recall, ziel, schwelle="25"):
+    """
+    Was kostet welcher Gewinn -- Durchsatz und Suchzeit gegen Recall@1.
+
+    Die Tabelle nennt beides, aber niemand liest sie nebeneinander: dass
+    megaloc siebenmal langsamer encodiert als clip und dafuer 0,50 R@1 mehr
+    holt, steht in zwei Spalten, vier Zeilen auseinander.
+
+    Die Messungen stammen nicht alle vom selben Geraet (timing.json haelt
+    device und host fest). Punkte von einem anderen Geraet bekommen eine
+    andere Form: ihre y-Position ist vergleichbar, ihre x-Position nicht.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    blau, rot = "#1565c0", "#c62828"
+    enc, such = daten.get("encodieren", {}), daten.get("suche", {})
+    # Nur Encoder mit Encodier-Messung. Die abgeleiteten Varianten haben nur
+    # eine Such-Messung -- mit ihnen stehen rechts achtzehn Beschriftungen
+    # uebereinander, und die Aussage ist der Vergleich der echten Encoder.
+    namen = [n for n in sorted(enc) if n in recall]
+    if not namen:
+        return None
+
+    geraete = [enc[n]["device"] for n in namen]
+    basis = max(set(geraete), key=geraete.count)
+
+    plt.rcParams["figure.dpi"] = 150
+    fig, achsen = plt.subplots(1, 2, figsize=(12, 5))
+    for ax, quelle, feld, xlabel, titel in (
+        (achsen[0], enc, "bilder_pro_s",
+         "Bilder je Sekunde beim Encodieren  (mehr ist besser)", "Encodieren"),
+        (achsen[1], such, "ms_pro_anfrage",
+         "Millisekunden je Anfrage  (weniger ist besser)", "Suche"),
+    ):
+        for n in namen:
+            if n not in quelle:
+                continue
+            x, y = quelle[n][feld], recall[n]
+            fremd = quelle is enc and quelle[n].get("device") != basis
+            ax.scatter(x, y, s=70, color=rot if fremd else blau,
+                       marker="^" if fremd else "o", zorder=3,
+                       edgecolor="white", linewidth=0.8)
+            ax.annotate(n, (x, y), textcoords="offset points", xytext=(0, 9),
+                        ha="center", fontsize=8.5)
+        ax.set_xscale("log")
+        ax.set_xlabel(xlabel, fontsize=9)
+        ax.set_title(titel, fontsize=10)
+        ax.grid(alpha=0.25, lw=0.5)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.tick_params(labelsize=8)
+        ax.margins(x=0.22, y=0.16)
+
+    achsen[0].set_ylabel(f"Recall@1 bei {schwelle} m", fontsize=9)
+    fremde = sorted({enc[n]["device"] for n in namen if enc[n].get("device") != basis})
+    fig.text(0.5, -0.02, f"Kreis = auf {basis} gemessen"
+             + (f", Dreieck = {'/'.join(fremde)}" if fremde else ""),
+             ha="center", fontsize=8, color="0.35")
+    fig.suptitle("Was kostet welcher Gewinn?", fontsize=11, y=1.0)
+    fig.tight_layout()
+    fig.savefig(ziel, bbox_inches="tight")
+    plt.close(fig)
+    return ziel
+
+
 def main():
     args = _args()
     neu_encode = {} if args.skip_encode else encode_all(args)
@@ -290,6 +370,11 @@ def main():
     daten = merge(neu_encode, neu_search)
     print_table(daten)
     print(f"\ngeschrieben: {OUT.relative_to(ROOT)}")
+    bild = plot_pareto(daten, recall_je_encoder(), OUT.with_suffix(".png"))
+    if bild:
+        print(f"geschrieben: {bild.relative_to(ROOT)}")
+    else:
+        print("keine Abbildung -- es fehlen Encodier-Messungen oder Auswertungen aus 07")
 
 
 if __name__ == "__main__":
