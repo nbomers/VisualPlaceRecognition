@@ -100,6 +100,91 @@ def by_road_type(typ, loesbar, falsch, fehler):
     return raus
 
 
+STRASSEN_LABEL = {"autobahn": "Autobahn", "hauptstrasse": "Hauptstraße",
+                  "sonstige": "Sonstige"}
+
+
+def _tausend(n):
+    """12345 -> '12.345' -- Punkt als Tausendertrennzeichen wie im Rest der Ausgabe."""
+    return f"{int(n):,}".replace(",", ".")
+
+
+def plot_strassentyp(strassen, name, schwelle, gesamt_recall, ziel):
+    """
+    Die Gegenprobe zur Karte, als drei Balkengruppen.
+
+    Auf der Karte sieht die Autobahn wie der Hauptgrund fuer Verwechslungen
+    aus: ihre Fehlgriffe sind lang und schnurgerade und ueberdecken optisch
+    die zehntausend kurzen daneben. Die Zahlen sagen etwas anderes, und sie
+    liegen bereits in derselben JSON -- diese Abbildung stellt sie daneben,
+    damit die Karte nicht allein gelesen wird.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    grau, rot = "#9e9e9e", "#c62828"
+    typen = [t for t in ("autobahn", "hauptstrasse", "sonstige")
+             if strassen.get(t) and strassen[t]["recall_1"] is not None]
+    x = range(len(typen))
+
+    plt.rcParams["figure.dpi"] = 150
+    fig, (a, b, c) = plt.subplots(1, 3, figsize=(13, 4.2))
+
+    # Links: Wo ist das System ueberhaupt schlechter?
+    werte = [strassen[t]["recall_1"] for t in typen]
+    a.bar(x, werte, color=grau, width=0.62)
+    a.axhline(gesamt_recall, color=rot, lw=1.0, ls="--", label="gesamt")
+    for i, t in enumerate(typen):
+        a.text(i, werte[i] + 0.012, f"{werte[i]:.3f}", ha="center", fontsize=9)
+        a.text(i, 0.02, f"n={_tausend(strassen[t]['n_loesbar'])}", ha="center",
+               fontsize=7.5, color="white", weight="bold")
+    a.set_ylim(0, max(werte) * 1.28)
+    a.legend(fontsize=8, frameon=False, loc="upper left")
+    a.set_title(f"Recall@1 je Straßentyp (gesamt {gesamt_recall:.3f})", fontsize=10)
+
+    # Mitte: Wie weit liegt ein Fehlgriff daneben? Log, weil zwischen den
+    # Typen mehr als eine Groessenordnung liegt.
+    med = [strassen[t]["median_fehler_falsch_m"] for t in typen]
+    b.bar(x, med, color=grau, width=0.62)
+    for i, m in enumerate(med):
+        b.text(i, m * 1.07, f"{_tausend(round(m))} m", ha="center", fontsize=9)
+    b.set_yscale("log")
+    b.set_ylim(min(med) * 0.5, max(med) * 3)
+    b.set_title("Median-Abstand eines Fehlgriffs", fontsize=10)
+
+    # Rechts: der eigentliche Befund. Stellt ein Typ mehr grobe Fehler, als
+    # sein Anteil am Datensatz erwarten laesst?
+    anteil_q = [strassen[t]["anteil_loesbar"] for t in typen]
+    anteil_f = [strassen[t]["anteil_an_fehlern_ueber_1km"] for t in typen]
+    breite = 0.36
+    c.bar([i - breite / 2 for i in x], anteil_q, breite, color=grau,
+          label="Anteil an Anfragen")
+    c.bar([i + breite / 2 for i in x], anteil_f, breite, color=rot,
+          label="Anteil an Fehlern > 1 km")
+    for i in x:
+        c.text(i - breite / 2, anteil_q[i] + 0.012, f"{anteil_q[i]:.0%}",
+               ha="center", fontsize=8)
+        c.text(i + breite / 2, anteil_f[i] + 0.012, f"{anteil_f[i]:.0%}",
+               ha="center", fontsize=8)
+    c.set_ylim(0, max(anteil_q + anteil_f) * 1.25)
+    c.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
+    c.legend(fontsize=8, frameon=False, loc="upper left")
+    c.set_title("Über- oder unterrepräsentiert bei groben Fehlern?", fontsize=10)
+
+    for ax in (a, b, c):
+        ax.set_xticks(list(x))
+        ax.set_xticklabels([STRASSEN_LABEL[t] for t in typen], fontsize=9)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.tick_params(labelsize=8)
+
+    fig.suptitle(f"{name}  |  Fehlgriffe nach Straßentyp (Top-1 > {schwelle:g} m)",
+                 fontsize=11, y=1.02)
+    fig.tight_layout()
+    fig.savefig(ziel, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot(G, city_polygon, districts, df, paare, name, schwelle, n_arrows, ziel, rng):
     import geopandas as gpd
     import matplotlib
@@ -213,6 +298,9 @@ def main():
     }, indent=2), encoding="utf-8")
     plot(G, city_polygon, districts, df, paare, name, args.threshold, args.n_arrows,
          out.with_suffix(".png"), rng)
+    plot_strassentyp(strassen, name, args.threshold,
+                     1 - len(falsch) / loesbar.sum(),
+                     OUT_DIR / f"confusion_atlas_{name}_strassentyp.png")
 
     print(f"\n{name}  |  {len(falsch):,} Fehlgriffe unter {loesbar.sum():,} loesbaren "
           f"(Top-1 > {args.threshold:g} m)")
@@ -230,7 +318,7 @@ def main():
     for t, z in strassen.items():
         print(f"{t:<14}{z['n_loesbar']:>9,}{z['anteil_loesbar']:>7.1%}{z['recall_1']:>7.3f}"
               f"{z['median_fehler_falsch_m']:>11,.0f} m{z['anteil_an_fehlern_ueber_1km']:>9.1%}")
-    print(f"\ngeschrieben: {out.relative_to(ROOT)} und .png")
+    print(f"\ngeschrieben: {out.relative_to(ROOT)}, .png und _strassentyp.png")
 
 
 if __name__ == "__main__":
