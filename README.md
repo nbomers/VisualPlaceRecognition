@@ -1,5 +1,29 @@
 # VPR Osnabrück — Visual Place Recognition auf Mapillary-Bildern
 
+[Schnellstart](#schnellstart) ·
+[Ergebnisse](#ergebnisse) ·
+[Pipeline](#pipeline) ·
+[Daten](#daten) ·
+[Reproduzierbarkeit](#reproduzierbarkeit) ·
+[Befehle](#befehlsreferenz) ·
+[`experiments/`](experiments/README.md) ·
+[Lizenz](#lizenz)
+
+[![check](https://github.com/nbomers/VisualPlaceRecognition/actions/workflows/check.yml/badge.svg)](https://github.com/nbomers/VisualPlaceRecognition/actions/workflows/check.yml)
+[![Python 3.11 | 3.14](https://img.shields.io/badge/python-3.11%20%7C%203.14-3776ab?logo=python&logoColor=white)](#voraussetzungen)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-ee4c2c?logo=pytorch&logoColor=white)](#voraussetzungen)
+[![FAISS](https://img.shields.io/badge/FAISS-Flat%20IP-00599c)](#konzeptioneller-aufbau)
+[![Code MIT](https://img.shields.io/badge/Code-MIT-2e7d32)](LICENSE)
+[![Daten CC BY-SA 4.0](https://img.shields.io/badge/Daten-CC--BY--SA%204.0-ef6c00)](NOTICE.md)
+
+[![Encoder](https://img.shields.io/badge/Encoder-5-6a1b9a)](#ergebnisse)
+[![Vergleichbare Zeilen](https://img.shields.io/badge/vergleichbare%20Zeilen-39-6a1b9a)](#ergebnisse)
+[![Staedte](https://img.shields.io/badge/St%C3%A4dte-6-1565c0)](#ergebnisse)
+[![Bilder](https://img.shields.io/badge/Bilder-332.868-1565c0)](#daten)
+[![Referenzbilder](https://img.shields.io/badge/Referenzbilder-48.321-1565c0)](#daten)
+[![Ground Truth](https://img.shields.io/badge/Ground%20Truth-4%20Varianten-1565c0)](#konzeptioneller-aufbau)
+[![Gewichte](https://img.shields.io/badge/%F0%9F%A4%97-MixVPR%20%7C%20AnyLoc-ffcc4d)](#fremd-repositories-und-gewichte)
+
 Projekt im Rahmen des Programmierpraktikums an der **Universität Osnabrück**.
 
 Ein Foto rein, ein Ort raus: das System vergleicht das Anfragebild mit
@@ -13,6 +37,11 @@ Bilder, und 39 vergleichbare Zeilen über fünf Encoder und ihre Varianten.
 **Eingabe:** ein Straßenfoto aus dem Stadtgebiet
 **Ausgabe:** geschätzte Koordinate, eine Konfidenz, und die ähnlichsten
 Referenzbilder — `python locate.py foto.jpg`
+
+![Anfrage und die fünf ähnlichsten Referenzbilder, grün = innerhalb 25 m](results/osnabrueck/figures/demo/eigenplaces_zwei_gruppen.png)
+
+<sub>Links die Anfrage, rechts die fünf ähnlichsten Referenzbilder. Grün =
+innerhalb 25 m. Bilder von [Mapillary](https://www.mapillary.com), CC BY-SA 4.0.</sub>
 
 ---
 
@@ -34,6 +63,7 @@ Referenzbilder — `python locate.py foto.jpg`
 - [Reproduzierbarkeit](#reproduzierbarkeit)
 - [Ergebnisse](#ergebnisse)
 - [Mögliche Erweiterungen](#mögliche-erweiterungen)
+- [Befehlsreferenz](#befehlsreferenz)
 - [Team](#team)
 - [Credits](#credits)
 - [Lizenz](#lizenz)
@@ -68,6 +98,13 @@ tests/` prüft in zwei Sekunden, dass Auswertung, Split und Ergebnisse
 zueinander passen.
 
 ## Ergebnisse auf einen Blick
+
+![Recall@1 bei 25 m je Encoder, mit Bootstrap-Intervall](results/osnabrueck/figures/evaluation/vergleich_r1_25m.png)
+
+<p align="center">
+  <img src="results/osnabrueck/figures/evaluation/vergleich_recall_k_25m.png" width="49%" alt="Recall gegen k bei 25 m">
+  <img src="results/osnabrueck/figures/evaluation/vergleich_schwellen.png" width="49%" alt="Recall@1 gegen die Ground-Truth-Schwelle">
+</p>
 
 Zwei Protokolle, dieselben 53.414 Anfragen aus **Osnabrück** (fünf weitere
 Städte weiter unten). **Volle Referenz**: alle
@@ -223,6 +260,19 @@ flowchart TD
 Bilder) sind die Grundlage für alles Weitere. 04 bis 08 laufen je Encoder
 und Variante.
 
+Der Split in Schritt 01 läuft über **Sequenzen**, nicht über Bilder: eine
+Fahrt landet vollständig in einem Topf. Würfelte man je Bild, stünde zu
+fast jedem Query-Bild ein train-Bild vom selben Meter — aus derselben
+Fahrt, Sekundenbruchteile später. Der Recall maße dann das Wiederfinden
+desselben Fotos, nicht das Wiedererkennen eines Ortes.
+
+![Sequenzbasierter Split gegen einen Split je Bild, derselbe Ausschnitt](results/osnabrueck/figures/dataset/split_sequenz_vs_zufall.png)
+
+<sub>Derselbe 400-m-Ausschnitt, zwei Splits. Links liegt jede Fahrt
+vollständig in einem Topf; rechts, je Bild gewürfelt, steht zu fast jedem
+Query-Bild ein train-Bild vom selben Meter. Auf der ganzen Stadt sehen beide
+gleich aus — sichtbar wird der Unterschied erst im Ausschnitt.</sub>
+
 ## Konzeptioneller Aufbau
 
 Vier Schichten, jede mit einer klaren Zuständigkeit:
@@ -276,6 +326,39 @@ die ersten zwei nicht — dieser Unterschied erklärt am Ende, wie sie auf
 Adapter und Whitening reagieren.
 
 ## Daten
+
+<!-- BILD-PLATZHALTER 2 -- Beispielaufnahmen
+     Zwei bis vier Mapillary-Aufnahmen aus dem Datensatz nebeneinander, die
+     zeigen, womit das System arbeitet: Dashcam bei Gegenlicht, Fahrrad,
+     Fussgaenger, Panorama.
+
+     NICHT den Mapillary-Kartenausschnitt abfotografieren -- dann haengt
+     zusaetzlich die OSM-Kartografie mit an. Bilder aus dem Bestand nehmen
+     (image_root/osnabrueck/<image_id>.jpg); creator_id steht in
+     data/osnabrueck/processed/metadata.parquet.
+
+     Ablageort: results/<stadt>/figures/demo/. Dort liegen die uebrigen
+     Abbildungen mit Mapillary-Bildinhalt, .gitignore laesst *.png dort zu,
+     und NOTICE.md erklaert genau diesen Ordner. (docs/ geht NICHT -- der
+     Ordner ist in .gitignore ausgeschlossen.)
+
+     Namensnennung ist Pflicht (NOTICE.md): CC BY-SA 4.0.
+
+![Vier Aufnahmen aus dem Datensatz — Bilder von Mapillary, CC BY-SA 4.0](results/osnabrueck/figures/demo/beispielbilder.png)
+-->
+
+<p align="center">
+  <img src="results/osnabrueck/figures/dataset/images_per_year.png" width="49%" alt="Bilder je Jahr">
+  <img src="results/osnabrueck/figures/dataset/sequence_sizes.png" width="49%" alt="Länge der Sequenzen">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/figures/dataset/coverage_map.png" width="49%" alt="Abdeckung des Stadtgebiets">
+  <img src="results/osnabrueck/figures/dataset/database_vs_query.png" width="49%" alt="Database gegen Query">
+</p>
+
+<sub>Alle vier aus `02_dataset_audit`. Links oben die Aufnahmejahre, rechts
+oben die Länge der Fahrten; unten die räumliche Abdeckung und die Lage von
+Referenz- gegen Anfragebildern.</sub>
 
 | | |
 |---|---|
@@ -632,6 +715,30 @@ sie. `demo/demo.ipynb` nutzt denselben Weg und zeigt
 dazu Trefferreihen, Karten auf dem Straßennetz und alle Encoder am selben
 Anfragebild.
 
+<p align="center">
+  <img src="results/osnabrueck/figures/demo/eigenplaces_erfolg.png" width="100%" alt="Gelöste Anfrage: Treffer innerhalb 25 m">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/figures/demo/eigenplaces_fehlschlag.png" width="100%" alt="Gescheiterte Anfrage: alle Treffer weiter als 25 m">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/figures/demo/eigenplaces_karte_zwei_gruppen.png" width="49%" alt="Treffer auf dem Straßennetz: zwei Gruppen">
+  <img src="results/osnabrueck/figures/demo/eigenplaces_karte_fehlschlag.png" width="49%" alt="Treffer auf dem Straßennetz: Fehlgriff">
+</p>
+
+<sub>Oben eine gelöste, darunter eine gescheiterte Anfrage — grün umrandet
+heißt innerhalb 25 m. Unten dieselben Treffer auf dem Straßennetz: links
+zerfallen sie in zwei Gruppen, rechts liegen sie geschlossen am falschen Ort.
+Der zweite Fall ist der, den keine Aggregation rettet. Bilder von
+[Mapillary](https://www.mapillary.com), CC BY-SA 4.0.</sub>
+
+Und dasselbe Anfragebild durch alle fünf Encoder:
+
+![Top-5 je Encoder für dieselbe Anfrage](results/osnabrueck/figures/demo/vergleich_query10013.png)
+
+<sub>Eine Zeile je Encoder. Bilder von [Mapillary](https://www.mapillary.com),
+CC BY-SA 4.0.</sub>
+
 ### Tests
 
 ```bash
@@ -807,6 +914,8 @@ Alle 38 Paare in `experiments/results/<stadt>/bootstrap_ci.json`.
 
 ### Sechs Städte — `python experiments/city_comparison.py`
 
+![Dieselbe Pipeline über sechs Städte](experiments/results/city_comparison.png)
+
 Dieselbe Pipeline, derselbe Split-Seed, zwei Encoder, sechs Städte. Die
 Städte wurden aus 50 nach Mapillary-Metadaten vorausgewählt
 (`experiments/city_coverage.py`), bevor ein einziges Bild geladen war.
@@ -944,6 +1053,18 @@ weil die Anfragemengen disjunkt sind; es bleibt beim Vergleich unabhängiger
 Schätzer mit breiten Intervallen.
 ### Lokalisierung — `python compare.py --localization`
 
+<p align="center">
+  <img src="experiments/results/osnabrueck/localization_aggregation_eigenplaces.png" width="49%" alt="Aggregationsverfahren gegen Top-1, EigenPlaces">
+  <img src="experiments/results/osnabrueck/localization_aggregation_megaloc.png" width="49%" alt="Aggregationsverfahren gegen Top-1, MegaLoc">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/figures/localization/eigenplaces_lokalisierungsfehler.png" width="49%" alt="Verteilung des Lokalisierungsfehlers, EigenPlaces">
+  <img src="results/osnabrueck/figures/localization/megaloc_lokalisierungsfehler.png" width="49%" alt="Verteilung des Lokalisierungsfehlers, MegaLoc">
+</p>
+
+<sub>Oben fünf Aggregationsverfahren gegen Top-1, links EigenPlaces, rechts
+MegaLoc. Unten die Verteilung des Fehlers derselben zwei Encoder.</sub>
+
 ```
 Lokalisierung  |  Anteil unter 25 m  |  53,414 Anfragen, Top-10 je Anfrage
 Median des Fehlers in Klammern.
@@ -976,6 +1097,11 @@ und unterliegen Top-1 bei jedem Encoder — MegaLoc: Clustering 0.318 bei
 
 ### Referenzdichte — `experiments/database_density.py`
 
+<p align="center">
+  <img src="experiments/results/osnabrueck/database_density_eigenplaces.png" width="49%" alt="Recall gegen Referenzdichte, EigenPlaces">
+  <img src="experiments/results/osnabrueck/database_density_megaloc_pcaw512.png" width="49%" alt="Recall gegen Referenzdichte, MegaLoc PCA+Whitening 512">
+</p>
+
 `train` stufenweise zur Datenbank dazugenommen, R@1 bei 25 m:
 
 | train dazu | Referenzbilder | lösbar | EigenPlaces | EigenPlaces pcaw512 | MegaLoc pcaw512 |
@@ -995,6 +1121,11 @@ Halbbreite der Tabelle.
 
 ### Stadtteile — `experiments/recall_by_district.py`
 
+<p align="center">
+  <img src="experiments/results/osnabrueck/recall_by_district_megaloc.png" width="49%" alt="Recall je Stadtteil, MegaLoc">
+  <img src="experiments/results/osnabrueck/recall_by_district_eigenplaces_pcaw512.png" width="49%" alt="Recall je Stadtteil, EigenPlaces PCA+Whitening 512">
+</p>
+
 R@1 von MegaLoc je OSM-Stadtteil reicht von 0.07 (Sutthausen) bis 0.83
 (Atter) — Faktor 12 beim selben Encoder, und EigenPlaces ordnet die
 Stadtteile praktisch gleich (Spearman 0.96): die Karte zeigt die Daten,
@@ -1009,6 +1140,11 @@ eine einzelne Fahrt, die ein Wohnviertel mit einem anderen verwechselt
 Karten unter `experiments/results/<stadt>/recall_by_district_*.png`.
 
 ### Ablehnung — `experiments/rejection_curve.py`
+
+<p align="center">
+  <img src="experiments/results/osnabrueck/rejection_curve_megaloc.png" width="49%" alt="Präzision gegen Abdeckung, MegaLoc">
+  <img src="experiments/results/osnabrueck/rejection_curve_eigenplaces_megaloc_concat.png" width="49%" alt="Präzision gegen Abdeckung, Verkettung">
+</p>
 
 Darf das System schweigen, wenn es sich nicht sicher ist? Drei
 Konfidenzmaße aus der Trefferliste, MegaLoc, Präzision = Top-1 innerhalb
@@ -1027,6 +1163,11 @@ lösbaren Anfragen), bei cos ≥ 0.20 noch 75 % (69 %).
 
 ### Schwierigkeit je Anfrage — `experiments/recall_by_difficulty.py`
 
+<p align="center">
+  <img src="experiments/results/osnabrueck/recall_by_difficulty_megaloc.png" width="49%" alt="R@1 gegen Nachbarzahl, Zeit, Blickrichtung, Fotograf — MegaLoc">
+  <img src="experiments/results/osnabrueck/recall_by_difficulty_eigenplaces_pcaw512.png" width="49%" alt="dieselbe Zerlegung für EigenPlaces PCA+Whitening 512">
+</p>
+
 R@1 von MegaLoc nach Eigenschaften der Anfrage, aus den Metadaten:
 
 | Merkmal | | R@1 |
@@ -1041,6 +1182,8 @@ als „viele Nachbarn helfen", nicht als „wenige schaden".
 
 ### Struktur der Fehler — `experiments/confusion_atlas.py`
 
+![Fehlgriffe als Pfeile von der echten zur geschätzten Position](experiments/results/osnabrueck/confusion_atlas_megaloc.png)
+
 Unter den 14.726 Fehlgriffen von MegaLoc (Top-1 weiter als 25 m, nur
 lösbare Anfragen) liegen 45 % unter 100 m — dieselbe Straße, knapp jenseits
 der Schwelle — und 44 % über 1 km; nur 11 % dazwischen. 53 % bleiben im
@@ -1049,6 +1192,17 @@ es gibt keine dominante Verwechslung zweier Orte, sondern viele kleine.
 Autobahn-Anfragen scheitern nicht öfter als andere (R@1 0.570 gegen 0.565),
 ihre Fehlgriffe sind sogar kurz (Median 56 m); die groben Verwechslungen
 sitzen in Wohnstraßen.
+
+**Die Karte legt das Gegenteil nahe, und das ist ein Darstellungsartefakt.**
+Auf ihr dominieren lange, schnurgerade rote Linien entlang der Autobahn —
+ein paar hundert 6-km-Pfeile überdecken optisch zehntausend kurze. Die
+Zahlen daneben sagen: die Autobahn stellt 32 % der lösbaren Anfragen, aber
+nur 23 % der Fehler über 1 km. Sie ist bei den groben Verwechslungen
+**unterrepräsentiert**; überrepräsentiert sind die Wohnstraßen (51 % der
+Anfragen, 56 % der groben Fehler). Autobahn-Anfragen aus dem Datensatz zu
+nehmen würde den Recall senken, nicht heben.
+
+![Fehlgriffe nach Straßentyp: Recall@1, Median-Abstand, Anteil an groben Fehlern](experiments/results/osnabrueck/confusion_atlas_megaloc_strassentyp.png)
 
 Über alle 53.414 Anfragen (08, auch die unlösbaren) liegt der Median eines
 falschen Top-1 bei 1,7 km (MegaLoc) bzw. 1,5 km (EigenPlaces). Beides
@@ -1107,6 +1261,8 @@ Verwechslungen — eine ganze Fahrt, die geschlossen auf die falsche Straße
 zeigt, ist als Pfad genauso konsistent wie die richtige.
 
 ### Laufzeit und Speicher — `experiments/timing.py`
+
+![Encodier-Durchsatz und Suchzeit gegen Recall@1](experiments/results/osnabrueck/timing.png)
 
 Suche im FAISS-Flat-Index über 48.321 Datenbankbilder (M1 Pro, CPU):
 
@@ -1176,7 +1332,14 @@ Bootstrap-Intervall, liegende Balken nach Wert sortiert, Farbe = Encoder),
 Encoder, gestrichelt = Adapter). Mit `--derived` heißen sie `_derived` und
 werden zu kleinen Vielfachen: ein Feld je Encoder, Farbe und Markerform =
 Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 39 Zeilen in eine
-Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde. `results/<stadt>/figures/localization/` —
+Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde.
+
+<p align="center">
+  <img src="results/osnabrueck/figures/evaluation/vergleich_r1_25m_derived.png" width="49%" alt="R@1 je Zeile, kleine Vielfache je Encoder">
+  <img src="results/osnabrueck/figures/evaluation/vergleich_recall_k_25m_derived.png" width="49%" alt="Recall gegen k, kleine Vielfache je Encoder">
+</p>
+
+`results/<stadt>/figures/localization/` —
 je Encoder die Fehlerverteilung. `results/<stadt>/figures/demo/` — Trefferreihen,
 Karten auf dem Straßennetz, Encoder-Vergleich. `experiments/results/` —
 Dichtekurven, Stadtteilkarten, Verwechslungsatlas.
@@ -1237,11 +1400,13 @@ Würzburg (4.895) und Heidelberg (4.879);
 Bamberg (25.248/km², 1,38 Mio. Bilder auf 55 km²) ist ein Sonderfall.
 
 **Nächster Schritt mit mehr Zeit.** Die geometrische Verifikation
-(`experiments/geometric_verification.py`) ist gebaut und geprüft, aber
-nicht gemessen — sie braucht die Bilder und eine GPU, rund sechs Stunden
-für alle Anfragen. Sie ist der einzige Hebel, der die grobe Verwechslung
-direkt angreift: global ähnliche, lokal verschiedene Orte. Erwartung aus
-der Literatur +0.05 bis +0.10 R@1.
+(`experiments/geometric_verification.py`) ist gebaut und auf Stichproben
+erprobt, aber noch nicht als Zeile im Benchmark gemessen: dafür müsste sie
+über alle Anfragen laufen, was die Bilder und eine GPU braucht — rund sechs
+Stunden. Sie ist der einzige Hebel, der die grobe Verwechslung direkt
+angreift: global ähnliche, lokal verschiedene Orte. Wie groß der Gewinn
+ausfällt, ist hier nicht belegt; die Stichprobenläufe lagen je nach Stadt
+zwischen −0.001 und +0.04 R@1 und sind ohne Konfidenzintervall.
 
 Danach bleibt als einziger offener Punkt ein **zweiter Split-Seed**: alle
 Zahlen stehen auf `split_seed: 42`, und wie viel davon am Seed hängt, ist
@@ -1254,6 +1419,77 @@ Download-Links für das Vokabular sind tot; `setup_external.py` holt es aus
 der HuggingFace-Space, und die Datei heißt dort `c_centers.pt`, während das
 README des Projekts `c_center.pt` nennt. AnyLocs `VLAD.generate()` legt
 Zwischenergebnisse auf der CPU an und bricht mit CUDA-Tensoren ab.
+
+## Befehlsreferenz
+
+Alles, was dieses Projekt ausführt, an einer Stelle. Die erklärenden
+Abschnitte stehen oben unter [Nutzung](#nutzung); hier steht nur, was es
+gibt. Jeder Aufruf kennt `--help`.
+
+**Pipeline**
+
+| Aufruf | Wirkung |
+|---|---|
+| `python run.py` | 01–08, überspringt, was schon zur `config.yaml` passt |
+| `python run.py --bestand` | zeigt, welche Encoder auf diesem Rechner vollständig sind |
+| `python run.py --method NAME` | ein anderer Encoder; `all`, `derived` oder eine Kommaliste |
+| `python run.py --adapter linear` | mit dem in 05 trainierten Adapter; `all` = beides |
+| `python run.py --from 06` | ab dieser Stufe, erzwungen |
+| `python run.py --force` | alles neu rechnen |
+| `python setup_external.py` | AnyLoc- und MixVPR-Repos, Gewichte, Vokabular |
+
+Umgebungsvariablen stechen die `config.yaml`: `VPR_CITY`, `VPR_METHOD`,
+`VPR_ADAPTER`, `VPR_IMAGE_ROOT`, `VPR_IMAGE_PATH`, `VPR_OVERPASS_URL`.
+
+**Vergleichen und anwenden**
+
+| Aufruf | Wirkung |
+|---|---|
+| `python compare.py` | Recall-Tabelle, R@k bei 25 m |
+| `python compare.py --derived` | dazu PCA-, Whitening-, Verkettungs- und Sequenz-Zeilen |
+| `python compare.py --ci` | dazu das 95-%-Intervall neben R@1 |
+| `python compare.py --threshold 5` | andere Ground-Truth-Schwelle (5/10/25/50/100) |
+| `python compare.py --split TEXT` | andere Ground-Truth-Variante (Hard, Blickrichtung, Panorama) |
+| `python compare.py --reference full` | zweites Protokoll: database + train als Referenz |
+| `python compare.py --localization` | Anteil unter 25 m und Median je Encoder |
+| `python compare.py --plot [--derived]` | Abbildungen nach `results/<stadt>/figures/evaluation/` |
+| `python locate.py foto.jpg` | ein eigenes Foto verorten |
+| `pytest tests/ -q` | Auswertung, Split und Ergebnis-JSONs prüfen |
+| `ruff check .` | Lint über Skripte, `src/` und Notebooks |
+
+**Abgeleitete Encoder** — erzeugen Embeddings, danach läuft die Pipeline darüber.
+
+| Aufruf | Wirkung |
+|---|---|
+| `python experiments/pca_reduce.py` | PCA- und Whitening-Varianten als Encoder |
+| `python experiments/concat_embeddings.py` | zwei Encoder verketten |
+| `python run.py --method derived --adapter all` | die Pipeline über die Varianten |
+
+**Nebenuntersuchungen** — rechnen auf vorhandenen Artefakten. Details in
+[`experiments/README.md`](experiments/README.md).
+
+| Aufruf | Wirkung |
+|---|---|
+| `python experiments/full_reference.py` | database + train als Referenz, alle Baselines |
+| `python experiments/bootstrap_ci.py` | Konfidenzintervalle für alle Zeilen (~1 min) |
+| `python experiments/rejection_curve.py` | Präzision gegen Abdeckung, welche Konfidenz taugt |
+| `python experiments/recall_by_difficulty.py` | R@1 gegen Nachbarn, Zeit, Blickrichtung, Fotograf |
+| `python experiments/database_density.py --method NAME` | Recall gegen Referenzdichte |
+| `python experiments/recall_by_district.py` | Recall je Stadtteil, Karte |
+| `python experiments/confusion_atlas.py` | wohin die Fehlgriffe zeigen, Karte und Straßentyp |
+| `python experiments/localization_aggregation.py` | fünf Aggregationsverfahren gegen Top-1 |
+| `python experiments/sequence_retrieval.py --method NAME` | Nachbarframes aufsummieren |
+| `python experiments/sequence_hmm.py --method NAME` | dieselbe Fahrt als Pfad (HMM) |
+| `python experiments/geometric_verification.py --method NAME` | SuperPoint + LightGlue, GPU |
+| `python experiments/detection_rerank.py` | Mapillary-Detections als Re-Ranking-Signal |
+| `python experiments/detection_probe.py` | taugen Mapillarys Detections überhaupt? |
+| `python experiments/timing.py` | Bilder/s, ms je Anfrage, Index-MB, Kosten gegen Gewinn |
+| `python experiments/city_coverage.py "Stadt, Land"` | Straßenabdeckung, nur Metadaten |
+| `python experiments/city_comparison.py` | dieselbe Pipeline über alle gerechneten Städte |
+
+Wichtige Flags der geometrischen Verifikation, weil sie das Ergebnis
+verschieben und im JSON landen: `--top-k 20`, `--min-inliers 15`,
+`--ransac-px 3.0`, `--max-keypoints 1024`, `--n-queries 2000` (`0` = alle).
 
 ## Team
 
