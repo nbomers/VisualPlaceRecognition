@@ -1,5 +1,5 @@
 {
-  "datum": "2026-09-14",
+  "datum": "2026-09-22",
   "bilder": 332868,
   "sequenzen": 1324,
   "sequenzen_mit_einem_bild": 52,
@@ -12,6 +12,7 @@
   "split_reproduzierbar": true,
   "sequenz_leakage": 0,
   "fehlende_pflichtwerte": 0,
+  "fehlende_auswertungswerte": 0,
   "panoramen": 0,
   "compass_unbekannt": 1,
   "aufnahmejahre": {
