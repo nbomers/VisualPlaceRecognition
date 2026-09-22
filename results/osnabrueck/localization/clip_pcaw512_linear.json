@@ -5,7 +5,7 @@
   "embedding_name": "clip_pcaw512_linear",
   "fingerprint_hash": "5b326b6b2a",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

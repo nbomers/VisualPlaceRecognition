@@ -5,7 +5,7 @@
   "embedding_name": "anyloc",
   "fingerprint_hash": "506e40453e",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

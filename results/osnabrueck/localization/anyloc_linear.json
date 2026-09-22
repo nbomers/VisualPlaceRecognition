@@ -5,7 +5,7 @@
   "embedding_name": "anyloc_linear",
   "fingerprint_hash": "ccf8184c3f",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

@@ -5,7 +5,7 @@
   "embedding_name": "clip",
   "fingerprint_hash": "c39c2fa91a",
   "code_version": {
-    "commit": "058c51f",
+    "commit": "a712022",
     "evaluation": "d8909b3f3f"
   },
   "top_k": 10,

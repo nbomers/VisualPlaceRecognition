@@ -5,7 +5,7 @@
   "embedding_name": "megaloc_pcaw512_linear",
   "fingerprint_hash": "17b2adf682",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

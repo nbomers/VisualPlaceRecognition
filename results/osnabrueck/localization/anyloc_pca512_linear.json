@@ -5,7 +5,7 @@
   "embedding_name": "anyloc_pca512_linear",
   "fingerprint_hash": "208e3e071c",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

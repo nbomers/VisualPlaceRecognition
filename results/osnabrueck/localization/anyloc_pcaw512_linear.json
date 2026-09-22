@@ -5,7 +5,7 @@
   "embedding_name": "anyloc_pcaw512_linear",
   "fingerprint_hash": "0cb516c777",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

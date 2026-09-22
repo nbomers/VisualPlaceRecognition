@@ -5,7 +5,7 @@
   "embedding_name": "eigenplaces_megaloc_concat",
   "fingerprint_hash": "d087a4ea4f",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

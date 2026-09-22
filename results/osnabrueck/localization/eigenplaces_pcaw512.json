@@ -5,7 +5,7 @@
   "embedding_name": "eigenplaces_pcaw512",
   "fingerprint_hash": "673193ff23",
   "code_version": {
-    "commit": "4df06dc",
+    "commit": "1cd4506",
     "evaluation": "f5dbec3675"
   },
   "top_k": 10,

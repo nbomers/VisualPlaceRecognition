@@ -5,7 +5,7 @@
   "embedding_name": "eigenplaces",
   "fingerprint_hash": "b079462d00",
   "code_version": {
-    "commit": "fae4d4b",
+    "commit": "7864164",
     "evaluation": "6f5d09207a"
   },
   "top_k": 10,
