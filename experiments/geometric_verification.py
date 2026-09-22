@@ -86,7 +86,7 @@ def inlier_count(kp0, kp1, min_matches=8):
     import cv2
     if len(kp0) < min_matches:
         return 0
-    _, mask = cv2.findFundamentalMat(kp0, kp1, cv2.FM_RANSAC, 3.0, 0.999)
+    _, mask = cv2.findFundamentalMat(kp0, kp1, cv2.FM_RANSAC, 1.5, 0.999)
     return int(mask.sum()) if mask is not None else 0
 
 
@@ -160,10 +160,21 @@ def main():
             # Verifizierte nach Inliern absteigend, der Rest in alter Reihenfolge
             # dahinter -- stabil, damit Gleichstaende die Deskriptor-Ordnung behalten.
             ok = inliers >= args.min_inliers
-            reihenfolge = np.r_[
-                np.argsort(-inliers[ok], kind="stable") if ok.any() else np.array([], int),
-            ]
-            reihenfolge = np.r_[np.flatnonzero(ok)[reihenfolge], np.flatnonzero(~ok)]
+            if ok.any():
+                original_ranks = np.flatnonzero(ok)
+                scores = inliers[ok] - (original_ranks * 3.0)
+                
+                # Sortierung relativ zum gefilterten Array
+                sort_idx = np.argsort(-scores, kind="stable")
+                
+                # Mapping der Sortierung zurueck auf die urspruenglichen Raenge
+                verifiziert_reihenfolge = original_ranks[sort_idx]
+            else:
+                verifiziert_reihenfolge = np.array([], dtype=int)
+                
+            # Die verifizierten Bilder vorne, die nicht-verifizierten (alter Rangfolge nach) hinten anhaengen
+            reihenfolge = np.r_[verifiziert_reihenfolge, np.flatnonzero(~ok)]
+            
             neu_idx[qi, :k] = indices[qi, reihenfolge]
 
     dauer = time.time() - t0
@@ -188,6 +199,45 @@ def main():
     print(f"verifizierte Paare (>= {args.min_inliers} Inlier): "
           f"{(inlier_stat >= args.min_inliers).mean():.1%}, Median Inlier {np.median(inlier_stat):.0f}")
 
+    status_file = OUT_DIR / "mapillary_status.json"
+    
+    cohort_results = {}  # NEU: Hier sammeln wir die Daten für das JSON
+    
+    if status_file.exists():
+        with open(status_file, "r", encoding="utf-8") as f:
+            map_status = json.load(f)
+            
+        is_sfm = np.array([map_status.get(str(q_ids[qi]), False) for qi in auswahl], dtype=bool)
+        is_raw = ~is_sfm
+        
+        print("\n=== Mapillary Kohorten Analyse ===")
+        print(f"Best Capture (Map Matched): {is_sfm.sum()} Queries")
+        print(f"Raw (Fallback / Rauschen):  {is_raw.sum()} Queries")
+        
+        for cohort_name, mask in (("Best Capture", is_sfm), ("Raw", is_raw)):
+            if not mask.any():
+                continue
+            
+            filt_cohort = np.zeros(len(query), dtype=bool)
+            filt_cohort[auswahl[mask]] = True
+            
+            vorher_c = evaluate_retrieval(indices, query, database, CFG, label="vorher", query_filter=filt_cohort, verbose=False)
+            nachher_c = evaluate_retrieval(neu_idx, query, database, CFG, label="nachher", query_filter=filt_cohort, verbose=False)
+            
+            # NEU: Werte ins Dictionary schreiben
+            cohort_results[cohort_name] = {
+                "n_queries": int(mask.sum()),
+                "vorher": vorher_c,
+                "nachher": nachher_c
+            }
+            
+            print(f"\n{cohort_name:<15}" + "".join(f"{'R@' + str(kk):>8}" for kk in CFG["retrieval"]["k_values"]))
+            for label, b in (("vorher", vorher_c), ("nachher", nachher_c)):
+                rec = b["schwellen"]["25"]["recall"]
+                print(f"{label:<15}" + "".join(f"{rec[str(kk)]:>8.3f}" for kk in CFG["retrieval"]["k_values"]))
+        print()
+
+
     if voll:
         befunde = standard_evaluations(neu_idx, query, database, CFG, verbose=False)
         variante = f"{adapter}+gv{k}" if adapter not in ("none", "None") else f"gv{k}"
@@ -195,17 +245,25 @@ def main():
                                 CFG, f"{name}_gv{k}", dim, len(database), befunde,
                                 variant=variante, fingerprint=fingerprint, root=ROOT,
                                 verification_top_k=k, min_inliers=args.min_inliers)
+        
     else:
         OUT_DIR.mkdir(parents=True, exist_ok=True)
         pfad = OUT_DIR / f"geometric_verification_{name}.json"
-        pfad.write_text(json.dumps({
+        
+        # Basis-Ergebnisse
+        ausgabe_daten = {
             "datum": pd.Timestamp.now().strftime("%Y-%m-%d"),
             "embedding_name": name, "top_k": k, "min_inliers": args.min_inliers,
             "n_queries": int(len(auswahl)), "stichprobe": True,
             "vorher": vorher, "nachher": nachher,
             "anteil_verifiziert": float((inlier_stat >= args.min_inliers).mean()),
-        }, indent=2), encoding="utf-8")
-    print(f"-> {pfad.relative_to(ROOT)}")
+        }
+        
+        # NEU: Kohorten-Daten anhängen, falls sie berechnet wurden
+        if cohort_results:
+            ausgabe_daten["mapillary_cohorts"] = cohort_results
+            
+        pfad.write_text(json.dumps(ausgabe_daten, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":
