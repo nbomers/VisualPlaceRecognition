@@ -16,8 +16,15 @@ Namensnennung: **Bilder und Metadaten von [Mapillary](https://www.mapillary.com)
 CC BY-SA 4.0.** Wer daraus abgeleitete Datensätze veröffentlicht, muss sie
 unter denselben Bedingungen weitergeben.
 
-Die **Bilder selbst** liegen nicht im Repository — `notebooks/03_image_download`
-lädt sie mit einem eigenen API-Token nach `image_root/<stadt>`.
+Der **Bildbestand** liegt nicht im Repository — `notebooks/03_image_download`
+lädt ihn mit einem eigenen API-Token nach `image_root/<stadt>`.
+
+Eine Ausnahme sind die Abbildungen unter `results/<stadt>/figures/demo/`:
+sie zeigen einzelne Anfrage- und Datenbankbilder nebeneinander, um Treffer
+und Fehlgriffe sichtbar zu machen, und enthalten damit Mapillary-Bildinhalt.
+Als abgeleitetes Werk stehen sie unter denselben Bedingungen — CC BY-SA 4.0,
+**Bilder von Mapillary, CC BY-SA 4.0**. Dasselbe gilt für dieselben
+Abbildungen, wenn sie in Vorträgen oder Berichten auftauchen.
 
 `creator_id` ist eine pseudonyme Mapillary-Konto-ID. Zusammen mit `lat`,
 `lon` und `captured_at` ergibt sie eine Aufnahmespur je Konto. Sie steht
