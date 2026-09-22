@@ -327,25 +327,13 @@ Adapter und Whitening reagieren.
 
 ## Daten
 
-<!-- BILD-PLATZHALTER 2 -- Beispielaufnahmen
-     Zwei bis vier Mapillary-Aufnahmen aus dem Datensatz nebeneinander, die
-     zeigen, womit das System arbeitet: Dashcam bei Gegenlicht, Fahrrad,
-     Fussgaenger, Panorama.
+![Beispielaufnahmen aus dem Datensatz](results/osnabrueck/figures/demo/beispielbilder.png)
 
-     NICHT den Mapillary-Kartenausschnitt abfotografieren -- dann haengt
-     zusaetzlich die OSM-Kartografie mit an. Bilder aus dem Bestand nehmen
-     (image_root/osnabrueck/<image_id>.jpg); creator_id steht in
-     data/osnabrueck/processed/metadata.parquet.
-
-     Ablageort: results/<stadt>/figures/demo/. Dort liegen die uebrigen
-     Abbildungen mit Mapillary-Bildinhalt, .gitignore laesst *.png dort zu,
-     und NOTICE.md erklaert genau diesen Ordner. (docs/ geht NICHT -- der
-     Ordner ist in .gitignore ausgeschlossen.)
-
-     Namensnennung ist Pflicht (NOTICE.md): CC BY-SA 4.0.
-
-![Vier Aufnahmen aus dem Datensatz — Bilder von Mapillary, CC BY-SA 4.0](results/osnabrueck/figures/demo/beispielbilder.png)
--->
+<sub>Bilder von [Mapillary](https://www.mapillary.com), CC BY-SA 4.0:
+[1](https://www.mapillary.com/app/?pKey=780189902701918) ·
+[2](https://www.mapillary.com/app/?pKey=1197830377325467) ·
+[3](https://www.mapillary.com/app/?pKey=198680795426861) ·
+[4](https://www.mapillary.com/app/?pKey=1375423550011512)</sub>
 
 <p align="center">
   <img src="results/osnabrueck/figures/dataset/images_per_year.png" width="49%" alt="Bilder je Jahr">
