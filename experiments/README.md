@@ -1095,13 +1095,23 @@ SuperPoint + LightGlue auf die Top-20, RANSAC gegen eine Fundamentalmatrix,
 nach Inliern umsortieren. Der einzige Hebel, der die Fehlerart direkt
 angreift: global ähnliche, lokal verschiedene Orte. Braucht die Bilder und
 eine GPU — 53.414 × 20 Paare, auf der 3070 grob sechs Stunden, auf CPU
-nicht sinnvoll. **Noch nicht gemessen.** Aufruf auf dem GPU-Rechner:
+nicht sinnvoll. **Auf Stichproben erprobt, als Benchmark-Zeile noch nicht
+gemessen** — dafür braucht es `--n-queries 0`. Aufruf auf dem GPU-Rechner:
 
 ```bash
 python experiments/geometric_verification.py --method eigenplaces_megaloc_concat --n-queries 2000
 python experiments/geometric_verification.py --method eigenplaces_megaloc_concat --n-queries 0   # alle
 ```
 
-Erwartung aus der Literatur: +0.05 bis +0.10 R@1. Abhängigkeit:
-`pip install git+https://github.com/cvg/LightGlue.git` (steht in
-`environment.yml`).
+Vier Werte bestimmen das Ergebnis und stehen deshalb alle als Flag, nicht
+als Konstante im Code: `--top-k` (wieviele Kandidaten überhaupt umsortiert
+werden), `--min-inliers` (ab wann ein Paar als verifiziert gilt),
+`--ransac-px` (zulässiger Abstand zur Epipolarlinie) und `--max-keypoints`.
+Sie landen im Ergebnis-JSON. Wer sie verstellt, misst etwas anderes — und
+wer sie am Recall der Stichprobe entlang verstellt, misst am Ende die
+Stichprobe. Die Vorgaben (20 / 15 / 3.0 / 1024) sind die aus der
+LightGlue-Demo; eine Variation davon gehört auf eine Stadt, die nicht
+berichtet wird.
+
+Abhängigkeit: `pip install git+https://github.com/cvg/LightGlue.git`
+(steht in `environment.yml`).
