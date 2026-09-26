@@ -30,6 +30,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install ruff pytest numpy pandas pyyaml tqdm scipy scikit-learn pyarrow shapely pyproj geopandas "faiss-cpu>=1.8.0.post1" requests pillow
+      - run: pip install ruff pytest numpy pandas pyyaml tqdm scipy scikit-learn pyarrow shapely pyproj geopandas "faiss-cpu>=1.9.0" requests pillow
       - run: ruff check .
       - run: pytest tests/ -q -rs

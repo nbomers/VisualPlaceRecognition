@@ -10,6 +10,7 @@ bricht sonst irgendwann ein Aufbau, der monatelang lief.
     python setup_external.py
 """
 
+import argparse
 import hashlib
 import shutil
 import subprocess
@@ -203,6 +204,13 @@ def fetch_anyloc_vocabulary():
 
 
 def main():
+    # Ohne Parser liefe auch `--help` die ganze Einrichtung durch -- Klonen
+    # und Herunterladen als Nebenwirkung einer Hilfeanfrage.
+    argparse.ArgumentParser(
+        description="AnyLoc und MixVPR auf ihre festen Commits klonen, MixVPR-Gewichte "
+                    "und AnyLoc-Vokabular holen. Keine Argumente; bereits Vorhandenes "
+                    "wird nur geprueft.",
+    ).parse_args()
     print("Fremd-Repos (EigenPlaces und MegaLoc kommen ueber torch.hub):")
     ok = all([fetch_repo(name, spec) for name, spec in REPOS.items()])
 

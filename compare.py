@@ -352,7 +352,9 @@ def _facetten(laeufe, split, x_werte, wert_von, x_label, y_label, titel, ziel, a
                             markeredgecolor="white", markeredgewidth=0.8,
                             label=FAMILIE_LABEL.get(f, f or "Basis"))
                      for f in familien]
-        varianten = sorted({v for _, _, v, _, _ in kurven}, key=lambda v: v != "none")
+        # Baseline zuerst, dann alphabetisch -- ohne den zweiten Schluessel hinge
+        # die Reihenfolge am Hash-Seed, und die Legende wechselte von Lauf zu Lauf.
+        varianten = sorted({v for _, _, v, _, _ in kurven}, key=lambda v: (v != "none", v))
         eintraege += [Line2D([], [], color=INK_LEISE, linewidth=1.6,
                              linestyle=_stil(v)[0], label=_stil(v)[1]) for v in varianten]
         if frei:

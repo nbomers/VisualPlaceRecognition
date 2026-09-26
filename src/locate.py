@@ -55,7 +55,16 @@ class Locator:
     def _load_database(self):
         import faiss
 
-        meta = pd.read_parquet(self.paths.metadata_file(self.name, self.method))
+        meta_datei = self.paths.metadata_file(self.name, self.method)
+        if not meta_datei.exists():
+            raise FileNotFoundError(
+                f"Keine Embeddings fuer {self.name!r} unter {meta_datei.parent}.\n"
+                "Entweder wurde der Encoder hier nie gerechnet, oder er liegt auf "
+                "einem anderen Rechner (Embeddings sind gitignored).\n"
+                "  python run.py --bestand        zeigt, was hier vollstaendig ist\n"
+                f"  python run.py --method {self.method}   rechnet ihn hier"
+            )
+        meta = pd.read_parquet(meta_datei)
         npy = self.paths.embedding_file(self.name, self.method)
         require_fingerprint(npy, embedding_fingerprint(self.cfg, self.method, self.adapter, meta),
                             "Embeddings")
