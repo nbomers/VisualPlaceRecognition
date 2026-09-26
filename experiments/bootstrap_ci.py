@@ -34,14 +34,17 @@ from tqdm import tqdm
 
 from _common import CFG, PATHS, RESULTS, ROOT
 from src.retrieval import hits_at_k, load_retrieval, localizable, retrieval_inputs
+from src.run_guard import embedding_fingerprint
 from src.sequence_hmm import hmm_rerank
+from src.verification import apply_verification, verification_file, verification_from_record
 
 EVAL_DIR = PATHS.evaluation
 OUT = RESULTS / "bootstrap_ci.json"
 SPLIT = "Alle Queries"
 
 # Die Paare, die im README und in experiments/README.md verglichen werden.
-# Differenz = b - a. Jeder Encoder gegen seine _linear-Variante kommt dazu.
+# Differenz = b - a. Jeder Encoder gegen seine _linear-Variante kommt dazu,
+# jede gv-Zeile gegen ihre Basis.
 PAARE = [
     ("eigenplaces", "eigenplaces_pca512"),
     ("eigenplaces", "eigenplaces_pcaw512"),
@@ -88,12 +91,14 @@ def load_run(record):
     """
     Trefferliste und Metadaten zu einer Recall-JSON aus 07.
 
-    Drei Sorten Zeile haben keine eigene .npz und werden aus der Basis
+    Vier Sorten Zeile haben keine eigene .npz und werden aus der Basis
     nachgerechnet -- jede traegt dafuer alles Noetige in ihrer eigenen JSON:
 
       seq-Zeilen     sequence_window          (experiments/sequence_retrieval.py)
       fullref-Zeilen reference_splits         (experiments/full_reference.py)
       hmm-Zeilen     hmm_beta/_sigma_m/_speed_ms  (experiments/sequence_hmm.py)
+      gv-Zeilen      verification_top_k, min_inliers, ... plus die gespeicherte
+                     Inlier-Matrix         (experiments/geometric_verification.py)
 
     Die Geschwindigkeit steht mit in der JSON und wird NICHT neu geschaetzt:
     sie haengt an den Datenbanksequenzen, und eine zweite Schaetzung koennte
@@ -105,6 +110,12 @@ def load_run(record):
         sequence_window=record.get("sequence_window"),
         reference_splits=record.get("reference_splits"),
     )
+    gv = verification_from_record(record)
+    if gv is not None:
+        meta = pd.read_parquet(retrieval_inputs(ROOT, CFG, record["method"], record["adapter"])[0])
+        indices = apply_verification(
+            ROOT, CFG, record["method"], record["adapter"], indices,
+            embedding_fingerprint(CFG, record["method"], record["adapter"], meta), gv)
     if record.get("hmm_beta") is not None:
         indices, _, _ = hmm_rerank(
             indices, similarities, query, database,
@@ -169,8 +180,12 @@ def main():
     for rec in records:
         # Nicht selbst zusammenbauen -- retrieval_inputs nennt genau die
         # Dateien, die load_run gleich oeffnen wird.
-        for pfad in retrieval_inputs(ROOT, CFG, rec["method"], rec["adapter"],
-                                     reference_splits=rec.get("reference_splits")):
+        dateien = list(retrieval_inputs(ROOT, CFG, rec["method"], rec["adapter"],
+                                        reference_splits=rec.get("reference_splits")))
+        gv = verification_from_record(rec)
+        if gv is not None:
+            dateien.append(verification_file(ROOT, CFG, rec["method"], rec["adapter"], gv["top_k"]))
+        for pfad in dateien:
             if not pfad.exists():
                 fehlend.append(f"{rec['embedding_name']} ({pfad.relative_to(ROOT)})")
                 break
@@ -249,6 +264,12 @@ def main():
     for name in eintraege:
         if f"{name}_linear" in eintraege:
             paare.append((name, f"{name}_linear"))
+    # gv-Zeilen heissen <basis>_gv<k> -- gegen genau die Trefferliste, die sie
+    # umsortiert haben.
+    for name, e in eintraege.items():
+        basis = name.rsplit("_gv", 1)[0]
+        if "gv" in e["variant"] and basis in eintraege and (basis, name) not in paare:
+            paare.append((basis, name))
     differenzen = []
     for a, b in paare:
         if a not in eintraege or b not in eintraege:

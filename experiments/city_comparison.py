@@ -14,6 +14,7 @@ Gelesen wird ausschliesslich Versioniertes:
     experiments/results/<stadt>/bootstrap_ci*.json     Intervalle
     experiments/results/<stadt>/recall_by_difficulty_<encoder>.json
                                                       Herkunft des Top-1-Treffers
+    results/<stadt>/evaluation/<encoder>_gv<k>.json    geometrische Verifikation
     experiments/results/city_coverage.json             Abdeckung, Panorama, Jahre
 
 Embeddings und Trefferlisten braucht es nicht. Das Skript laeuft also in
@@ -320,6 +321,60 @@ def _panoramatabelle(zeilen):
     return {z["stadt"]: x for z, x in mit}
 
 
+def geometrische_verifikation(slug, method, schwelle):
+    """
+    Die gv-Zeile einer Stadt (experiments/geometric_verification.py
+    --n-queries 0) mit gepaarter Differenz aus bootstrap_ci.json, oder None.
+    Die Differenz gibt es erst, wenn der Bootstrap nach dem gv-Lauf lief.
+    """
+    ev = ROOT / "results" / slug / "evaluation"
+    laeufe = sorted(ev.glob(f"{method}_gv*.json"))
+    if not laeufe:
+        return None
+    r = json.loads(laeufe[0].read_text(encoding="utf-8"))
+    x = {"name": r["embedding_name"], "top_k": r.get("verification_top_k"),
+         "gv": _recall(r["auswertungen"]["Alle Queries"], schwelle),
+         "anteil_verifiziert": r.get("anteil_verifiziert"),
+         "n_verifiziert": r.get("n_verifiziert"),
+         "stunden": r["dauer_s"] / 3600 if r.get("dauer_s") else None,
+         "differenz": None, "ci": None}
+    boot = ROOT / "experiments" / "results" / slug / "bootstrap_ci.json"
+    if boot.exists():
+        roh = json.loads(boot.read_text(encoding="utf-8"))
+        paar = next((q for q in roh.get("paare", []) if q["a"] == method
+                     and q["b"] == x["name"] and q["k"] == 1), None)
+        if paar:
+            x["differenz"], x["ci"] = paar["differenz"], paar["ci"]
+    return x
+
+
+def _gv_tabelle(zeilen, method, schwelle):
+    mit = [(z, geometrische_verifikation(z["stadt"], method, schwelle)) for z in zeilen]
+    if not any(x for _, x in mit):
+        print("\nGeometrische Verifikation: in keiner Stadt ueber alle Anfragen gerechnet.")
+        return {}
+    print("\nGeometrische Verifikation   Top-k nach SuperPoint + LightGlue umsortiert, "
+          "Differenz gepaart")
+    print(f"{'Stadt':<16}{'R@1':>7}{'+GV':>7}{'dR@1':>8}{'95-%-Intervall':>19}"
+          f"{'verif.':>8}{'Anfragen':>10}{'h':>6}")
+    print("-" * 81)
+    for z, x in mit:
+        x = x or {}
+        ci = x.get("ci")
+        print(f"{z['stadt']:<16}"
+              + _zelle(z.get("alle"), "{:>7.3f}", 7)
+              + _zelle(x.get("gv"), "{:>7.3f}", 7)
+              + _zelle(x.get("differenz"), "{:>+8.3f}", 8)
+              + (f"   [{ci[0]:+.3f}, {ci[1]:+.3f}]" if ci else f"{'—':>19}")
+              + _zelle(x.get("anteil_verifiziert"), "{:>8.1%}", 8)
+              + _zelle(x.get("n_verifiziert"), "{:>10,}", 10)
+              + _zelle(x.get("stunden"), "{:>6.1f}", 6))
+    ohne_ci = [z["stadt"] for z, x in mit if x and x["ci"] is None]
+    if ohne_ci:
+        print(f"  Ohne Intervall: {', '.join(ohne_ci)} -- dort bootstrap_ci.py nach dem gv-Lauf starten.")
+    return {z["stadt"]: x for z, x in mit if x}
+
+
 def _zusammenhang(titel, zeilen, a, b, deutung):
     paare = [(z[a], z[b]) for z in zeilen if z.get(a) is not None and z.get(b) is not None]
     if len(paare) < 3:
@@ -404,6 +459,8 @@ def main():
         "Anteil seit 2022 gegen Hard-Abschlag", zeilen, "seit_2022", "hard_abschlag",
         "Wenige alte Kampagnen -> Anfrage und Treffer aus derselben Befahrung -> der Filter greift hart.")
 
+    verifikation = _gv_tabelle(zeilen, args.method, schwelle)
+
     absolut = [z["alle"] for z in zeilen]
     print(f"\nSpanne des absoluten R@1: {min(absolut):.3f} bis {max(absolut):.3f} "
           f"({max(absolut)-min(absolut):.3f})")
@@ -412,7 +469,9 @@ def main():
     OUT.write_text(json.dumps({"method": args.method, "schwelle_m": float(schwelle),
                                "staedte": zeilen, "befunde": befunde,
                                "zerlegung": zerlegt,
-                               "panorama": panoramen}, indent=2), encoding="utf-8")
+                               "panorama": panoramen,
+                               "geometrische_verifikation": verifikation},
+                              indent=2), encoding="utf-8")
     print(f"\ngeschrieben: {OUT.relative_to(ROOT)}")
 
     if args.plot:
