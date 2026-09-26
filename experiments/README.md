@@ -291,9 +291,12 @@ schwer; in der gepaarten Differenz fällt das heraus. Halbbreiten von
 `seq3` ist die Kurzform von `eigenplaces_pcaw512_seq3` — dieselbe
 Trefferliste, über ±3 Nachbarframes aufsummiert (siehe unten,
 „`sequence_retrieval.py`"). Alle Paare stehen in
-`results/<stadt>/bootstrap_ci.json`, auch für R@5/10/20.
+[`results/osnabrueck/bootstrap_ci.json`](results/osnabrueck/bootstrap_ci.json)
+(also `experiments/results/<stadt>/`), auch für R@5/10/20.
 
-**Was die Intervalle überlebt — die sieben Befunde des Projekts (README, „Ergebnisse auf einen Blick"):**
+**Was die Intervalle überlebt** — die Befunde einzeln geprüft. Die Zählung
+folgt einer früheren Fassung der Übersicht im README, die heute acht Punkte
+hat (README, „Ergebnisse auf einen Blick"):
 
 1. *Encoder-Wechsel ist der größte Hebel* — **belegt.** CLIP → MegaLoc
    +0.496 [+0.405, +0.590]; jedes Nachbarpaar der Rangfolge
@@ -645,8 +648,11 @@ EigenPlaces (pcaw512) zeigt dieselben Muster auf niedrigerem Niveau
    keinen Nachbarn, der in dieselbe Richtung schaut: R@1 0.071. Ohne sie
    läge MegaLoc bei 0.653. Das ist der Befund „Blickrichtung" aus 07,
    je Anfrage.
-2. **Zeit.** 8–30 Tage Abstand: 0.819; über ein Jahr: 0.473. Ein
-   Jahr kostet mehr als die Hälfte der Nachbarn.
+2. **Zeit — schwächer, und nicht monoton.** 8–30 Tage Abstand: 0.819;
+   über ein Jahr: 0.473. Aber 0–7 Tage liegen nur bei 0.575 und 181–365
+   Tage bei 0.612 — ein gleichmäßiger Verfall mit dem Alter ist das nicht.
+   Belastbar ist nur die Richtung an den Rändern; Intervalle je Klasse
+   gibt es nicht.
 3. **Dichte.** Ab 51 Nachbarn 0.781, darunter zwischen 0.45 und 0.60
    ohne klaren Verlauf. Der Dichte-Befund hält — aber als „viele Nachbarn
    helfen", nicht als „wenige schaden": bei 1–2 Nachbarn ist R@1 nicht
@@ -1094,24 +1100,47 @@ Ausreißer stehen lässt und das HMM ihn zurückstuft
 SuperPoint + LightGlue auf die Top-20, RANSAC gegen eine Fundamentalmatrix,
 nach Inliern umsortieren. Der einzige Hebel, der die Fehlerart direkt
 angreift: global ähnliche, lokal verschiedene Orte. Braucht die Bilder und
-eine GPU — 53.414 × 20 Paare, auf der 3070 grob sechs Stunden, auf CPU
-nicht sinnvoll. **Auf Stichproben erprobt, als Benchmark-Zeile noch nicht
-gemessen** — dafür braucht es `--n-queries 0`. Aufruf auf dem GPU-Rechner:
+eine GPU, auf CPU nicht sinnvoll. Standard ist `megaloc` — der Encoder, den
+es in allen sechs Städten gibt. **Als Benchmark-Zeile noch nicht gemessen**;
+dafür braucht es `--n-queries 0`, auf dem GPU-Rechner je Stadt:
 
 ```bash
-python experiments/geometric_verification.py --method eigenplaces_megaloc_concat --n-queries 2000
-python experiments/geometric_verification.py --method eigenplaces_megaloc_concat --n-queries 0   # alle
+python experiments/geometric_verification.py --n-queries 0
 ```
 
-Vier Werte bestimmen das Ergebnis und stehen deshalb alle als Flag, nicht
+```bash
+python experiments/bootstrap_ci.py
+```
+
+Verifiziert werden nur Anfragen, die bei der größten Schwelle (100 m) ein
+Datenbankbild haben — die übrigen zählen in keinem Recall mit, sie
+umzusortieren kostete je nach Stadt 8 bis 33 % der Laufzeit. Das Skript
+speichert je Anfrage und Kandidat die **Inlier-Zahl** neben der Trefferliste
+(`results/<stadt>/retrieval/<encoder>/<name>_gv20_inlier.npz`, gitignored)
+und sichert sie alle zwei Minuten; ein abgebrochener Lauf setzt mit
+denselben Parametern dort fort. Umsortiert wird in `src/verification.py`,
+und genau dort rechnet auch `bootstrap_ci.py` die gv-Zeile nach, ohne ein
+Bild erneut zu matchen — ohne gespeicherte Inlier hätte der Bootstrap die
+Zeile nicht reproduzieren können und wäre abgebrochen. `city_comparison.py`
+stellt die Städte danach gegenüber.
+
+Fünf Werte bestimmen das Ergebnis und stehen deshalb alle als Flag, nicht
 als Konstante im Code: `--top-k` (wieviele Kandidaten überhaupt umsortiert
 werden), `--min-inliers` (ab wann ein Paar als verifiziert gilt),
-`--ransac-px` (zulässiger Abstand zur Epipolarlinie) und `--max-keypoints`.
-Sie landen im Ergebnis-JSON. Wer sie verstellt, misst etwas anderes — und
-wer sie am Recall der Stichprobe entlang verstellt, misst am Ende die
-Stichprobe. Die Vorgaben (20 / 15 / 3.0 / 1024) sind die aus der
-LightGlue-Demo; eine Variation davon gehört auf eine Stadt, die nicht
+`--ransac-px` (zulässiger Abstand zur Epipolarlinie), `--max-keypoints` und
+`--max-side`. Sie landen im Ergebnis-JSON. Wer sie verstellt, misst etwas
+anderes — und wer sie am Recall entlang verstellt, misst am Ende die
+Stichprobe. Woher die Vorgaben kommen: 1.024 Keypoints ist die Einstellung,
+die das LightGlue-README für mehr Tempo bei kleinem Genauigkeitsverlust
+nennt (die Demo nimmt 2.048); 3,0 px ist die Voreinstellung von OpenCVs
+`findFundamentalMat`; Top-20 und 15 Inlier sind Setzungen dieses Projekts,
+vor dem Lauf festgelegt. `--min-inliers` lässt sich nachträglich prüfen,
+ohne neu zu matchen — es wirkt erst beim Umsortieren der gespeicherten
+Inlier. Eine Variation der übrigen gehört auf eine Stadt, die nicht
 berichtet wird.
+
+Lizenz: die SuperPoint-Gewichte stehen unter einer Lizenz **nur für
+nichtkommerzielle Forschung** (Magic Leap), siehe [NOTICE.md](../NOTICE.md).
 
 Abhängigkeit: `pip install git+https://github.com/cvg/LightGlue.git`
 (steht in `environment.yml`).
