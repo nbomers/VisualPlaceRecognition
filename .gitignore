@@ -153,6 +153,9 @@ $RECYCLE.BIN/
 !/results/*/figures/demo/
 /results/*/figures/demo/*
 !/results/*/figures/demo/*.png
+# Namensnennung je Bild fuer die Abbildungen darueber (src/quellen.py)
+!/results/*/figures/demo/QUELLEN.md
+!/results/*/figures/demo/quellen.json
 !/results/*/figures/dataset/
 /results/*/figures/dataset/*
 !/results/*/figures/dataset/*.png
@@ -185,7 +188,7 @@ external/
 weights/
 
 # Je Stadt ein Zweig: data/<stadt>/{raw,processed,embeddings}. Versioniert
-# sind nur Split-Listen und Metadaten (9 MB je Stadt) -- Zeilenreihenfolge
+# sind nur Split-Listen und Metadaten (5-17 MB je Stadt) -- Zeilenreihenfolge
 # und Mapillary-Schnappschuss sind Teil jedes Fingerabdrucks, nur so rechnet
 # ein anderer Rechner dieselben Artefakte.
 !data/*/
