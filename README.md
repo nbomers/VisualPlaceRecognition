@@ -338,7 +338,7 @@ Pipeline rechnet genau diese neu.
 | [`evaluation.py`](src/evaluation.py) | die Recall-Auswertung mit vier Ground-Truth-Varianten — dieselbe für 07 und jedes Experiment |
 | [`retrieval.py`](src/retrieval.py) | Trefferlisten laden, „lösbar" und „Treffer unter Top-k" je Anfrage, Sequenz-Aggregation |
 | [`sequence_hmm.py`](src/sequence_hmm.py), [`verification.py`](src/verification.py) | Nachbearbeitung der Top-k: Fahrt als Pfad (HMM), Umsortieren nach gespeicherten Inliern der geometrischen Verifikation |
-| [`locate.py`](src/locate.py) | der Inferenz-Einstieg: Foto → Encoder → FAISS → Koordinate mit Konfidenz; nutzt Demo und `locate.py` |
+| [`locate.py`](src/locate.py) | der Inferenz-Einstieg: Foto → Encoder → exakte Suche → Koordinate mit Konfidenz; nutzt Demo und `locate.py`. Sucht mit numpy statt FAISS, weil Torch und FAISS auf macOS nicht in einen Prozess passen |
 | [`districts.py`](src/districts.py) | OSM-Stadtteile, dieselbe Gliederung für 01 und die Experimente |
 | [`geo.py`](src/geo.py) | Haversine, Kompassdifferenz, UTM-Projektion |
 | [`device.py`](src/device.py) | cuda / mps / cpu |
@@ -759,7 +759,7 @@ python locate.py ~/Downloads/mapillary/test
 
 `locate.py` baut den Encoder über die Factory — auch die PCA-, Whitening-
 und Verkettungsvarianten, deren Projektion neben den Embeddings liegt —,
-sucht im FAISS-Index über die Datenbank und gibt Koordinate, Konfidenz (die
+sucht exakt über die Datenbank und gibt Koordinate, Konfidenz (die
 Ähnlichkeit des besten Treffers, siehe [Ablehnung](#ablehnung)) und die
 Top-k zurück. Auch AnyLoc und seine Varianten: 04 legt die angepasste PCA
 als `anyloc_pca.npz` neben die Embeddings, die Factory lädt sie.

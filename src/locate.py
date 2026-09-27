@@ -8,9 +8,18 @@ Kommandozeile teilen.
 
 Baut den Encoder ueber die Factory (auch abgeleitete: PCA, Whitening,
 Verkettung), legt den Adapter darueber, wenn einer konfiguriert ist, und
-sucht im FAISS-Index ueber die Datenbank-Embeddings -- exakt der Weg von
-04 bis 06, nur fuer ein Bild. Die Datenbank kommt per memmap: nur die
-database-Zeilen landen im Speicher.
+sucht exakt ueber die Datenbank-Embeddings -- der Weg von 04 bis 06, nur
+fuer ein Bild. Die Datenbank kommt per memmap: nur die database-Zeilen
+landen im Speicher.
+
+Gesucht wird mit numpy, nicht mit FAISS. Der Locator braucht Torch fuer den
+Encoder, und Torch und FAISS bringen auf macOS je ihre eigene
+OpenMP-Bibliothek mit: beide im selben Prozess beenden ihn ohne Traceback
+(siehe tests/blockwise_check.py) -- in Jupyter als "kernel died". FAISS-Flat
+ist ohnehin nur das vollstaendige Skalarprodukt; fuer eine Handvoll Fotos
+gegen 48.321 Datenbankbilder sind das Millisekunden, mit derselben
+Rangfolge (bis auf die Reihenfolge exakt gleicher Aehnlichkeiten). Die
+Pipeline (06) behaelt FAISS -- dort laeuft kein Torch im selben Prozess.
 
 Konfidenz: die Aehnlichkeit des besten Treffers. experiments/
 rejection_curve.py hat sie gegen Marge und Geschlossenheit gemessen -- sie
@@ -47,14 +56,12 @@ class Locator:
         self.verbose = verbose
         self._embedder = None
         self._adapter = None
-        self._index = None
+        self._vektoren = None
         self._load_database()
 
     # -- Datenbank ---------------------------------------------------------
 
     def _load_database(self):
-        import faiss
-
         meta_datei = self.paths.metadata_file(self.name, self.method)
         if not meta_datei.exists():
             raise FileNotFoundError(
@@ -71,10 +78,8 @@ class Locator:
         zeilen = np.flatnonzero((meta["split"] == "database").to_numpy())
         self.database = meta.iloc[zeilen].reset_index(drop=True)
         emb = np.load(npy, mmap_mode="r")
-        vektoren = np.ascontiguousarray(emb[zeilen], dtype=np.float32)
-        self.dim = int(vektoren.shape[1])
-        self._index = faiss.IndexFlatIP(self.dim)
-        self._index.add(vektoren)
+        self._vektoren = np.ascontiguousarray(emb[zeilen], dtype=np.float32)
+        self.dim = int(self._vektoren.shape[1])
         if self.verbose:
             print(f"Datenbank: {len(self.database):,} Bilder, {self.dim} Dimensionen ({self.name})")
 
@@ -118,8 +123,15 @@ class Locator:
     # -- Suche -------------------------------------------------------------
 
     def search(self, vecs, k=10):
-        sims, idx = self._index.search(np.ascontiguousarray(vecs, dtype=np.float32), k)
-        return idx, sims
+        """Exakte Suche nach Skalarprodukt, wie faiss.IndexFlatIP: (indices, aehnlichkeiten),
+        je Zeile absteigend sortiert."""
+        sims = np.ascontiguousarray(vecs, dtype=np.float32) @ self._vektoren.T
+        k = min(int(k), sims.shape[1])
+        # Erst die k groessten finden (linear), dann nur diese sortieren.
+        idx = np.argpartition(-sims, k - 1, axis=1)[:, :k]
+        ordnung = np.argsort(-np.take_along_axis(sims, idx, axis=1), axis=1, kind="stable")
+        idx = np.take_along_axis(idx, ordnung, axis=1)
+        return idx, np.take_along_axis(sims, idx, axis=1)
 
     def locate(self, image_path, k=10):
         """Koordinate des besten Treffers, seine Aehnlichkeit als Konfidenz, die Top-k dazu."""
