@@ -58,6 +58,8 @@ dependencies:
 
   - pip
   - pip:
+      # macOS: das Wheel bringt eine eigene libomp mit, die sich mit der aus
+      # conda-forge schlaegt -- README, Abschnitt Fehlerbehebung.
       - torch>=2.2
       - torchvision>=0.17
       - transformers>=4.40

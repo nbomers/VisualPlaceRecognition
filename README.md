@@ -79,6 +79,7 @@ Urheber je Bild in [QUELLEN.md](results/osnabrueck/figures/demo/QUELLEN.md).</su
     [Abbildungen](#abbildungen)
 - [Mögliche Erweiterungen](#mögliche-erweiterungen)
 - [Befehlsreferenz](#befehlsreferenz)
+- [Fehlerbehebung](#fehlerbehebung)
 - [Team](#team)
 - [Credits](#credits)
 - [Lizenz](#lizenz)
@@ -541,7 +542,9 @@ pytest tests/
 ```
 
 `nbstripout` hält Zellenausgaben aus dem Git und wird einmal je Rechner
-eingerichtet; `pytest` prüft die Installation, ohne Torch zu laden.
+eingerichtet; `pytest` prüft die Installation, ohne Torch zu laden. Auf dem
+Mac danach einmal die [Fehlerbehebung](#fehlerbehebung) ansehen, sonst
+stürzt die Demo beim ersten eigenen Foto ohne Meldung ab.
 
 `environment.yml` holt alles mit kompilierten Abhängigkeiten (faiss, GDAL
 hinter geopandas) über conda-forge und den Rest — torch und was darauf
@@ -1919,6 +1922,73 @@ python experiments/beispielbilder.py --szenen
 ```
 
 </details>
+
+## Fehlerbehebung
+
+### Kernel stirbt ohne Meldung (macOS)
+
+**Symptom.** Der Prozess endet, sobald das Modell das erste Bild rechnet:
+Jupyter meldet nur *kernel died*, im Terminal steht `Segmentation fault`.
+In der Demo trifft es das erste eigene Foto. Alles davor — Imports,
+Datenbank, `pytest` — läuft unauffällig durch.
+
+**Ursache.** Zwei OpenMP-Laufzeiten im selben Prozess. Pakete aus
+conda-forge wie scikit-learn und faiss laden
+`$CONDA_PREFIX/lib/libomp.dylib`, das pip-Wheel von torch bringt eine
+eigene Kopie in `torch/lib/libomp.dylib` mit. macOS unterscheidet
+Bibliotheken nach Datei, nicht nach Namen, also landen beide im Prozess,
+und die erste parallele Rechnung in torch stürzt ab. Das ist keine Frage
+der Hardware, sondern der Mischung aus conda und pip, und es trifft jeden
+Prozess, der torch zusammen mit einem dieser Pakete lädt. Die Demo tut das
+immer: `osmnx` importiert scikit-learn schon beim Laden. Die Encoder-Läufe
+in 04 importieren keins davon und liefen auf dem M1 Pro ohne Fix durch.
+Auf Linux passiert es nicht — dort nutzen torch und conda-forge in der
+Regel dasselbe GNU-OpenMP (`libgomp.so.1`), und der Linker lädt eine
+Bibliothek gleichen Namens nur einmal. Derselbe Konflikt ist der
+Grund, warum `tests/blockwise_check.py` in einem eigenen Prozess läuft und
+`experiments/timing.py` Kodierung und Suche getrennt misst.
+
+**Prüfen.** Sind beide Einträge gewöhnliche Dateien, ist die Umgebung
+betroffen; nach dem Beheben zeigt der zweite mit `->` auf den ersten:
+
+```bash
+ls -l $CONDA_PREFIX/lib/libomp.dylib $CONDA_PREFIX/lib/python3.*/site-packages/torch/lib/libomp.dylib
+```
+
+**Beheben.** torch auf die libomp von conda umlenken. Dann ist es dieselbe
+Datei, und macOS lädt sie einmal:
+
+```bash
+cd $CONDA_PREFIX/lib/python3.*/site-packages/torch/lib
+```
+
+```bash
+mv libomp.dylib libomp.dylib.orig
+```
+
+```bash
+ln -s $CONDA_PREFIX/lib/libomp.dylib libomp.dylib
+```
+
+```bash
+cd -
+```
+
+Rückgängig, im selben Ordner:
+
+```bash
+mv libomp.dylib.orig libomp.dylib
+```
+
+Jede Neuinstallation von torch (`pip install -U torch`, `conda env create`)
+legt die eigene Kopie wieder an — dann die drei Schritte wiederholen.
+`KMP_DUPLICATE_LIB_OK=TRUE` ist kein Ersatz: die Variable schaltet nur die
+Prüfung ab, beide Kopien bleiben geladen, und die Laufzeit warnt selbst,
+dass das zu Abstürzen oder stillschweigend falschen Ergebnissen führen kann.
+
+**Allgemein.** Stirbt ein Kernel ohne Meldung, denselben Code als Skript im
+Terminal ausführen. `python -X faulthandler skript.py` zeigt die
+Absturzmeldung und meist die Python-Zeile dazu, beides verschluckt Jupyter.
 
 ## Team
 
