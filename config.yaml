@@ -141,8 +141,10 @@ vpr:
   anyloc_pcaw4096:      {source: "anyloc",      pca_dim: 4096, fit_images: 50000, whiten: true}
   eigenplaces_pcaw2048: {source: "eigenplaces", pca_dim: 2048, fit_images: 50000, whiten: true}
 
-  # Verkettung: die Quellen muessen denselben Split haben, das Skript prueft
-  # den Metadaten-Hash. Die Reihenfolge bestimmt die Reihenfolge der Bloecke.
+  # Verkettung: experiments/concat_embeddings.py richtet die Quellen ueber die
+  # image_id aus (auf zwei Rechnern gerechnet, andere Zeilenreihenfolge);
+  # database und query muessen in allen vollstaendig sein. Die Reihenfolge
+  # hier bestimmt die Reihenfolge der Bloecke.
   eigenplaces_megaloc_concat:
     sources: ["eigenplaces_pcaw512", "megaloc_pcaw512"]
 
@@ -171,11 +173,10 @@ vpr:
 
   positive_radius_m: 10.0
 
-  # Bilder außerhalb dieses Radius gelten als Negative.
-  #
-  # Der Bereich zwischen positive_radius_m und
-  # negative_radius_m kann später als "hard negative"
-  # verwendet werden.
+  # Bilder außerhalb dieses Radius gelten als Negative. Zwischen
+  # positive_radius_m und diesem Wert liegt die unsichere Zone: dort zählt
+  # ein Bild weder als positiv noch als negativ. Hard Negatives für 05
+  # kommen aus hard_negative_min_m bis hard_negative_max_m.
   #
   # Zugleich die Schwelle der Ground Truth: compare.py nimmt diesen Wert als
   # Standard fuer --threshold. Warum 25 und nicht 10 oder 50 -- die Schwelle
@@ -287,7 +288,9 @@ retrieval:
 # Aus der Trefferliste von 06 eine Koordinate machen (08_localization).
 localization:
 
-  # Wieviele Treffer je Anfrage einfliessen. Muss <= retrieval.top_k sein.
+  # Wieviele Treffer die Aggregationsverfahren in
+  # experiments/localization_aggregation.py betrachten; 08 selbst nimmt nur
+  # den besten und schreibt den Wert mit. Muss <= retrieval.top_k sein.
   top_k: 10
 
   # DBSCAN: Nachbarschaftsradius und Mindestgroesse einer Gruppe.
@@ -337,7 +340,7 @@ download_image_size: 1024
 # dazu ist ein print in einem Notebook, das run.py ohne Konsole ausfuehrt.
 # Lieber ein Abbruch als eine Zahl, der niemand ansieht, dass sie falsch ist.
 #
-# 0.01 = bis zu 1 % darf fehlen (in Osnabrueck ist es 1 Bild von 332.868).
+# 0.01 = bis zu 1 % darf fehlen (in Osnabrueck 1 Bild von 332.868, bei MegaLoc 3).
 max_missing_images_frac: 0.01
 
 # 03 prueft nach dem Download, ob die JPGs vollstaendig sind.

@@ -202,7 +202,7 @@ def train_adapter(adapter, loader, val_fn, epochs, learning_rate, margin, device
 def apply_adapter(adapter, embeddings, out_path, device, block=8192):
     """
     Adapter blockweise auf alle Embeddings anwenden und als memmap schreiben --
-    bei MegaLoc waeren 332.867 x 8448 float32 nochmal 11 GB im Speicher.
+    bei MegaLoc waeren 332.865 x 8448 float32 nochmal 11 GB im Speicher.
     Gibt den mittleren Cosinus zur Baseline zurueck.
     """
     from tqdm.auto import tqdm

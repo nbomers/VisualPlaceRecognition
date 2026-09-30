@@ -31,9 +31,9 @@ def _import_anyloc(repo_path):
     repo = Path(repo_path).expanduser().resolve()
     if not (repo / "utilities.py").exists():
         raise FileNotFoundError(
-            f"AnyLoc-Repo nicht gefunden unter {repo}. "
-            "git clone https://github.com/AnyLoc/AnyLoc.git und "
-            "vpr.anyloc.repo_path in config.yaml setzen."
+            f"AnyLoc-Repo nicht gefunden unter {repo}.\n"
+            "  python setup_external.py   klont es auf den getesteten Commit\n"
+            "Liegt es woanders: vpr.anyloc.repo_path in config.yaml setzen."
         )
     if str(repo) not in sys.path:
         sys.path.insert(0, str(repo))

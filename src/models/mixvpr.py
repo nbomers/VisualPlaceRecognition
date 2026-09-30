@@ -30,9 +30,9 @@ def _import_mixvpr(repo_path):
     repo = Path(repo_path).expanduser().resolve()
     if not (repo / "models" / "helper.py").exists():
         raise FileNotFoundError(
-            f"MixVPR-Repo nicht gefunden unter {repo}. "
-            "git clone https://github.com/amaralibey/MixVPR.git und "
-            "vpr.mixvpr.repo_path in config.yaml setzen."
+            f"MixVPR-Repo nicht gefunden unter {repo}.\n"
+            "  python setup_external.py   klont es auf den getesteten Commit\n"
+            "Liegt es woanders: vpr.mixvpr.repo_path in config.yaml setzen."
         )
     if str(repo) not in sys.path:
         sys.path.insert(0, str(repo))

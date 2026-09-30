@@ -20,7 +20,7 @@ Abdeckung.
     python experiments/rejection_curve.py                      # megaloc
     python experiments/rejection_curve.py --method eigenplaces_megaloc_concat
 
-Ergebnis: experiments/results/rejection_curve_<name>.{json,png}
+Ergebnis: experiments/results/<stadt>/rejection_curve_<name>.{json,png}
 """
 
 import argparse

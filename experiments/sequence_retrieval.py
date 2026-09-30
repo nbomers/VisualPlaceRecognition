@@ -17,7 +17,7 @@ des mittleren Frames, mit denselben vier Ground-Truth-Varianten.
 Reines Nachbearbeiten der .npz aus 06; kein Modell, keine GPU.
 
     python experiments/sequence_retrieval.py --method eigenplaces_pcaw512
-    python experiments/sequence_retrieval.py --method megaloc --window 5
+    python experiments/sequence_retrieval.py --method megaloc --windows 5
     python experiments/sequence_retrieval.py --method megaloc --windows 1,2,3,5,10
 
 Fenstergroesse gegen Schwelle: bei 3,3 m je Frame reicht +-3 knapp 10 m

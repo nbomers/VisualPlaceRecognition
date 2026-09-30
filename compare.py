@@ -77,8 +77,8 @@ def _derived_hinweis(args, ordner):
 
 
 def _abgeleitet(method):
-    """Hat der Encoder in der config einen source-Eintrag, ist er aus einem
-    anderen gerechnet -- die PCA- und Whitening-Varianten."""
+    """Hat der Encoder in der config einen source- oder sources-Eintrag, ist
+    er aus anderen gerechnet -- PCA, Whitening, Verkettung."""
     block = CFG["vpr"].get(method)
     return isinstance(block, dict) and ("source" in block or "sources" in block)
 
@@ -151,10 +151,12 @@ def bootstrap_intervals(args, still=False):
 
 def localization_table(args):
     """
-    08 macht aus der Trefferliste eine Koordinate -- auf drei Wegen. Hier
-    steht je Encoder, welcher Weg wie oft unter der Schwelle landet und wie
+    08 macht aus der Trefferliste eine Koordinate: die des besten Treffers.
+    Hier steht je Encoder, wie oft sie unter der Schwelle landet und wie
     weit der Median danebenliegt. Bezogen auf ALLE Anfragen, nicht nur die
-    loesbaren: eine Koordinate wird immer geschaetzt.
+    loesbaren: eine Koordinate wird immer geschaetzt. Aeltere JSONs mit
+    weiteren Verfahren zeigt die Tabelle mit; gemessen sind diese heute in
+    experiments/localization_aggregation.py.
     """
     if not LOC_DIR.exists():
         raise SystemExit(f"Keine Lokalisierung in {LOC_DIR.relative_to(ROOT)}. 08 laufen lassen.")
@@ -183,7 +185,7 @@ def localization_table(args):
     breite = max(14, max(len(r["embedding_name"]) for r in laeufe) + 2)
 
     print(f"Lokalisierung  |  Anteil unter {args.threshold} m  |  "
-          f"{laeufe[0]['n_queries']:,} Anfragen, Top-{laeufe[0]['top_k']} je Anfrage")
+          f"{laeufe[0]['n_queries']:,} Anfragen, Koordinate des besten Treffers")
     print("Median des Fehlers in Klammern.\n")
     kopf = f"{'Encoder':<{breite}}" + "".join(f"{n:>17}" for n in namen)
     print(kopf)
@@ -201,8 +203,8 @@ def localization_table(args):
         print("-" * len(kopf))
         print(f"{'Zufall (DB-Bild)':<{breite}}{z[schluessel]:>6.3f} ({z['median_m']:>6,.0f} m)")
     print()
-    print("Lesart: liegt Top-1 vorn, sind die Nachbartreffer zu oft falsch, als")
-    print("dass Mitteln oder Clustern helfen koennte.")
+    print("Mitteln oder Clustern der Top-10 liegt bei jedem Encoder unter Top-1")
+    print("(experiments/localization_aggregation.py).")
 
 
 # ----------------------------------------------------------------------
@@ -393,7 +395,7 @@ def plot(laeufe, args):
 
     # ------------------------------------------------------------------
     # 1. R@1 je Zeile mit dem Bootstrap-Intervall.
-    #    Liegende Balken, nach Wert sortiert: 37 Namen lesen sich waagerecht,
+    #    Liegende Balken, nach Wert sortiert: 39 Namen lesen sich waagerecht,
     #    um 60 Grad gedreht nicht. Farbe = Encoder, der Variantenname steht
     #    ohnehin daneben.
     # ------------------------------------------------------------------

@@ -160,7 +160,7 @@ def require_city_match(root, cfg, metadata, what="Artefakt", min_overlap=0.5):
     Deshalb hier eine Pruefung gegen etwas, das NICHT mitwandert: die
     versionierte data/<stadt>/processed/metadata.parquet. Verglichen werden
     die image_id-Mengen, nicht ihre Hashes -- ein Encoder darf Bilder fehlen
-    haben (in Osnabrueck ist ein Download gescheitert, bei MegaLoc zwei), er
+    haben (in Osnabrueck fehlt den meisten Encodern ein Bild, MegaLoc drei), er
     darf nur keine FREMDEN enthalten.
 
     Dasselbe Muster wie min_overlap in src/split.py, das dort Split-Listen

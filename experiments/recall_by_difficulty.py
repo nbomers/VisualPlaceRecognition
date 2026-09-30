@@ -20,7 +20,7 @@ haengt der Recall an der Referenz vor Ort -- nicht am Stadtteil.
     python experiments/recall_by_difficulty.py                    # megaloc
     python experiments/recall_by_difficulty.py --method eigenplaces_pcaw512
 
-Ergebnis: experiments/results/recall_by_difficulty_<name>.{json,png}
+Ergebnis: experiments/results/<stadt>/recall_by_difficulty_<name>.{json,png}
 """
 
 import argparse

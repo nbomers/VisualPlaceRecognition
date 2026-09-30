@@ -5,7 +5,7 @@ Jedes Notebook und jedes Skript beginnt mit denselben Zeilen: Wurzel suchen,
 config.yaml lesen, Verfahren und Adapter aus der Umgebung uebernehmen, den
 Embedding-Namen bilden. Hier stehen sie einmal.
 
-Bootstrap in einem Notebook -- vier Zeilen, mehr braucht es nicht:
+Bootstrap in einem Notebook -- diese Zeilen, mehr braucht es nicht:
 
     import sys
     from pathlib import Path

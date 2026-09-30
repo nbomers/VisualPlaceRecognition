@@ -7,10 +7,11 @@ Zwei Fragen stehen dahinter:
      Vorsprungs ist Koennen und wieviel nur Breite?
   2. Adapter-Test. Der lineare Adapter ist eine d-x-d-Matrix, seine
      Parameterzahl waechst also quadratisch: 4,2 Mio bei 2048, 71,4 Mio bei
-     8448. Gemessen waechst der Schaden monoton mit der Breite. Auf gleicher
-     Breite hat jeder Encoder dieselben 262.144 Parameter. Bleibt die
-     Rangfolge des Schadens, liegt es am Encoder; wird sie flach, war es die
-     Parameterzahl.
+     8448. Vor dieser Messung sah es so aus, als wachse der Schaden mit der
+     Breite. Auf gleicher Breite hat jeder Encoder dieselben 262.144
+     Parameter. Bleibt die Rangfolge des Schadens, liegt es am Encoder;
+     wird sie flach, war es die Parameterzahl. Ergebnis: sie bleibt --
+     MegaLoc verliert auf 8448 und auf 512 dasselbe (experiments/README.md).
 
 Das Skript rechnet weder Retrieval noch Recall. Es schreibt die reduzierten
 Embeddings so, wie 04 sie schreiben wuerde -- mit Metadaten und einem
@@ -44,7 +45,7 @@ from src.run_guard import embedding_fingerprint, write_fingerprint
 
 EMBEDDING_ROOT = PATHS.embeddings
 
-# Blockweise transformieren: MegaLoc sind 332.867 x 8448 float32, also
+# Blockweise transformieren: MegaLoc sind 332.865 x 8448 float32, also
 # 11,2 GB. Vollstaendig laden waere auf 16 GB nicht drin.
 BLOCK = 8192
 

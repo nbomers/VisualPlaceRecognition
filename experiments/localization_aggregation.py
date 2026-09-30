@@ -20,7 +20,7 @@ Konsens bestaetigt dann den Fehler. Parameter aus config.yaml -> localization.
     python experiments/localization_aggregation.py                  # megaloc
     python experiments/localization_aggregation.py --method eigenplaces
 
-Ergebnis: experiments/results/localization_aggregation_<name>.{json,png}
+Ergebnis: experiments/results/<stadt>/localization_aggregation_<name>.{json,png}
 """
 
 import argparse

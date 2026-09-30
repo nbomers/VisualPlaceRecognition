@@ -87,7 +87,8 @@ stehen — nur dort gibt es etwas zu unterscheiden. Holt die Detections, baut
 IDF-gewichtete Histogramme und misst AUC sowie das tatsächliche Umsortieren.
 Rund 20.000 API-Aufrufe, etwa zwei Minuten.
 
-Die Detections landen in `cache/detections.jsonl` (gitignored). Ein zweiter
+Die Detections landen in `cache/detections.jsonl` — als Ausnahme in der
+`.gitignore` versioniert, sie gehören zum Messergebnis. Ein zweiter
 Lauf holt nur nach, was fehlt.
 
 ### `detection_probe.py`
@@ -175,6 +176,95 @@ Adapterschaden, also `linear` minus `none`:
 Konsequenz: Whitening gehört für AnyLoc in `04` (VLAD ohne Whitening ist
 unüblich), nicht als allgemeiner Adapter — bei EigenPlaces auf voller Breite
 schadet es.
+
+### `adapter_diagnose.py` — warum der Adapter schadet
+
+**Frage:** Verschlechtert das Training die VPR-Encoder schon auf den
+val-Fahrten, oder erst auf database und query?
+
+05 wählt die beste Epoche nach val-Recall@1, aber nur unter **trainierten**
+Epochen: `train_adapter` startet mit `recall = -1` und misst zum ersten Mal
+nach Epoche 1. Der untrainierte Adapter — die Identität, also exakt die
+Baseline — stand nie zur Wahl. Das Skript misst ihn auf demselben val-Split
+nach und stellt ihn neben die beste Epoche (aus dem Fingerabdruck der
+Gewichte, den 05 schreibt, und zusätzlich nachgemessen) und neben die
+Test-Zahlen aus 07. Kein neues Training.
+
+```bash
+python experiments/adapter_diagnose.py
+python experiments/adapter_diagnose.py --method clip mixvpr eigenplaces
+```
+
+| Lesart | heißt |
+|---|---|
+| adapter hilft im test | val und test steigen beide — der Adapter tut, wofür er gedacht ist |
+| schon auf val schlechter | das Training schadet auch dort; 05 konnte „nicht trainieren" nur nicht wählen |
+| val steigt, test fällt | was auf den train-Fahrten hilft, überträgt sich nicht auf database und query |
+
+Ergebnis in `results/<stadt>/adapter_diagnose_<method>.json`. Braucht die
+Basis-Embeddings, liest davon nur die val-Zeilen — also den Rechner, der den
+Encoder gerechnet hat. Fehlen die Adapter-Gewichte, rechnet es „val mit“ aus
+den adaptierten Embeddings aus 05 (`<method>_linear_embeddings.npy`): die sind
+genau die normierte Ausgabe des Adapters, die Zahl ist also dieselbe. Stimmt der nachgemessene val-Wert des Adapters mit dem
+gespeicherten überein, ist der val-Split derselbe wie in 05; sonst warnt das
+Skript und die Zeile ist nicht zu deuten.
+
+**Ergebnis** (Osnabrück, alle 18 Adapter; Recall@1, test bei 25 m):
+
+| Encoder | val ohne | val mit | test ohne | test mit | Lesart |
+|---|---:|---:|---:|---:|---|
+| clip | 0.015 | 0.033 | 0.073 | 0.123 | hilft |
+| clip_pca512 | 0.015 | 0.034 | 0.074 | 0.121 | hilft |
+| clip_pcaw512 | 0.026 | 0.027 | 0.105 | 0.113 | hilft |
+| anyloc | 0.050 | 0.194 | 0.204 | 0.335 | hilft |
+| anyloc_pca512 | 0.048 | 0.184 | 0.175 | 0.305 | hilft |
+| anyloc_pcaw512 | 0.129 | 0.180 | 0.263 | 0.308 | hilft |
+| anyloc_pcaw4096 | 0.136 | 0.151 | 0.321 | 0.292 | val steigt, test fällt |
+| mixvpr | 0.120 | 0.112 | 0.426 | 0.363 | schon auf val schlechter |
+| mixvpr_pca512 | 0.103 | 0.112 | 0.408 | 0.371 | val steigt, test fällt |
+| mixvpr_pcaw512 | 0.119 | 0.110 | 0.424 | 0.366 | schon auf val schlechter |
+| eigenplaces | 0.118 | 0.142 | 0.484 | 0.444 | val steigt, test fällt |
+| eigenplaces_pca512 | 0.127 | 0.129 | 0.481 | 0.438 | val steigt, test fällt |
+| eigenplaces_pcaw512 | 0.164 | 0.128 | 0.507 | 0.437 | schon auf val schlechter |
+| eigenplaces_pcaw2048 | 0.097 | 0.129 | 0.459 | 0.422 | val steigt, test fällt |
+| megaloc | 0.198 | 0.132 | 0.568 | 0.442 | schon auf val schlechter |
+| megaloc_pca512 | 0.167 | 0.133 | 0.545 | 0.417 | schon auf val schlechter |
+| megaloc_pcaw512 | 0.155 | 0.127 | 0.541 | 0.416 | schon auf val schlechter |
+| eigenplaces_megaloc_concat | 0.220 | 0.165 | 0.572 | 0.479 | schon auf val schlechter |
+
+Die beste Epoche je Zeile steht in der JSON (`beste_epoche`).
+
+Drei Gruppen, und sie folgen dem Encoder, nicht der Breite:
+
+- **Hilft (6):** CLIP und AnyLoc bis auf `anyloc_pcaw4096`. Die Encoder
+  sind nicht für Ortserkennung trainiert, der Adapter hat etwas zu lernen,
+  und val und test sind sich einig. Nach Whitening bleibt davon wenig
+  (`clip_pcaw512` val +0.001) — dasselbe Bild wie in `pca_reduce.py`.
+- **Schon auf val schlechter (7):** jede MegaLoc-Variante, die Verkettung,
+  MixVPR und die gewhitenten 512er von MixVPR und EigenPlaces. Keine
+  trainierte Epoche erreicht die Identität; der Schaden entsteht im
+  Training, nicht erst beim Übertragen. 05 hätte hier „nicht trainieren"
+  gewählt, wenn es die Wahl gehabt hätte — MegaLoc bliebe bei 0.568 statt
+  0.442.
+- **val steigt, test fällt (5):** die übrigen EigenPlaces- und
+  MixVPR-Varianten und `anyloc_pcaw4096`. Der val-Gewinn ist klein
+  (+0.002 bis +0.032), der test-Verlust größer (−0.029 bis −0.043). Hier
+  hätte auch die korrigierte Auswahl den Adapter genommen.
+
+Zwei Vorbehalte. val misst eine andere, schwerere Aufgabe (MegaLoc 0.198
+gegen 0.568): Anfrage und Referenz sind je eine Hälfte der val-Fahrten. Die
+absoluten Werte sind mit test nicht vergleichbar, nur die Richtung zählt.
+Und val ist klein — Differenzen wie bei MixVPR (0.120 gegen 0.112) liegen im
+Rauschen, die Zeile ist nicht belastbar. Belastbar ist das Muster: je
+besser der Encoder schon für Ortserkennung trainiert ist, desto früher
+schadet der Adapter.
+
+Kernsatz: **von den zwölf Adaptern, die im test schaden, hätte die
+Auswahlregel sieben verworfen, wenn die Identität zur Wahl gestanden hätte;
+bei den übrigen fünf zeigt val in die falsche Richtung.** Die Regel
+zu korrigieren (Identität als Epoche 0) ändert die Adapter-Zahlen in
+`results/` und damit jede davon abgeleitete Zeile; die Zahlen oben stehen
+deshalb neben den bestehenden, nicht an ihrer Stelle.
 
 ---
 
@@ -309,7 +399,7 @@ hat (README, „Ergebnisse auf einen Blick"):
    mit einer Einschränkung.** Ohne Whitening ist der Gewinn bei CLIP und
    AnyLoc klar; nach Whitening schließt er 0 ein (CLIP +0.009, AnyLoc auf
    4096 −0.029). Der Schaden bei den VPR-trainierten Encodern schließt 0
-   in allen zwölf Paaren aus. Einschränkung: auf `anyloc_pcaw512` bleibt
+   in allen elf Paaren aus. Einschränkung: auf `anyloc_pcaw512` bleibt
    +0.045 [+0.009, +0.088] — 512 gewhitente Komponenten holen aus VLAD
    weniger heraus als 4096, dort hat der Adapter noch etwas zu tun.
 4. *Rangfolge und Adapterschaden hängen nicht an der Breite* — **die
@@ -728,7 +818,7 @@ mit einem, der nicht `null` ist. Vorher standen dort Nullen, und ein
 
 Gemessen 2026-09-14/15. Straßenabdeckung für sechs Kandidaten und
 Osnabrück; 30 weitere Städte nur über die Kacheln (`--tiles-only`, ohne
-Straßennetz), alle 36 in `results/city_coverage.json`:
+Straßennetz), alle 36 in `experiments/results/city_coverage.json`:
 
 | Stadt | Bilder | /km² | Straßen km | gedeckt | große | Wohn | Seq. | Fotografen | größter | seit 2022 |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -820,7 +910,7 @@ experiments/results/city_coverage.json             Abdeckung, Panorama, Jahre
 Embeddings und Trefferlisten braucht es nicht. Das Skript läuft damit in
 jedem frischen Klon und auf jedem Rechner — als einziges hier unter
 `experiments/`. Was fehlt, erscheint als `—`; eine Stadt fällt nur heraus,
-wenn ihre Haupt-JSON fehlt. Ergebnis: `results/city_comparison.json`.
+wenn ihre Haupt-JSON fehlt. Ergebnis: `experiments/results/city_comparison.json`.
 
 MegaLoc, R@1 bei 25 m, Stand 2026-09-18:
 

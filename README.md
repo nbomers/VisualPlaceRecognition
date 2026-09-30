@@ -182,7 +182,13 @@ Acht Befunde, jeder gemessen, sechs davon mit Intervall belegt:
    Whitening nicht schon liefert.** Ohne Whitening hilft er CLIP (+0.050)
    und AnyLoc (+0.130); nach Whitening schließen beide Gewinne 0 ein
    (+0.009 [−0.002, +0.021], −0.029 [−0.074, +0.012]). Den VPR-trainierten
-   Encodern schadet er in allen zwölf Paaren sicher (−0.037 bis −0.127).
+   Encodern schadet er in allen elf Paaren sicher (−0.037 bis −0.127).
+   Ein Teil davon ist ein Auswahlfehler: 05 wählt die beste Epoche nach
+   val, stellt die untrainierte Identität aber nie zur Wahl. Bei sieben
+   der elf Paare, darunter alle MegaLoc-Varianten, ist schon auf val jede
+   trainierte Epoche schlechter — MegaLoc bliebe sonst bei 0.568. Bei den
+   übrigen vier steigt val leicht, und test fällt trotzdem
+   ([`adapter_diagnose.py`](experiments/README.md#adapter_diagnosepy--warum-der-adapter-schadet)).
    Einzige Einschränkung: auf `anyloc_pcaw512` bleibt +0.045 [+0.009,
    +0.088] — 512 gewhitente Komponenten holen aus VLAD weniger heraus als
    4096.
@@ -349,7 +355,7 @@ Pipeline rechnet genau diese neu.
 | [`models/`](src/models/) | ein Modul je Encoder, gemeinsame Basis (`base.py`), Adapter, `derived.py` für PCA-/Whitening-/Verkettungsvarianten, und `factory.py`, das aus einem Namen jeden Encoder baut |
 
 **[`notebooks/01–08`](notebooks/)** sind die Pipeline. Jedes Notebook beginnt mit
-denselben vier Zeilen, liest die config, prüft die Fingerabdrücke seiner
+denselben Zeilen, liest die config, prüft die Fingerabdrücke seiner
 Eingaben und schreibt sein Ergebnis mit eigenem Fingerabdruck. `run.py`
 führt sie der Reihe nach aus und überspringt, was passt.
 
@@ -407,7 +413,7 @@ Referenz- gegen Anfragebildern.</sub>
 |---|---|
 | **Quelle** | [Mapillary](https://www.mapillary.com) — Straßenbilder von Nutzern, per Vector Tiles (Zoom 14) über das OSM-Stadtpolygon von Osnabrück ermittelt, Thumbnails mit 1024 px Breite |
 | **Lizenz** | CC BY-SA 4.0; Gesichter und Kennzeichen sind von Mapillary automatisch unkenntlich gemacht |
-| **Umfang** | 332.868 Bilder aus 120 km² Stadtgebiet, alle innerhalb der administrativen Grenze. Ein Bild ist auf dem einen Rechner beim Download gescheitert, zwei auf dem anderen — deshalb hat MegaLoc zwei `train`-Bilder weniger als die übrigen Encoder (siehe [Reproduzierbarkeit](#reproduzierbarkeit)) |
+| **Umfang** | 332.868 Bilder aus 120 km² Stadtgebiet, alle innerhalb der administrativen Grenze. Den übrigen Encodern fehlt ein `train`-Bild, dessen Download scheiterte, MegaLoc drei — MegaLoc hat deshalb zwei `train`-Bilder weniger als die übrigen (siehe [Reproduzierbarkeit](#reproduzierbarkeit)) |
 | **Aufteilung** | nach **Sequenzen** (Fahrten), nie nach Einzelbildern: train 231.133 · database 48.321 · query 53.414 (70 / 15 / 15 %). Keine Sequenz in zwei Splits, keine Panoramen, keine fehlenden Werte |
 | **Query-Struktur** | 198 Sequenzen, Median 176 Bilder, die längste 3.156; 0,17 s und 3,3 m zwischen Frames |
 | **Fotografen** | 57; einer stellt 47,8 % aller Bilder, die drei größten zusammen 65,2 % |
@@ -476,6 +482,7 @@ der Slug aus `city` in der `config.yaml` (`Osnabrück, Germany` →
 │
 ├── experiments/                je Skript eine Frage; Zahlen in experiments/README.md
 │   ├── pca_reduce  concat_embeddings                     abgeleitete Encoder
+│   ├── adapter_diagnose                                  warum der Adapter schadet
 │   ├── full_reference  bootstrap_ci                      zweites Protokoll, Intervalle
 │   ├── recall_by_difficulty  recall_by_district
 │   │   confusion_atlas  rejection_curve
@@ -502,14 +509,14 @@ gegen die `config.yaml` geprüft:
 
 ```text
 data/<stadt>/raw/                   Kachel-Rohdaten aus 01
-data/<stadt>/embeddings/<name>/     Embeddings aus 04, auch die abgeleiteten, mit <name>_pca.npz
-results/<stadt>/retrieval/<name>/   Trefferlisten aus 06; Inlier der geometrischen Verifikation
+data/<stadt>/embeddings/<method>/   Embeddings aus 04 und 05, auch die abgeleiteten, mit <name>_pca.npz
+results/<stadt>/retrieval/<method>/ Trefferlisten aus 06; Inlier der geometrischen Verifikation
 weights/adapter/<stadt>/            trainierte Adapter
 weights/mixvpr/                     MixVPR-Checkpoint
 external/                           AnyLoc und MixVPR, geklont von setup_external.py
 cache/                              OSMnx-Antworten, Kontaktabzüge der Beispielbilder
 <image_root>/<stadt>/  …/test/      die Bilder und eigene Fotos, außerhalb des Repos
-~/.cache/torch/hub/                 EigenPlaces, MegaLoc (Code), DINOv2
+~/.cache/torch/hub/                 EigenPlaces samt CosPlace, MegaLoc (Code), DINOv2
 ~/.cache/huggingface/hub/           MegaLoc-Gewichte, CLIP
 ```
 
@@ -802,7 +809,7 @@ CC BY-SA 4.0, Urheber je Bild in
 pytest tests/
 ```
 
-14 Dateien, unter einer Minute, für fast alle kein Torch: die Recall-Auswertung gegen eine
+19 Dateien, unter einer Minute, für fast alle kein Torch: die Recall-Auswertung gegen eine
 handgerechnete Erwartung (Standard, Hard, Blickrichtung, Panorama), der Split gegen
 die versionierten Listen, die Paarbildung, `validate_config` gegen die
 echte `config.yaml` und gegen Tippfehler, die PCA-Projektion gegen sklearn,
@@ -1166,7 +1173,7 @@ Schätzer mit breiten Intervallen.
 MegaLoc. Unten die Verteilung des Fehlers derselben zwei Encoder.</sub>
 
 ```text
-Lokalisierung  |  Anteil unter 25 m  |  53,414 Anfragen, Top-10 je Anfrage
+Lokalisierung  |  Anteil unter 25 m  |  53,414 Anfragen, Koordinate des besten Treffers
 Median des Fehlers in Klammern.
 
 Encoder                         Top-1
@@ -1184,8 +1191,8 @@ mixvpr_linear        0.232 ( 1,335 m)
 -------------------------------------
 Zufall (DB-Bild)     0.000 ( 4,223 m)
 
-Lesart: liegt Top-1 vorn, sind die Nachbartreffer zu oft falsch, als
-dass Mitteln oder Clustern helfen koennte.
+Mitteln oder Clustern der Top-10 liegt bei jedem Encoder unter Top-1
+(experiments/localization_aggregation.py).
 ```
 
 <sub>Wörtliche Ausgabe von `python compare.py --localization`.</sub>
@@ -1840,6 +1847,12 @@ Präzision gegen Abdeckung — welche Konfidenz taugt:
 
 ```bash
 python experiments/rejection_curve.py
+```
+
+Warum der Adapter schadet — val ohne Training gegen die beste Epoche aus 05, braucht die Basis-Embeddings:
+
+```bash
+python experiments/adapter_diagnose.py
 ```
 
 Recall gegen Referenzdichte (Standard: EigenPlaces):

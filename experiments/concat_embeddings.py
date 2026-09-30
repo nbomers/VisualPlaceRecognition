@@ -1,9 +1,10 @@
 """
 Zwei oder mehr Encoder zu einem Deskriptor verketten.
 
-Ensembles schlagen in der Bildsuche fast immer ihr bestes Mitglied um ein
-bis drei Punkte: was der eine Encoder verwechselt, verwechselt der andere
-oft nicht. Die Vektoren sind L2-normalisiert, also traegt jeder Encoder
+Die Erwartung: ein Ensemble schlaegt sein bestes Mitglied, weil der eine
+Encoder oft nicht verwechselt, was der andere verwechselt. Hier traf das
+nicht zu -- EigenPlaces + MegaLoc liegt +0.004 [-0.005, +0.014] ueber
+MegaLoc allein, das Intervall schliesst 0 ein (bootstrap_ci.json). Die Vektoren sind L2-normalisiert, also traegt jeder Encoder
 gleich viel zum inneren Produkt bei; nach dem Verketten wird noch einmal
 normalisiert, damit 06 wie gewohnt ueber das innere Produkt suchen kann.
 

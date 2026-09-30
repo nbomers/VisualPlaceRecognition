@@ -3,7 +3,8 @@ Zugang zu Mapillary: Token aus .env, Sessions mit Wiederholung, und die
 Vector Tiles, aus denen 01 die Bildpositionen holt.
 
 Warum Vector Tiles und nicht die Bbox-Suche der Graph-API: die Kacheln
-liefern alle Bildpunkte einer Stadt in rund 150 Anfragen, die Bbox-Suche
+liefern alle Bildpunkte einer Stadt in rund 130 Anfragen (Osnabrueck,
+Zoom 14), die Bbox-Suche
 kappt bei 2.000 Treffern je Aufruf.
 """
 

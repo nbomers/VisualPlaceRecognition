@@ -21,8 +21,9 @@
 #              pyarrow 16.0.0, shapely 2.0.4, geopandas 1.0, faiss-cpu 1.9.0,
 #              pyyaml 6.0, tqdm 4.66, pytest 8.0, ruff 0.5 unter Python 3.11:
 #              `pytest tests/` und `ruff check .` laufen durch.
-#              faiss-cpu 1.8.0 (ohne .post1) ist gegen numpy 1.x gebaut und
-#              bricht beim Import -- daher diese eine genauere Grenze.
+#              faiss-cpu 1.8.x geht mit numpy 2 nicht: 1.8.0 ist gegen
+#              numpy 1.x gebaut und bricht beim Import, 1.8.0.post1 verlangt
+#              numpy<2 -- daher die Grenze bei 1.9.0.
 #   gemessen   Der Fingerabdruck (pd.util.hash_pandas_object in
 #              src/run_guard.py) liefert unter pandas 2.2.2 / 2.3.3 / 3.0.6
 #              und numpy 2.0 / 2.2 / 2.4 denselben Wert. Ein Major-Sprung

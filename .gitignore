@@ -72,7 +72,7 @@ checkpoints/
 *.safetensors
 
 # ---------- Embeddings & Indizes ----------
-# Generierte CLIP-/AnyLoc-/EigenPlaces-/MixVPR-Embeddings
+# Generierte Embeddings aller Encoder, Trefferlisten, Inlier
 embeddings/
 *.npy
 *.npz
@@ -180,8 +180,8 @@ cache/*
 .ruff_cache/
 
 # ---------- Geklonte Fremd-Repos ----------
-# AnyLoc, MixVPR, EigenPlaces, MegaLoc. Werden per git clone geholt,
-# siehe README. Nie mitcommitten.
+# AnyLoc und MixVPR, geklont von setup_external.py auf feste Commits.
+# EigenPlaces und MegaLoc kommen ueber torch.hub nach ~/.cache. Nie mitcommitten.
 external/
 
 # ---------- Modellgewichte ----------

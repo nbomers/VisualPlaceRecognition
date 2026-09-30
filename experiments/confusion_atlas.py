@@ -19,7 +19,7 @@ aus dem osmnx-Cache.
     python experiments/confusion_atlas.py                       # megaloc
     python experiments/confusion_atlas.py --method eigenplaces_pcaw512
 
-Ergebnis: experiments/results/confusion_atlas_<name>.json und .png
+Ergebnis: experiments/results/<stadt>/confusion_atlas_<name>.json und .png
 """
 
 import argparse

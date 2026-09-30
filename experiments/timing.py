@@ -12,7 +12,8 @@ die Zahlen dazu -- drei Messungen, die verschiedene Dinge kosten:
   Suche        ms je Anfrage im FAISS-Flat-Index ueber die Datenbankzeilen,
                1.000 Anfragen in Bloecken von 256, Median aus fuenf Runden,
                fuer alle 18 Encoder mit .npy -- auch die abgeleiteten.
-               Waechst linear mit der Breite.
+               Waechst schwaecher als die Breite: 16,5-mal breiter ist
+               4-mal langsamer (README, Laufzeit und Speicher).
   Index        n_database x dim x 4 Byte, dazu die tatsaechliche Groesse der
                .npy (die haelt alle 332k Zeilen, nicht nur die Datenbank).
 

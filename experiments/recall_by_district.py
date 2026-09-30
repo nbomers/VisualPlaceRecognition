@@ -14,7 +14,7 @@ Distanzen einmal je Anfrage, kein Modell, keine GPU.
     python experiments/recall_by_district.py                       # megaloc
     python experiments/recall_by_district.py --method eigenplaces_pcaw512
 
-Ergebnis: experiments/results/recall_by_district_<name>.json und .png
+Ergebnis: experiments/results/<stadt>/recall_by_district_<name>.json und .png
 """
 
 import argparse

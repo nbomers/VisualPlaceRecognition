@@ -8,9 +8,11 @@ Koordinate des aehnlichsten Datenbankbildes ausgeben.
     python locate.py ~/Downloads/mapillary/test     # alle Bilder in einem Ordner
 
 Der Encoder kommt aus der Factory (auch PCA-, Whitening- und
-Verkettungsvarianten), die Datenbank aus data/<stadt>/embeddings/, die Suche aus
-FAISS -- derselbe Weg wie 04 bis 06, fuer ein Bild. AnyLoc-Varianten sind
-nicht vorfuehrbar (PCA aus 04 liegt nicht neben den Embeddings).
+Verkettungsvarianten), die Datenbank aus data/<stadt>/embeddings/, die Suche
+exakt mit numpy statt FAISS -- Torch und FAISS passen auf macOS nicht in einen
+Prozess (src/locate.py). Sonst derselbe Weg wie 04 bis 06, fuer ein Bild.
+AnyLoc geht ebenfalls: 04 legt die angepasste PCA als anyloc_pca.npz neben
+die Embeddings, die Factory laedt sie (src/models/factory.py).
 """
 
 import argparse
@@ -47,7 +49,7 @@ def main():
             bilder.append(str(pfad))
         else:
             # Sonst faellt der Tippfehler erst auf, nachdem der Encoder
-            # geladen und der FAISS-Index gebaut ist -- und dann mit einer
+            # geladen und die Datenbank im Speicher ist -- und dann mit einer
             # Meldung ueber ein fehlendes Artefakt statt ueber die Datei.
             raise SystemExit(
                 f"Kein Bild und kein Ordner: {pfad}\n"

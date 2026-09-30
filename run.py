@@ -5,9 +5,10 @@ Eine Stufe wird uebersprungen, wenn ihr Ergebnis vorliegt UND laut
 Fingerabdruck zur aktuellen config.yaml passt. Aendert man etwas an der
 Config, laufen genau die betroffenen Stufen neu.
 
-01 bis 03 werden nur auf Existenz ihres Ergebnisses geprueft: 01 wuerfelt
-sonst den Split neu und entwertet damit alle vorhandenen Embeddings, 02 und
-03 haengen nicht an der config. 05 entfaellt, solange vpr.adapter auf "none"
+01 und 02 werden nur auf Existenz ihres Ergebnisses geprueft: 01 wuerfelt
+sonst den Split neu und entwertet damit alle vorhandenen Embeddings, 02
+haengt nicht an der config. 03 gilt als fertig, wenn der Bildbestand
+vollstaendig ist (_download_stand), nicht wenn eine Datei existiert. 05 entfaellt, solange vpr.adapter auf "none"
 steht. Welche Stufe woran erkannt wird, steht an einer Stelle: _stages().
 
 --method und --adapter nehmen auch Listen ("clip,mixvpr") oder "all" und
@@ -61,7 +62,7 @@ def _args():
                "  python run.py --method mixvpr                anderer Encoder\n"
                "  python run.py --method clip --adapter linear\n"
                "  python run.py --method all                   jeden Encoder nacheinander\n"
-               "  python run.py --method derived               die PCA-Varianten\n"
+               "  python run.py --method derived               PCA, Whitening, Verkettung\n"
                "  python run.py --method all --adapter all     dazu je Baseline und Adapter\n"
                "  python run.py --method clip,mixvpr           nur diese beiden\n"
                "  python run.py --from 06                      ab dem Retrieval, erzwungen\n"
@@ -172,7 +173,7 @@ def bestand(cfg):
     """
     Was auf diesem Rechner liegt -- je Encoder und Variante.
 
-    Embeddings (77 GB ueber alle Varianten) und Trefferlisten sind
+    Embeddings (in Osnabrueck rund 84 GB ueber alle Varianten) und Trefferlisten sind
     gitignored; im Projekt entstanden sie auf zwei Rechnern und wurden per
     rsync zusammengefuehrt. Ein Lauf, der 07/08 neu rechnet, kann deshalb
     nur die Encoder anfassen, die HIER vorliegen. Diese Uebersicht sagt,
