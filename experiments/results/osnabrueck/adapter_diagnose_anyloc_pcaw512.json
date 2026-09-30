@@ -1,0 +1,15 @@
+{
+  "datum": "2026-09-30",
+  "method": "anyloc_pcaw512",
+  "n_val_queries_loesbar": 3210,
+  "val_radius_m": 25.0,
+  "val_recall_1_ohne_training": 0.1292834890965732,
+  "val_recall_1_beste_epoche_gespeichert": null,
+  "val_recall_1_beste_epoche_gemessen": 0.17975077881619939,
+  "val_mit_quelle": "adaptierte_embeddings",
+  "beste_epoche": 3,
+  "test_threshold_m": 25.0,
+  "test_recall_1_ohne": 0.26263484990619135,
+  "test_recall_1_mit": 0.30813203564727953,
+  "lesart": "adapter hilft im test"
+}

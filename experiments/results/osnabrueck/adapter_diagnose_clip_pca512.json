@@ -1,0 +1,15 @@
+{
+  "datum": "2026-09-30",
+  "method": "clip_pca512",
+  "n_val_queries_loesbar": 3210,
+  "val_radius_m": 25.0,
+  "val_recall_1_ohne_training": 0.014953271028037384,
+  "val_recall_1_beste_epoche_gespeichert": null,
+  "val_recall_1_beste_epoche_gemessen": 0.03395638629283489,
+  "val_mit_quelle": "adaptierte_embeddings",
+  "beste_epoche": 8,
+  "test_threshold_m": 25.0,
+  "test_recall_1_ohne": 0.07387429643527205,
+  "test_recall_1_mit": 0.12136491557223264,
+  "lesart": "adapter hilft im test"
+}

@@ -1,0 +1,15 @@
+{
+  "datum": "2026-09-30",
+  "method": "megaloc_pca512",
+  "n_val_queries_loesbar": 3210,
+  "val_radius_m": 25.0,
+  "val_recall_1_ohne_training": 0.16697819314641746,
+  "val_recall_1_beste_epoche_gespeichert": null,
+  "val_recall_1_beste_epoche_gemessen": 0.13302180685358256,
+  "val_mit_quelle": "adaptierte_embeddings",
+  "beste_epoche": 4,
+  "test_threshold_m": 25.0,
+  "test_recall_1_ohne": 0.5448229362101313,
+  "test_recall_1_mit": 0.4173604596622889,
+  "lesart": "schon auf val schlechter"
+}

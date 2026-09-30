@@ -1,0 +1,15 @@
+{
+  "datum": "2026-09-30",
+  "method": "eigenplaces_megaloc_concat",
+  "n_val_queries_loesbar": 3210,
+  "val_radius_m": 25.0,
+  "val_recall_1_ohne_training": 0.21993769470404984,
+  "val_recall_1_beste_epoche_gespeichert": null,
+  "val_recall_1_beste_epoche_gemessen": 0.16542056074766356,
+  "val_mit_quelle": "adaptierte_embeddings",
+  "beste_epoche": 1,
+  "test_threshold_m": 25.0,
+  "test_recall_1_ohne": 0.5724671669793621,
+  "test_recall_1_mit": 0.47886374296435275,
+  "lesart": "schon auf val schlechter"
+}
