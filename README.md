@@ -182,16 +182,11 @@ Acht Befunde, jeder gemessen, fünf davon (1, 3, 4, 5, 8) mit Intervall belegt:
    Whitening nicht schon liefert.** Ohne Whitening hilft er CLIP (+0.050)
    und AnyLoc (+0.130); nach Whitening schließen beide Gewinne 0 ein
    (+0.009 [−0.002, +0.021], −0.029 [−0.074, +0.012]). Den VPR-trainierten
-   Encodern schadet er in allen elf Paaren sicher (−0.037 bis −0.127).
-   Ein Teil davon ist ein Auswahlfehler: 05 wählt die beste Epoche nach
-   val, stellt die untrainierte Identität aber nie zur Wahl. Bei sieben
-   der elf Paare, darunter alle MegaLoc-Varianten, ist schon auf val jede
-   trainierte Epoche schlechter — MegaLoc bliebe sonst bei 0.568. Bei den
-   übrigen vier steigt val leicht, und test fällt trotzdem
-   ([`adapter_diagnose.py`](experiments/README.md#adapter_diagnosepy--warum-der-adapter-schadet)).
-   Einzige Einschränkung: auf `anyloc_pcaw512` bleibt +0.045 [+0.009,
-   +0.088] — 512 gewhitente Komponenten holen aus VLAD weniger heraus als
-   4096.
+   Encodern schadet er in allen elf Paaren sicher (−0.037 bis −0.127). Bei
+   sieben davon war das schon auf val zu sehen, doch die Auswahl in 05
+   stellte „nicht trainieren" nie zur Wahl — MegaLoc bliebe sonst bei 0.568
+   ([Adapter-Diagnose](experiments/README.md#adapter_diagnosepy--warum-der-adapter-schadet)).
+   Einzige Einschränkung: `anyloc_pcaw512` behält +0.045 [+0.009, +0.088].
 4. **Die Rangfolge hängt nicht an der Deskriptorbreite.** Auf 512
    Dimensionen bleibt sie identisch; MegaLoc verliert von 8448 auf 512 per
    PCA 0.023 [0.017, 0.031], mit Whitening 0.028 [0.020, 0.038]. Der
@@ -199,19 +194,15 @@ Acht Befunde, jeder gemessen, fünf davon (1, 3, 4, 5, 8) mit Intervall belegt:
    −0.127) — die Intervalle decken sich, ein Beweis für Gleichheit ist das
    nicht.
 5. **Nachbearbeitung holt wenig, und was sie holt, zahlt sie anderswo.**
-   Schwerpunkt, Clustering, zwei Hybride, Sequenz-Aggregation über
-   Nachbarframes (−0.009 [−0.017, −0.001]) und semantisches Re-Ranking mit
-   Mapillary-Detections — alle gemessen, alle schlechter oder gleich. Auch
-   die Verkettung schlägt MegaLoc nicht: +0.004 [−0.005, +0.014]. Die
-   einzige Ausnahme ist das **Sequenz-HMM**, das die Fahrt als Pfad liest
-   statt als Folge von Einzelentscheidungen: R@1 steigt bei MegaLoc von
-   0.568 auf 0.598 (+0.030 [+0.020, +0.041]) und bei EigenPlaces von 0.484
-   auf 0.501 (+0.017 [+0.006, +0.030]) — beides gepaart belegt. Umsonst ist
-   das nicht — bei EigenPlaces fällt R@10 dabei von 0.650 auf 0.633, weil ein
-   Re-Ranking die Liste nur umsortiert: was nach oben rutscht, verdrängt
-   anderes. Details unter [Die Fahrt als Pfad](#die-fahrt-als-pfad). Der
-   zweite Kandidat, die [geometrische Verifikation](#geometrische-verifikation),
-   ist gebaut; ihre Läufe über alle Anfragen stehen noch aus.
+   Schwerpunkt, Clustering, zwei Hybride, Sequenz-Aggregation (−0.009
+   [−0.017, −0.001]) und Re-Ranking mit Mapillary-Detections liegen alle
+   bei oder unter Top-1; die Verkettung schlägt MegaLoc bei R@1 nicht
+   (+0.004 [−0.005, +0.014]). Einzige Ausnahme ist das **Sequenz-HMM**, das
+   die Fahrt als Pfad liest: +0.030 [+0.020, +0.041] bei MegaLoc, +0.017
+   [+0.006, +0.030] bei EigenPlaces — bei EigenPlaces erkauft mit R@10
+   (0.650 → 0.633), siehe [Die Fahrt als Pfad](#die-fahrt-als-pfad). Die
+   [geometrische Verifikation](#geometrische-verifikation) ist gebaut, ihre
+   Läufe stehen aus.
 6. **Fehler sind bimodal.** Unter den 14.726 Fehlgriffen von MegaLoc liegen
    45 % unter 100 m (dieselbe Straße, knapp jenseits der Schwelle) und
    44 % über 1 km (ein anderes Viertel); nur 11 % dazwischen. Ein Median
@@ -409,7 +400,7 @@ Adapter und Whitening reagieren.
 oben die Länge der Fahrten; unten die räumliche Abdeckung und die Lage von
 Referenz- gegen Anfragebildern.</sub>
 
-| | |
+| | Osnabrück |
 |---|---|
 | **Quelle** | [Mapillary](https://www.mapillary.com) — Straßenbilder von Nutzern, per Vector Tiles (Zoom 14) über das OSM-Stadtpolygon von Osnabrück ermittelt, Thumbnails mit 1024 px Breite |
 | **Lizenz** | CC BY-SA 4.0; Gesichter und Kennzeichen sind von Mapillary automatisch unkenntlich gemacht |
@@ -528,7 +519,7 @@ Einzelnen steht unter [Mögliche Erweiterungen](#mögliche-erweiterungen).
 
 ## Voraussetzungen
 
-| | |
+| | Anforderung |
 |---|---|
 | **Python** | ab 3.11 (`src/config.py` prüft es beim Laden der config). Entwickelt wird mit 3.14; unter 3.11 läuft die Testsuite ebenfalls durch, und beide Versionen laufen im CI |
 | **Paketmanager** | conda (empfohlen) oder uv |
@@ -698,11 +689,10 @@ VPR_CITY="Kaiserslautern, Germany" jupyter lab notebooks/01_mapillary_coverage.i
 VPR_CITY="Kaiserslautern, Germany" python run.py --bestand
 ```
 
-Das ist nicht nur Bequemlichkeit: die Notebooks lesen `config.yaml` bei
-**jeder** Zellenausführung neu. Die Datei umzustellen, während ein `run.py`
-läuft, würde dem laufenden Durchgang die Stadt unter den Füßen wechseln —
-die nächste Stufe schriebe nach `results/<andere stadt>/` und fände ihre
-Eingaben nicht. Über die Umgebung bleiben beide Läufe getrennt, und die
+Das ist nicht nur Bequemlichkeit: jedes Notebook liest `config.yaml` beim
+Start neu. Die Datei umzustellen, während ein `run.py` läuft, würde dem
+laufenden Durchgang bei der nächsten Stufe die Stadt wechseln — sie
+schriebe nach `results/<andere stadt>/` und fände ihre Eingaben nicht. Über die Umgebung bleiben beide Läufe getrennt, und die
 versionierte Datei bleibt unangetastet.
 
 Nach demselben Muster sticht **`VPR_OVERPASS_URL`** den Endpunkt aus
@@ -920,7 +910,8 @@ mixvpr        none        4096      0.653  [0.575, 0.724]   0.723   0.751   0.77
 ----------------------------------------------------------------------------------
 Zufall        (Raten)              0.0005                   0.0022  0.0043  0.0088
 
-Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.py). Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
+Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.py).
+Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
 ```
 
 <sub>Wörtliche Ausgabe von `python compare.py --reference full --ci`.</sub>
@@ -955,7 +946,8 @@ mixvpr        linear      4096      0.363  [0.302, 0.433]   0.508   0.568   0.62
 ----------------------------------------------------------------------------------
 Zufall        (Raten)              0.0006                   0.0028  0.0047  0.0098
 
-Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.py). Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
+Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.py).
+Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
 ```
 
 <sub>Wörtliche Ausgabe von `python compare.py --ci`.</sub>
@@ -1202,8 +1194,8 @@ Mitteln oder Clustern der Top-10 liegt bei jedem Encoder unter Top-1
 
 Bezogen auf alle 53.414 Anfragen, denn eine Koordinate wird immer
 geschätzt. **MegaLoc trifft mit dem besten Treffer im Median auf 94 m.**
-Fünf Aggregationsverfahren (Schwerpunkt, Clustering, Snap, Gated) sind
-gemessen und unterliegen Top-1 bei jedem Encoder — MegaLoc: Clustering
+Fünf Aggregationsverfahren (Schwerpunkt roh und gespreizt, Clustering, Snap,
+Gated) sind gemessen und unterliegen Top-1 bei jedem Encoder — MegaLoc: Clustering
 0.318 bei 444 m, Schwerpunkt 0.267 bei 575 m; siehe
 [`experiments/localization_aggregation.py`](experiments/localization_aggregation.py)
 und [`experiments/README.md`](experiments/README.md).
@@ -1241,8 +1233,10 @@ größer als jede Halbbreite unter [Unsicherheit](#unsicherheit).
 ### Stadtteile
 
 <p align="center">
-  <img src="experiments/results/osnabrueck/recall_by_district_megaloc.png" width="49%" alt="Recall je Stadtteil, MegaLoc">
-  <img src="experiments/results/osnabrueck/recall_by_district_eigenplaces_pcaw512.png" width="49%" alt="Recall je Stadtteil, EigenPlaces PCA+Whitening 512">
+  <img src="experiments/results/osnabrueck/recall_by_district_megaloc.png" width="100%" alt="Recall je Stadtteil, MegaLoc">
+</p>
+<p align="center">
+  <img src="experiments/results/osnabrueck/recall_by_district_eigenplaces_pcaw512.png" width="100%" alt="Recall je Stadtteil, EigenPlaces PCA+Whitening 512">
 </p>
 
 R@1 von MegaLoc je OSM-Stadtteil reicht von 0.07 (Sutthausen) bis 0.83
@@ -1261,8 +1255,10 @@ Erzeugt von `python experiments/recall_by_district.py`.
 ### Ablehnung
 
 <p align="center">
-  <img src="experiments/results/osnabrueck/rejection_curve_megaloc.png" width="49%" alt="Präzision gegen Abdeckung, MegaLoc">
-  <img src="experiments/results/osnabrueck/rejection_curve_eigenplaces_megaloc_concat.png" width="49%" alt="Präzision gegen Abdeckung, Verkettung">
+  <img src="experiments/results/osnabrueck/rejection_curve_megaloc.png" width="100%" alt="Präzision gegen Abdeckung, MegaLoc">
+</p>
+<p align="center">
+  <img src="experiments/results/osnabrueck/rejection_curve_eigenplaces_megaloc_concat.png" width="100%" alt="Präzision gegen Abdeckung, Verkettung">
 </p>
 
 Darf das System schweigen, wenn es sich nicht sicher ist? Drei
@@ -1291,8 +1287,10 @@ noch 75 % (69 %).
 ### Schwierigkeit je Anfrage
 
 <p align="center">
-  <img src="experiments/results/osnabrueck/recall_by_difficulty_megaloc.png" width="49%" alt="R@1 gegen Nachbarzahl, Zeit, Blickrichtung, Fotograf — MegaLoc">
-  <img src="experiments/results/osnabrueck/recall_by_difficulty_eigenplaces_pcaw512.png" width="49%" alt="dieselbe Zerlegung für EigenPlaces PCA+Whitening 512">
+  <img src="experiments/results/osnabrueck/recall_by_difficulty_megaloc.png" width="100%" alt="R@1 gegen Nachbarzahl, Zeit, Blickrichtung, Fotograf — MegaLoc">
+</p>
+<p align="center">
+  <img src="experiments/results/osnabrueck/recall_by_difficulty_eigenplaces_pcaw512.png" width="100%" alt="dieselbe Zerlegung für EigenPlaces PCA+Whitening 512">
 </p>
 
 R@1 nach Eigenschaften der Anfrage, aus den Metadaten; alle Klassen, nicht
@@ -1572,8 +1570,10 @@ Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 39 Zeilen in eine
 Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde.
 
 <p align="center">
-  <img src="results/osnabrueck/figures/evaluation/vergleich_r1_25m_derived.png" width="49%" alt="R@1 je Zeile, kleine Vielfache je Encoder">
-  <img src="results/osnabrueck/figures/evaluation/vergleich_recall_k_25m_derived.png" width="49%" alt="Recall gegen k, kleine Vielfache je Encoder">
+  <img src="results/osnabrueck/figures/evaluation/vergleich_r1_25m_derived.png" width="100%" alt="R@1 je Zeile, kleine Vielfache je Encoder">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/figures/evaluation/vergleich_recall_k_25m_derived.png" width="100%" alt="Recall gegen k, kleine Vielfache je Encoder">
 </p>
 
 `results/<stadt>/figures/localization/` —
@@ -1977,17 +1977,8 @@ Datei, und macOS lädt sie einmal:
 
 ```bash
 cd $CONDA_PREFIX/lib/python3.*/site-packages/torch/lib
-```
-
-```bash
 mv libomp.dylib libomp.dylib.orig
-```
-
-```bash
 ln -s $CONDA_PREFIX/lib/libomp.dylib libomp.dylib
-```
-
-```bash
 cd -
 ```
 

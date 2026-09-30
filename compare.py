@@ -604,7 +604,7 @@ def main():
 
     if intervalle:
         print("\nIntervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil "
-              "(experiments/bootstrap_ci.py). Fuer den Vergleich zweier Zeilen "
+              "(experiments/bootstrap_ci.py).\nFuer den Vergleich zweier Zeilen "
               "gilt die gepaarte Differenz dort, nicht die Ueberlappung.")
 
 

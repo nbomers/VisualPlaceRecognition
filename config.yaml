@@ -1,12 +1,11 @@
-# Projektparameter — bewusst versioniert.
+# Projektparameter, versioniert. Umgebungsvariablen (VPR_CITY, VPR_METHOD,
+# VPR_ADAPTER, ...) stechen einzelne Werte, ohne die Datei zu aendern.
 
-# Die Stadt bestimmt auch die Ablage: data/<slug>, results/<slug>,
-# experiments/results/<slug>, weights/adapter/<slug> (src/paths.py).
+# Bestimmt auch die Ablage: data/<slug>, results/<slug>, ... (src/paths.py).
 city: "Osnabrück, Germany"
 
 
-# Vorlagen fuer die abgeleiteten Encoder unter vpr (YAML-Anker). Kein
-# Schalter -- wer eine Variante aendern will, aendert ihren Block dort.
+# YAML-Anker fuer die PCA-Varianten unter vpr; kein eigener Schalter.
 _vorlagen:
   pca512:  &pca512  {pca_dim: 512, fit_images: 50000, whiten: false}
   pcaw512: &pcaw512 {pca_dim: 512, fit_images: 50000, whiten: true}
@@ -22,52 +21,40 @@ vpr:
   # Verfahren
   # ----------------------------------------------------------
 
-  # Welcher Encoder: ein Name aus vpr.models -- die fuenf echten (clip,
-  # anyloc, mixvpr, eigenplaces, megaloc) oder eine abgeleitete Variante.
-  # run.py --method ueberschreibt das je Lauf.
-
+  # Ein Name aus vpr.models. run.py --method sticht ihn je Lauf.
   method: "eigenplaces"
 
-  # none = Encoder wie veroeffentlicht, linear = mit dem in 05 trainierten
-  # Adapter. Bestimmt, welche Embeddings 06 bis 08 auswerten.
-
+  # none = Encoder wie veroeffentlicht, linear = mit Adapter aus 05.
   adapter: "none"
 
   models:
-    # Nur Modellnamen. Die Konfiguration steht in eigenen Bloecken darunter.
+    # Nur Namen; die Konfiguration steht in eigenen Bloecken darunter.
     clip: "openai/clip-vit-base-patch32"
     anyloc: "dinov2_vitg14"
     mixvpr: "resnet50"
     eigenplaces: "ResNet50"
     megaloc: "megaloc"
 
-    # Auf gemeinsame Deskriptorbreite reduzierte Varianten. Erzeugt von
-    # experiments/pca_reduce.py, danach ganz normale Encoder fuer 05 bis 08.
+    # Auf 512 reduziert (experiments/pca_reduce.py), danach normale Encoder.
     clip_pca512: "clip -> PCA 512"
     anyloc_pca512: "anyloc -> PCA 512"
     mixvpr_pca512: "mixvpr -> PCA 512"
     eigenplaces_pca512: "eigenplaces -> PCA 512"
     megaloc_pca512: "megaloc -> PCA 512"
 
-    # Dieselben, zusaetzlich gewhitent: jede Hauptrichtung auf gleiche
-    # Streuung gebracht. Eine lineare Nachbearbeitung wie der Adapter, nur
-    # aus der Kovarianz geschaetzt statt aus Triplets gelernt.
+    # Dieselben, zusaetzlich gewhitent: jede Hauptrichtung auf gleiche Streuung.
     clip_pcaw512: "clip -> PCA 512 + Whitening"
     anyloc_pcaw512: "anyloc -> PCA 512 + Whitening"
     mixvpr_pcaw512: "mixvpr -> PCA 512 + Whitening"
     eigenplaces_pcaw512: "eigenplaces -> PCA 512 + Whitening"
     megaloc_pcaw512: "megaloc -> PCA 512 + Whitening"
 
-    # Nur Whitening, keine Reduktion: trennt bei AnyLoc den Effekt des
-    # Whitenings von dem der Breite. VLAD-Deskriptoren sind stark anisotrop;
-    # ohne Whitening dominieren wenige Richtungen die Cosinus-Aehnlichkeit.
+    # Nur Whitening, volle Breite: trennt den Effekt des Whitenings von dem
+    # der Breite. EigenPlaces ist die Kontrolle an einem VPR-Encoder.
     anyloc_pcaw4096: "anyloc -> Whitening auf 4096"
-    # Kontrolle dazu: derselbe Test an einem VPR-trainierten Encoder. Hilft
-    # Whitening hier NICHT und bei AnyLoc schon, ist es ein VLAD-Befund.
     eigenplaces_pcaw2048: "eigenplaces -> Whitening auf 2048"
 
-    # Verkettung der beiden besten gewhitenten Deskriptoren, 1024 Dimensionen.
-    # Erzeugt von experiments/concat_embeddings.py.
+    # Verkettung, 1024 Dimensionen (experiments/concat_embeddings.py).
     eigenplaces_megaloc_concat: "eigenplaces_pcaw512 + megaloc_pcaw512"
 
 
@@ -75,8 +62,7 @@ vpr:
     revision: "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
 
   anyloc:
-    # ViT-G mit 1,14 Mrd. Parametern passt auf 8 GB VRAM nur in kleinen
-    # Batches. Sticht vpr.embed_batch_size fuer dieses Verfahren.
+    # ViT-G passt auf 8 GB VRAM nur in kleinen Batches; sticht embed_batch_size.
     batch_size: 4
 
     repo_path: "external/AnyLoc"
@@ -88,7 +74,7 @@ vpr:
     pca_dim: 4096                     # null = keine Reduktion
     pca_fit_images: 10000
 
-  mixvpr: 
+  mixvpr:
     repo_path: "external/MixVPR"
     weights: "weights/mixvpr/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt"
     image_size: 320
@@ -110,21 +96,13 @@ vpr:
   # PCA-Varianten
   # ----------------------------------------------------------
 
-  # Gemeinsame Deskriptorbreite fuer den fairen Vergleich. source nennt den
-  # Encoder, aus dem reduziert wird; die PCA wird nur auf dem train-Split
-  # angepasst. Diese Werte gehen in den Fingerabdruck ein -- wer pca_dim
-  # aendert, entwertet die Datei korrekt.
+  # source = Encoder, aus dem reduziert wird. Die PCA wird nur auf train
+  # angepasst; alle Werte gehen in den Fingerabdruck ein. <<: fuegt die
+  # Vorlage vom Dateianfang ein.
   #
-  # Whitening bewusst nur auf 512 Komponenten, nicht auf allen. Die Vermutung
-  # dahinter: die kleinsten Eigenwerte sind bei 50.000 Stichproben Rauschen,
-  # und Whitening teilt durch sie. Die zwei Ausnahmen (anyloc_pcaw4096,
-  # eigenplaces_pcaw2048) zeigen, dass das Vorzeichen zur Vermutung passt --
-  # den Mechanismus belegen sie nicht. Dafuer braeuchte es Shrinkage
-  # (durch sqrt(lambda + eps * lambda_max) teilen); ungemessen.
-  #
-  # Die Bloecke teilen sich ihre Werte ueber YAML-Anker (_vorlagen am
-  # Dateianfang);
-  # <<: fuegt den Anker ein, source kommt je Variante dazu.
+  # Whitening bewusst meist auf 512 Komponenten: die kleinsten Eigenwerte
+  # sind Rauschen, und Whitening teilt durch sie. Die beiden Varianten auf
+  # voller Breite passen zu dieser Vermutung, belegen sie aber nicht.
 
   clip_pca512:        {source: "clip",        <<: *pca512}
   anyloc_pca512:      {source: "anyloc",      <<: *pca512}
@@ -141,10 +119,8 @@ vpr:
   anyloc_pcaw4096:      {source: "anyloc",      pca_dim: 4096, fit_images: 50000, whiten: true}
   eigenplaces_pcaw2048: {source: "eigenplaces", pca_dim: 2048, fit_images: 50000, whiten: true}
 
-  # Verkettung: experiments/concat_embeddings.py richtet die Quellen ueber die
-  # image_id aus (auf zwei Rechnern gerechnet, andere Zeilenreihenfolge);
-  # database und query muessen in allen vollstaendig sein. Die Reihenfolge
-  # hier bestimmt die Reihenfolge der Bloecke.
+  # Quellen werden ueber die image_id ausgerichtet; die Reihenfolge hier ist
+  # die Reihenfolge der Bloecke im verketteten Vektor.
   eigenplaces_megaloc_concat:
     sources: ["eigenplaces_pcaw512", "megaloc_pcaw512"]
 
@@ -159,8 +135,7 @@ vpr:
   database_fraction: 0.15
   query_fraction: 0.15
 
-  # Anteil der train-Sequenzen, der in 05 als Validierung zurueckgehalten
-  # wird. Beeinflusst nur das Adaptertraining, nicht die Auswertung.
+  # Anteil der train-Sequenzen, den 05 als Validierung zurueckhaelt.
   val_fraction: 0.10
 
 
@@ -168,39 +143,23 @@ vpr:
   # Geografische Definition
   # ----------------------------------------------------------
 
-  # Zwei train-Bilder aus verschiedenen Sequenzen gelten in 05 als
-  # Positiv-Paar (Anchor/Positive), wenn sie höchstens so weit auseinander
-  # liegen. Die Auswertung in 07 nutzt retrieval.thresholds.
-
+  # Positiv-Paar im Adaptertraining (05): zwei train-Bilder aus
+  # verschiedenen Sequenzen, hoechstens so weit auseinander.
   positive_radius_m: 10.0
 
-  # Bilder außerhalb dieses Radius gelten als Negative. Zwischen
-  # positive_radius_m und diesem Wert liegt die unsichere Zone: dort zählt
-  # ein Bild weder als positiv noch als negativ. Hard Negatives für 05
-  # kommen aus hard_negative_min_m bis hard_negative_max_m.
-  #
-  # Zugleich die Schwelle der Ground Truth: compare.py nimmt diesen Wert als
-  # Standard fuer --threshold. Warum 25 und nicht 10 oder 50 -- die Schwelle
-  # muss ueber dem GPS-Rauschen der Aufnahmen liegen, sonst misst der Recall
-  # die Ortung der Kamera statt die Leistung des Encoders. Mapillary-Bilder
-  # kommen ueberwiegend von Smartphones und Dashcams; deren Einzelmessung
-  # streut im Stadtgebiet (Mehrwegeausbreitung an Hausfassaden) typisch 5 bis
-  # 15 m, einzelne Punkte deutlich weiter. Bei 10 m zaehlte ein korrekt
-  # wiedererkannter Ort je nach Rauschen mal als Treffer, mal nicht; bei 50 m
-  # faengt die Schwelle bereits die Nachbarstrasse ein. 25 m liegt darueber
-  # und unter der typischen Blocklaenge. retrieval.thresholds berichtet
-  # daneben 5 / 10 / 50 / 100 m, damit die Wahl nachpruefbar bleibt.
+  # Schwelle der Ground Truth (auch Standard von compare.py --threshold) und
+  # Grenze der Negative in 05; dazwischen liegt die unsichere Zone. Warum
+  # 25 m: ueber dem GPS-Rauschen (5-15 m), unter der Blocklaenge -- README,
+  # "Warum 25 Meter". 07 berichtet zusaetzlich 5 / 10 / 50 / 100 m.
+  uncertain_radius_m: 25.0
 
-  uncertain_radius_m: 25.0      # 10-25 m: weder positiv noch negativ
-
-  # Hard Negatives MUESSEN oberhalb der Uncertain-Zone liegen,
-  # sonst trainiert man gegen die eigene Evaluationsmetrik.
+  # Hard Negatives fuer 05. Muessen oberhalb der unsicheren Zone liegen,
+  # sonst trainiert man gegen die eigene Metrik.
   hard_negative_min_m: 25.0
   hard_negative_max_m: 100.0
-  
-  # Zwei Bilder 5 m auseinander, die in entgegengesetzte Richtungen schauen,
-  # haben keinen gemeinsamen Bildinhalt -- geometrisch aber "positiv".
-  # Maximale zyklische Differenz von compass_angle fuer ein Positiv-Paar.
+
+  # Hoechste Kompassabweichung fuer ein Positiv-Paar und fuer die
+  # Blickrichtungs-Auswertung in 07.
   max_heading_diff_deg: 90.0
 
 
@@ -208,52 +167,34 @@ vpr:
   # Adapter Training
   # ----------------------------------------------------------
 
-  # Ground-Truth-Radius der Validierungsmetrik in 05. Eigener Schluessel,
-  # steht aber auf demselben Wert wie uncertain_radius_m, damit val Recall@1
-  # mit der entsprechenden Zeile in 07 vergleichbar bleibt.
+  # Ground-Truth-Radius der val-Metrik in 05; gleich uncertain_radius_m,
+  # damit val und 07 dasselbe messen.
   val_radius_m: 25.0
 
-
-  # Batchgroesse beim Encodieren in 04. Beeinflusst nur Tempo und
-  # Speicherbedarf, nicht das Ergebnis.
+  # Batchgroesse beim Encodieren in 04; aendert nur Tempo und Speicher.
   embed_batch_size: 64
 
-
-  # Obergrenze der in 04 encodierten Bilder -- nur zum Ausprobieren auf einem
-  # kleinen Ausschnitt. null = alle. Ein Wert hier erzeugt Embeddings, die
-  # NICHT zur Auswertung taugen; der Fingerabdruck haelt sie auseinander.
+  # Nur zum Ausprobieren: hoechstens so viele Bilder in 04. null = alle.
   max_images: null
 
 
   adapter_training:
 
-    # Anzahl Triplets pro Batch
-    batch_size: 64
-
-    # Anzahl Trainingsdurchläufe
-    epochs: 20
-
-    # Lernrate
+    batch_size: 64                    # Triplets je Batch
+    epochs: 20                        # hoechstens
     learning_rate: 0.001
+    margin: 0.2                       # auf dem Cosinus-Abstand 1 - cos
+    hard_negative_probability: 0.75   # sonst ein Easy Negative
 
-    # Abstandsmarge der Triplet Loss
-    margin: 0.2
-
-    # Wahrscheinlichkeit, ein Hard Negative statt eines Easy Negatives zu ziehen
-    hard_negative_probability: 0.75
-
-    # Abbruch nach so vielen Epochen ohne Verbesserung von val Recall@1.
-    # null = alle epochs durchlaufen. Gespeichert wird ohnehin die beste
-    # Epoche, patience spart nur Zeit.
+    # Abbruch nach so vielen Epochen ohne Verbesserung von val Recall@1
+    # (null = alle). Gespeichert wird ohnehin die beste Epoche.
     patience: 3
 
-    # Mindestzuwachs, der als Verbesserung zaehlt. Ohne Schwelle setzt
-    # Rauschen den Zaehler staendig zurueck -- bei ~3.200 val-Queries
-    # entspricht ein einzelner Treffer 0.0003.
+    # Mindestzuwachs, der als Verbesserung zaehlt; ein einzelner Treffer
+    # unter ~3.200 val-Queries sind 0.0003.
     min_delta: 0.001
 
-    # Obergrenze fuer Trainingspaare je Epoche.
-    #   null = alle Paare verwenden
+    # Obergrenze fuer Trainingspaare je Epoche (null = alle).
     max_pairs_per_epoch: null
 
 
@@ -266,19 +207,17 @@ retrieval:
   # faiss | numpy
   method: "faiss"
 
-  # Wieviele Nachbarn 06 je Query speichert. Begrenzt, was 07 auswerten
-  # kann, und was fuer eine spaetere GPS-Aggregation zur Verfuegung steht.
+  # Treffer je Anfrage, die 06 speichert; begrenzt k in 07 und 08.
   top_k: 50
 
-  # Maximale geografische Distanz für Ground Truth
-  # bei der Evaluation.
+  # Schwellen der Ground Truth in 07, in Metern.
   thresholds: [5, 10, 25, 50, 100]
 
-  # Bei welchen k Recall berichtet wird. Muss <= top_k bleiben.
+  # Recall@k fuer diese k (<= top_k).
   k_values: [1, 5, 10, 20]
 
-  # Fuer die strengere Auswertung: ein Datenbanktreffer zaehlt nur, wenn er
-  # von einem anderen Fotografen stammt oder so viele Tage entfernt liegt.
+  # "Hard": ein Treffer zaehlt nur von einem anderen Fotografen oder mit
+  # mindestens so vielen Tagen Abstand.
   min_days_apart: 180
 
 
@@ -286,31 +225,25 @@ retrieval:
 # Lokalisierung
 # ============================================================
 
-# Aus der Trefferliste von 06 eine Koordinate machen (08_localization).
+# 08 nimmt die Koordinate des besten Treffers. Die Werte unten gelten fuer
+# die Aggregationsverfahren in experiments/localization_aggregation.py --
+# gemessen, alle schlechter als Top-1.
 localization:
 
-  # Wieviele Treffer die Aggregationsverfahren in
-  # experiments/localization_aggregation.py betrachten; 08 selbst nimmt nur
-  # den besten und schreibt den Wert mit. Muss <= retrieval.top_k sein.
+  # Treffer, die aggregiert werden (<= retrieval.top_k).
   top_k: 10
 
-  # DBSCAN: Nachbarschaftsradius und Mindestgroesse einer Gruppe.
-  # eps entspricht dem uncertain_radius_m, damit "dieselbe Stelle" hier und
-  # in der Auswertung dasselbe heisst.
+  # DBSCAN: Radius wie die Ground Truth, Mindestgroesse einer Gruppe.
   eps_m: 25.0
   min_samples: 2
 
-  # Die Aggregationsverfahren (Schwerpunkt, Clustering, Snap, Gated) sind
-  # gemessen und unterliegen Top-1; sie stehen in
-  # experiments/localization_aggregation.py und lesen die Werte hier.
-
-  # Fuer die Gated-Variante: Top-1 wird nur durch die staerkste Gruppe
-  # ersetzt, wenn mindestens dieser Anteil der Treffer in ihr liegt.
+  # Gated: Top-1 wird nur ersetzt, wenn mindestens dieser Anteil der Treffer
+  # in der staerksten Gruppe liegt.
   gate_share: 0.7
 
-  # Cosinus-Werte liegen dicht beieinander (bei CLIP 0.89 bis 0.92), eine
-  # direkte Gewichtung waere praktisch ein ungewichteter Mittelwert. Die
-  # Temperatur spreizt sie: hoeher = staerker auf die besten Treffer.
+  # Gewicht je Treffer = exp(T * (cos - cos_max)). Cosinus-Werte liegen dicht
+  # beieinander; ohne Spreizung waere es ein ungewichteter Mittelwert.
+  # Grosses T naehert sich Top-1.
   softmax_temperature: 50.0
 
 
@@ -320,81 +253,49 @@ localization:
 
 zoom: 14
 
-# Getrennt, weil die beiden Stufen unterschiedliche Arbeit machen:
-# Kachelverarbeitung ist CPU-gebunden, der Bilddownload wartet auf das Netz.
-#   "auto" = min(16, 2 x CPU-Kerne)
-tile_workers: "auto"
-#   "auto" = 96
-download_workers: "auto"
+# Kacheln (01) rechnen auf der CPU, der Download (03) wartet auf das Netz.
+tile_workers: "auto"        # min(16, 2 x CPU-Kerne)
+download_workers: "auto"    # 96
 
-# Aufloesung der Mapillary-Thumbnails beim Download. Nicht zu verwechseln
-# mit vpr.<verfahren>.image_size, das die Modelleingabe bestimmt.
+# Breite der geladenen Thumbnails; die Modelle skalieren selbst herunter.
 download_image_size: 1024
 
-# Wieviele Bilder fehlen duerfen, bevor 03 und 04 abbrechen.
-#
-# Ohne Schranke gilt 03 auch nach einem abgelaufenen Token als fertig; 04
-# filtert die fehlenden Bilder heraus, bildet den Fingerabdruck aus den
-# GEFILTERTEN Metadaten -- er passt also -- und liefert einen sauber
-# abgestempelten, unvollstaendigen Encoder. Die Warnung dazu waere nur ein
-# print in einem Notebook, das run.py ohne Konsole ausfuehrt.
-#
-# 0.01 = bis zu 1 % darf fehlen (in Osnabrueck 1 Bild von 332.868, bei MegaLoc 3).
+# Anteil fehlender Bilder, ab dem 03 und 04 abbrechen. Ohne Schranke gaelte
+# ein durch abgelaufenen Token abgebrochener Download als fertig, und 04
+# lieferte einen unvollstaendigen Encoder mit passendem Fingerabdruck.
+# Osnabrueck: 1 Bild von 332.868 fehlt, bei MegaLoc 3.
 max_missing_images_frac: 0.01
 
-# 03 prueft nach dem Download, ob die JPGs vollstaendig sind.
-#   false = nur die in diesem Lauf geholten Bilder (Sekunden)
-#   true  = der gesamte Bestand (bei 330k Dateien etliche Minuten)
+# 03 prueft die JPGs: false = nur die neu geladenen, true = alle (Minuten).
 verify_all_images: false
 
-# Bilder liegen ausserhalb des Repos (50 GB je Stadt): image_root/<stadt>,
-# der Stadtname als Slug aus city (osnabrueck, wuerzburg, ...). Daneben
-# image_root/test fuer eigene Fotos (locate.py, Demo). Je Rechner anders:
-# VPR_IMAGE_ROOT (oder VPR_IMAGE_PATH fuer den Stadtordner direkt) in der
-# Umgebung setzen statt die versionierte Datei zu aendern.
+# Bilder liegen ausserhalb des Repos (50 GB je Stadt): image_root/<slug>,
+# daneben image_root/test fuer eigene Fotos. Je Rechner per VPR_IMAGE_ROOT
+# oder VPR_IMAGE_PATH (Stadtordner direkt).
 image_root: "~/Downloads/mapillary"
-
 
 
 # ============================================================
 # OpenStreetMap / Overpass
 # ============================================================
 
-# Woher 01 Stadtgrenze, Strassennetz und Stadtteile holt. Nominatim
-# (Geocoder) und Overpass (alles andere) sind oeffentliche, geteilte
-# Dienste: Zeitueberschreitung, 429 und 504 sind dort Normalbetrieb, kein
-# Programmfehler. 01 bricht deshalb an keiner dieser Stellen mehr ab -- der
-# Datensatz (metadata.parquet, die Split-Listen) steht vorher fest, die
-# Karten und die Stadtteiltabelle danach fallen im Zweifel aus.
+# Stadtgrenze, Strassennetz und Stadtteile fuer 01. Nominatim und Overpass
+# sind geteilte Dienste; Zeitueberschreitungen sind dort normal. 01 bricht
+# daran nicht ab: der Datensatz steht vorher fest, Karten und Stadtteile
+# fallen im Zweifel aus. Antworten landen gitignored unter cache/.
 
 osm:
 
-  # Antworten landen unter cache/ und werden bei einer Wiederholung nicht
-  # erneut geholt. Diese Antworten sind gitignored (versioniert ist unter
-  # cache/ nur detections.jsonl) -- ein frischer Klon stellt jede Abfrage
-  # genau einmal wirklich.
-
-  # Endpunkt ohne /interpreter. Der Standard ist haeufig ausgelastet;
-  # Spiegel mit meist kuerzeren Wartezeiten:
+  # Endpunkt ohne /interpreter; je Rechner per VPR_OVERPASS_URL. Spiegel:
   #   https://overpass.kumi.systems/api
   #   https://overpass.private.coffee/api
-  # Je Rechner ohne Aenderung an dieser Datei: VPR_OVERPASS_URL setzen.
-
   overpass_url: "https://overpass-api.de/api"
 
-
-  # Zeitlimit je Abfrage, in Sekunden. Gilt fuer die HTTP-Anfrage und fuer
-  # das [timeout:...], das osmnx in das Overpass-Skript schreibt.
-  # osmnx-Standard ist 180; das Strassennetz einer ganzen Stadt liegt an
-  # einem ausgelasteten Endpunkt darueber.
-
+  # Sekunden je Abfrage (osmnx-Standard 180 reicht fuer eine ganze Stadt oft nicht).
   timeout_s: 300
 
-
-  # Vor jeder Abfrage den Serverstatus lesen und warten, bis ein Slot frei
-  # ist. Langsamer, aber ohne die 429-Sperren, die sonst mitten im Lauf
-  # kommen. Nur auf einem eigenen Overpass-Server abschaltbar.
-
+  # Vor jeder Abfrage auf einen freien Slot warten -- langsamer, aber ohne
+  # 429-Sperren mitten im Lauf.
   rate_limit: true
 
 
@@ -404,37 +305,16 @@ osm:
 
 districts:
 
-  # true  = Stadtteile berechnen und auswerten
   # false = 01 berechnet keine Stadtteile (recall_by_district.py und
-  #         confusion_atlas.py laden sie trotzdem)
-
+  # confusion_atlas.py laden sie trotzdem).
   enabled: true
 
+  # Administrative Ebenen; bei Gleichstand gewinnt die zuerst genannte.
+  admin_levels: [10, 9]
 
-  # Rueckfall, wenn keine admin_level-Ebene brauchbar ist: OSM-place-Tags,
-  # die als Stadtteil gelten
+  # Rueckfall ohne brauchbare admin_level-Ebene: diese place-Tags.
+  place_tags: [suburb, quarter, neighbourhood]
 
-  place_tags:
-    - suburb
-    - quarter
-    - neighbourhood
-
-
-  # Kleine Flächen herausfiltern
-
+  # Kleinere Flaechen fallen weg; eine Ebene braucht mindestens so viele Teile.
   min_area_km2: 0.05
-
-
-  # Administrative Ebenen, die geprüft werden.
-  # Bei gleichwertigen Kandidaten gilt die Reihenfolge
-  # als Präferenz.
-
-  admin_levels:
-    - 10
-    - 9
-
-
-  # Mindestanzahl an Stadtteilen,
-  # damit eine Ebene als brauchbar gilt.
-
   min_districts_required: 3
