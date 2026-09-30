@@ -429,7 +429,8 @@ def main():
     befunde = {}
     befunde["abdeckung_intervall"] = _zusammenhang(
         "Abdeckung gegen Intervallbreite", zeilen, "abdeckung", "halbbreite",
-        "Loechrige Abdeckung -> manche Fahrten laufen ins Leere -> grosse Streuung zwischen Fahrten.")
+        "Vermutung: loechrige Abdeckung -> manche Fahrten laufen ins Leere -> grosse Streuung "
+        "zwischen Fahrten. Nicht entscheidbar: die Zahl der Fahrten liefert dasselbe rho.")
     for z in zeilen:
         if z.get("hard") is not None:
             z["hard_abschlag"] = z["hard"] - z["alle"]
@@ -475,10 +476,10 @@ def main():
     print(f"\ngeschrieben: {OUT.relative_to(ROOT)}")
 
     if args.plot:
-        _abbildung(zeilen, args.method)
+        _abbildung(zeilen, args.method, befunde["abdeckung_intervall"])
 
 
-def _abbildung(zeilen, method):
+def _abbildung(zeilen, method, zusammenhang):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -493,15 +494,15 @@ def _abbildung(zeilen, method):
     ax.scatter(x, y, s=40, zorder=3)
     for xi, yi, n in p:
         ax.annotate(n, (xi, yi), textcoords="offset points", xytext=(6, 4), fontsize=8)
-    if len(p) >= 3:
-        m, b = np.polyfit(x, y, 1)
-        xs = np.linspace(min(x), max(x), 50)
-        ax.plot(xs, m * xs + b, "--", linewidth=1, alpha=0.7,
-                label=f"±boot = {m:.3f}·Abdeckung + {b:.3f}")
-        ax.legend(fontsize=8)
+    # Keine Ausgleichsgerade: bei sechs Staedten und p ueber 0,05 behauptete sie
+    # einen Zusammenhang, den die Rangkorrelation nicht traegt (README, Sechs Staedte).
     ax.set_xlabel("Strassenabdeckung")
     ax.set_ylabel("95-%-Halbbreite von R@1 (Sequenz-Bootstrap)")
-    ax.set_title(f"{method}: Abdeckung bestimmt die Messunsicherheit")
+    ax.set_title(f"{method}: Messunsicherheit gegen Strassenabdeckung")
+    if zusammenhang and zusammenhang.get("p") is not None:
+        ax.text(0.98, 0.97, f"Spearman rho = {zusammenhang['rho']:+.2f}, p = {zusammenhang['p']:.3f}, "
+                f"n = {zusammenhang['n']}\nnicht belegt -- die Zahl der Fahrten korreliert genauso",
+                transform=ax.transAxes, fontsize=7, color="0.35", ha="right", va="top")
     ax.grid(alpha=0.3)
     ziel = OUT.with_suffix(".png")
     fig.savefig(ziel, bbox_inches="tight")
