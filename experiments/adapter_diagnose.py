@@ -16,7 +16,8 @@ legt vier Zahlen nebeneinander:
                         aus 05 (<method>_linear_embeddings.npy). Die sind
                         genau die normierte Ausgabe des Adapters, also
                         dieselbe Zahl. Stimmen gespeichert und gemessen, ist
-                        der val-Split derselbe wie in 05
+                        der val-Split derselbe wie in 05; ohne Gewichte
+                        prueft das die Metadaten (val_split_wie_05)
   test ohne / mit       aus results/<stadt>/evaluation/<method>{,_linear}.json
 
 Lesart:
@@ -109,7 +110,7 @@ def diagnose(method, device):
     with torch.no_grad():
         val_ohne, n_val = val_recall_at_1(identitaet, *args)
 
-    val_mit_gespeichert = beste_epoche = val_mit_gemessen = None
+    val_mit_gespeichert = beste_epoche = val_mit_gemessen = split_wie_05 = None
     fp_datei = gewichte.with_name(gewichte.name + ".fingerprint.json")
     if fp_datei.exists():
         gespeichert = require_fingerprint(gewichte, adapter_fingerprint(CFG, method, basis),
@@ -135,6 +136,11 @@ def diagnose(method, device):
             fp = require_fingerprint(lin_npy, embedding_fingerprint(CFG, method, "linear", lin_meta),
                                      what="Adaptierte Embeddings")
             beste_epoche = beste_epoche if beste_epoche is not None else fp.get("best_epoch")
+            # 05 schreibt diese Metadaten als Kopie derer, auf denen es den
+            # val-Split gezogen hat. Dieselben Zeilen (Reihenfolge egal, der
+            # Split geht ueber sortierte Sequenzen) heissen: derselbe Seed
+            # zieht hier denselben val-Split.
+            split_wie_05 = _zeilen(lin_meta) == _zeilen(meta)
             # Zeilen ueber image_id zuordnen, nicht ueber die Position.
             zeile = pd.Series(np.arange(len(lin_meta)), index=lin_meta["image_id"].to_numpy())
             lin_rows = zeile.reindex(val_meta["image_id"].to_numpy()).to_numpy()
@@ -148,6 +154,8 @@ def diagnose(method, device):
             quelle = "adaptierte_embeddings"
 
     val_mit = val_mit_gemessen if val_mit_gemessen is not None else val_mit_gespeichert
+    if split_wie_05 is None and val_mit_gespeichert is not None and val_mit_gemessen is not None:
+        split_wie_05 = abs(val_mit_gespeichert - val_mit_gemessen) <= 0.002
     schwelle = float(vpr["uncertain_radius_m"])
     test_ohne, test_mit = _test_recall(method, "", schwelle), _test_recall(method, "_linear", schwelle)
     return {
@@ -158,12 +166,17 @@ def diagnose(method, device):
         "val_recall_1_beste_epoche_gespeichert": _zahl(val_mit_gespeichert),
         "val_recall_1_beste_epoche_gemessen": _zahl(val_mit_gemessen),
         "val_mit_quelle": quelle,
+        "val_split_wie_05": split_wie_05,
         "beste_epoche": beste_epoche,
         "test_threshold_m": schwelle,
         "test_recall_1_ohne": test_ohne,
         "test_recall_1_mit": test_mit,
         "lesart": lesart(val_ohne, val_mit, test_ohne, test_mit),
     }
+
+
+def _zeilen(meta):
+    return set(zip(meta["image_id"].astype(str), meta["sequence_id"].astype(str), meta["split"]))
 
 
 def _zahl(x):
@@ -186,21 +199,25 @@ def main():
 
     print("\nAdapter-Diagnose  |  val = Mini-Retrieval auf den val-Fahrten aus 05, "
           f"test = 07 bei {zeilen[0]['test_threshold_m']:g} m")
-    print(f"{'Encoder':<14}{'val ohne':>9}{'val mit':>9}{'Epoche':>7}{'test ohne':>10}"
+    breite = max(14, max(len(z["method"]) for z in zeilen) + 1)
+    print(f"{'Encoder':<{breite}}{'val ohne':>9}{'val mit':>9}{'Epoche':>7}{'test ohne':>10}"
           f"{'test mit':>9}   Lesart")
-    print("-" * 82)
+    print("-" * (breite + 68))
     for z in zeilen:
         val_mit = z["val_recall_1_beste_epoche_gemessen"]
         if val_mit is None:
             val_mit = z["val_recall_1_beste_epoche_gespeichert"]
         epoche = "-" if z["beste_epoche"] is None else str(z["beste_epoche"])
-        print(f"{z['method']:<14}   {_fmt(z['val_recall_1_ohne_training'])}   {_fmt(val_mit)}"
+        print(f"{z['method']:<{breite}}   {_fmt(z['val_recall_1_ohne_training'])}   {_fmt(val_mit)}"
               f"{epoche:>7}    {_fmt(z['test_recall_1_ohne'])}   {_fmt(z['test_recall_1_mit'])}"
               f"   {z['lesart']}")
         gesp, gem = z["val_recall_1_beste_epoche_gespeichert"], z["val_recall_1_beste_epoche_gemessen"]
         if gesp is not None and gem is not None and abs(gesp - gem) > 0.002:
             print(f"  Achtung: val mit Adapter gemessen {gem:.4f}, in 05 gespeichert {gesp:.4f} -- "
                   "der val-Split hier ist nicht derselbe wie in 05, die Zeile nicht deuten.")
+        elif z["val_split_wie_05"] is False:
+            print("  Achtung: die Metadaten der adaptierten Embeddings passen nicht zu den "
+                  "Basis-Metadaten -- der val-Split ist nicht sicher derselbe wie in 05.")
         elif gesp is not None and gem is not None and gesp != gem:
             print(f"  val mit Adapter gemessen {gem:.4f}, in 05 gespeichert {gesp:.4f} -- "
                   "Rundung zwischen Geraeten, derselbe Split.")

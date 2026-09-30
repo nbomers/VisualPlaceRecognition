@@ -36,3 +36,15 @@ def test_nan_wird_none():
     assert ad._zahl(float("nan")) is None
     assert ad._zahl(None) is None
     assert math.isclose(ad._zahl(0.5), 0.5)
+
+
+def test_split_abgleich_ignoriert_reihenfolge():
+    # Die Zeilen werden ueber image_id zugeordnet; zaehlen darf nur, welche
+    # Bilder in welchem Split liegen, nicht in welcher Reihenfolge.
+    import pandas as pd
+
+    a = pd.DataFrame({"image_id": [1, 2, 3], "sequence_id": ["s", "s", "t"],
+                      "split": ["train", "train", "query"]})
+    assert ad._zeilen(a) == ad._zeilen(a.iloc[::-1])
+    b = a.assign(split=["train", "database", "query"])
+    assert ad._zeilen(a) != ad._zeilen(b)
