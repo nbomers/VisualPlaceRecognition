@@ -28,4 +28,3 @@ ignore = [
 "*.ipynb" = ["E402"]
 "experiments/*.py" = ["E402"]
 "run.py" = ["E402"]
-"src/models/*.py" = ["E402"]

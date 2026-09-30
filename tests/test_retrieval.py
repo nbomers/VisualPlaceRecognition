@@ -36,26 +36,36 @@ def _brute_force(query, database, threshold):
 
 def test_kdtree_ergibt_dieselbe_menge_wie_die_volle_matrix():
     rng = np.random.default_rng(7)
-    # Rund um Osnabrueck, Streuung etwa 3 km -- genug Anfragen knapp
-    # innerhalb und knapp ausserhalb jeder geprueften Schwelle.
-    q = _rahmen(52.279 + rng.normal(0, 0.02, 400), 8.047 + rng.normal(0, 0.03, 400), 1)
-    db = _rahmen(52.279 + rng.normal(0, 0.02, 900), 8.047 + rng.normal(0, 0.03, 900), 10_000)
+    # Datenbank rund um Osnabrueck (Streuung etwa 2 km), die Anfragen um
+    # Datenbankbilder herum, halb mit etwa 20 m, halb mit etwa 100 m
+    # Streuung -- so liegen bei jeder geprueften Schwelle Anfragen knapp
+    # innerhalb und knapp ausserhalb.
+    db_lat = 52.279 + rng.normal(0, 0.02, 900)
+    db_lon = 8.047 + rng.normal(0, 0.03, 900)
+    streuung = np.repeat([1.0, 5.0], 200)
+    q = _rahmen(db_lat[:400] + rng.normal(0, 0.0002, 400) * streuung,
+                db_lon[:400] + rng.normal(0, 0.0003, 400) * streuung, 1)
+    db = _rahmen(db_lat, db_lon, 10_000)
     for schwelle in (5.0, 10.0, 25.0, 50.0, 100.0):
-        assert np.array_equal(localizable(q, db, schwelle), _brute_force(q, db, schwelle)), schwelle
+        ergebnis = localizable(q, db, schwelle)
+        assert 0 < ergebnis.sum() < len(ergebnis), schwelle
+        assert np.array_equal(ergebnis, _brute_force(q, db, schwelle)), schwelle
 
 
 def test_randfaelle_genau_auf_der_schwelle():
-    """Ein Nachbar exakt bei ~25 m darf nicht durch den Suchradius fallen."""
-    # 25 m noerdlich entsprechen 25 / 111_195 Grad Breite.
+    """Ein Nachbar knapp an der Schwelle darf nicht durch den Suchradius fallen."""
+    # Je Anfrage genau ein Datenbankbild, im gegebenen Abstand noerdlich
+    # (25 m entsprechen 25 / 111_195 Grad Breite). Die Anfragen liegen gut
+    # 1 km auseinander und sehen die Bilder der anderen nicht.
     grad_je_meter = 1.0 / (6_371_000.0 * np.pi / 180.0)
     abstaende = np.array([0.0, 24.0, 24.9, 25.0, 25.1, 26.0, 200.0])
-    q = _rahmen(np.full(len(abstaende), 52.0), np.full(len(abstaende), 8.0), 100)
-    db = _rahmen(52.0 + abstaende * grad_je_meter, np.full(len(abstaende), 8.0), 20_000)
-    # Je Anfrage derselbe Datenbanksatz -- loesbar ist deshalb ueberall True,
-    # sobald irgendein Abstand unter der Schwelle liegt. Aussagekraeftiger ist
-    # der Vergleich Zeile fuer Zeile gegen die volle Matrix.
-    for schwelle in (5.0, 25.0, 25.05, 100.0):
+    lon = 8.0 + np.arange(len(abstaende)) * 0.015
+    q = _rahmen(np.full(len(abstaende), 52.0), lon, 100)
+    db = _rahmen(52.0 + abstaende * grad_je_meter, lon, 20_000)
+    for schwelle in (5.0, 24.95, 25.0, 25.05, 100.0):
         assert np.array_equal(localizable(q, db, schwelle), _brute_force(q, db, schwelle)), schwelle
+    # An der Schwelle trennt sich die Menge -- der Test ist nicht trivial.
+    assert localizable(q, db, 25.05).tolist() == [True] * 4 + [False] * 3
 
 
 def test_ohne_jeden_nachbarn():

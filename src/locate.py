@@ -17,15 +17,16 @@ Encoder, und Torch und FAISS bringen auf macOS je ihre eigene
 OpenMP-Bibliothek mit: beide im selben Prozess beenden ihn ohne Traceback
 (siehe tests/blockwise_check.py) -- in Jupyter als "kernel died". FAISS-Flat
 ist ohnehin nur das vollstaendige Skalarprodukt; fuer eine Handvoll Fotos
-gegen 48.321 Datenbankbilder sind das Millisekunden, mit derselben
-Rangfolge (bis auf die Reihenfolge exakt gleicher Aehnlichkeiten). Die
+gegen die Datenbank einer Stadt (Osnabrueck: 48.321 Bilder) sind das
+Millisekunden, mit derselben Rangfolge (bis auf die Reihenfolge exakt
+gleicher Aehnlichkeiten). Die
 Pipeline (06) behaelt FAISS -- dort laeuft kein Torch im selben Prozess.
 
 Konfidenz: die Aehnlichkeit des besten Treffers. experiments/
 rejection_curve.py hat sie gegen Marge und Geschlossenheit gemessen -- sie
 trennt am besten (AUC 0.79 auf loesbaren Anfragen). Bei MegaLoc: cos >= 0.30
-heisst 82 % richtig (37 % der Anfragen), >= 0.20 noch 75 %, unter 0.17
-faellt es unter zwei Drittel.
+heisst 82 % richtig bei 37 % der loesbaren Anfragen, >= 0.20 noch 75 % bei
+69 % (experiments/README.md, Ablehnungskurve).
 """
 
 from pathlib import Path

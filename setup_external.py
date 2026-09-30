@@ -1,11 +1,12 @@
 """
-Holt die Fremd-Repos, die nicht mit ins Git-Repo gehoeren.
+Holt, was nicht mit ins Git-Repo gehoert: die Klone von AnyLoc und MixVPR,
+die MixVPR-Gewichte (Google Drive, per SHA-256 geprueft) und das
+AnyLoc-Vokabular (Hugging Face). EigenPlaces und MegaLoc kommen ueber
+torch.hub und laden sich beim ersten Lauf selbst nach.
 
-Nur AnyLoc und MixVPR werden als Klon gebraucht -- EigenPlaces und MegaLoc
-kommen ueber torch.hub und laden sich beim ersten Lauf selbst nach.
-
-Die Commits sind festgenagelt: aendert eines der Projekte seine helper.py,
-bricht sonst irgendwann ein Aufbau, der monatelang lief.
+Die Commits sind festgenagelt: aendert eines der Projekte seine Hilfsmodule
+(utilities.py bei AnyLoc, models/helper.py bei MixVPR), bricht sonst
+irgendwann ein Aufbau, der monatelang lief.
 
     python setup_external.py
 """

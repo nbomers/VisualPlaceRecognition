@@ -21,7 +21,7 @@
 [![Städte](https://img.shields.io/badge/St%C3%A4dte-6-1565c0)](#sechs-städte)
 [![Bilder](https://img.shields.io/badge/Bilder-332.868-1565c0)](#daten)
 [![Referenzbilder](https://img.shields.io/badge/Referenzbilder-48.321-1565c0)](#daten)
-[![Ground Truth](https://img.shields.io/badge/Ground%20Truth-4%20Varianten-1565c0)](#konzeptioneller-aufbau)
+[![Ground Truth](https://img.shields.io/badge/Ground%20Truth-3%20Definitionen-1565c0)](#konzeptioneller-aufbau)
 [![Gewichte](https://img.shields.io/badge/%F0%9F%A4%97-MixVPR%20%7C%20AnyLoc-ffcc4d)](#fremd-repositories-und-gewichte)
 
 Projekt im Rahmen des Programmierpraktikums an der **Universität Osnabrück**.
@@ -30,7 +30,7 @@ Ein Foto rein, ein Ort raus: das System vergleicht das Anfragebild mit
 48.321 Referenzbildern aus Osnabrück und gibt die Koordinate des ähnlichsten
 zurück. Der Eigenanteil ist nicht das Modell — die Encoder kommen fertig
 vortrainiert — sondern der **Benchmark**: ein sequenzbasierter Split ohne
-Leakage, vier Ground-Truth-Definitionen, eine Zufallsbasis, Fingerabdrücke
+Leakage, drei Ground-Truth-Definitionen, eine Zufallsbasis, Fingerabdrücke
 gegen vertauschte Artefakte, Konfidenzintervalle über Fahrten statt über
 Bilder, und 39 vergleichbare Zeilen über fünf Encoder und ihre Varianten.
 
@@ -89,7 +89,7 @@ Urheber je Bild in [QUELLEN.md](results/osnabrueck/figures/demo/QUELLEN.md).</su
 ## Schnellstart
 
 Von null bis zur Vergleichstabelle. Voraussetzung: conda, ein
-Mapillary-Token, rund 60 GB Platz für Bilder und 25 GB je vollständigem
+Mapillary-Token, rund 50 GB Platz für Bilder und 25 GB je vollständigem
 Encoder-Satz. Erst die Umgebung:
 
 ```bash
@@ -149,7 +149,7 @@ Ziehungen der 198 Query-Fahrten, fett der Bestwert je Spalte. Raten trifft
 | **Bester Encoder** | MegaLoc | 8448 | **0.798** <sub>[0.739, 0.848]</sub> | 0.568 <sub>[0.475, 0.666]</sub> |
 | **Bei 1/16 der Breite** | MegaLoc, PCA-Whitening auf 512 | 512 | 0.778 <sub>[0.716, 0.831]</sub> | 0.541 <sub>[0.451, 0.636]</sub> |
 | **Verkettung** | EigenPlaces + MegaLoc, gewhitent | 1024 | 0.778 <sub>[0.714, 0.832]</sub> | **0.572** <sub>[0.482, 0.666]</sub> |
-| **Bester Recall je Byte Index** | EigenPlaces, PCA-Whitening auf 512 | 512 | 0.715 <sub>[0.646, 0.777]</sub> | 0.507 <sub>[0.426, 0.595]</sub> |
+| **Zweitbester Encoder, auf 512** | EigenPlaces, PCA-Whitening auf 512 | 512 | 0.715 <sub>[0.646, 0.777]</sub> | 0.507 <sub>[0.426, 0.595]</sub> |
 | **Schwächster** | CLIP ViT-B/32 (nicht für VPR trainiert) | 512 | 0.232 <sub>[0.144, 0.349]</sub> | 0.073 <sub>[0.044, 0.108]</sub> |
 
 > [!NOTE]
@@ -161,7 +161,7 @@ Ziehungen der 198 Query-Fahrten, fett der Bestwert je Spalte. Raten trifft
 > und dort fällt heraus, was für alle Encoder gleich schwer ist. Die
 > Verkettung liegt deshalb nicht „vor" MegaLoc: +0.004 [−0.005, +0.014].
 
-Acht Befunde, jeder gemessen, sechs davon mit Intervall belegt:
+Acht Befunde, jeder gemessen, fünf davon (1, 3, 4, 5, 8) mit Intervall belegt:
 
 1. **Der Encoder ist der größte Hebel.** CLIP → MegaLoc ist Faktor 7,8,
    +0.496 [+0.405, +0.590]. Jedes Nachbarpaar der Rangfolge clip < anyloc <
@@ -299,7 +299,7 @@ flowchart TD
     G -- none --> I[06 · Retrieval, FAISS, Top-50]
     F -.-> X[experiments/<br/>PCA · Whitening · Verkettung]
     X -.-> I
-    I --> J[07 · Recall@k bei 5/10/25/50/100 m, 4 Ground Truths]
+    I --> J[07 · Recall@k bei 5/10/25/50/100 m, 4 Auswertungen]
     I --> K[08 · Lokalisierung, Fehler in m]
     J --> L[compare.py]
     K --> L
@@ -342,7 +342,7 @@ Pipeline rechnet genau diese neu.
 | [`run_guard.py`](src/run_guard.py) | Fingerabdrücke schreiben und prüfen, `validate_config` beim Laden, Code-Kennung für Ergebnis-JSONs |
 | [`split.py`](src/split.py) | der Sequenz-Split: Listen übernehmen oder mit Seed würfeln |
 | [`pairs.py`](src/pairs.py) | Bildpaare aus den Metadaten — Anchor/Positive für 05, Query/Datenbank für 02 |
-| [`evaluation.py`](src/evaluation.py) | die Recall-Auswertung mit vier Ground-Truth-Varianten — dieselbe für 07 und jedes Experiment |
+| [`evaluation.py`](src/evaluation.py) | die Recall-Auswertung: drei Ground-Truth-Definitionen, dazu die Nicht-Panorama-Anfragen getrennt — dieselbe für 07 und jedes Experiment |
 | [`retrieval.py`](src/retrieval.py) | Trefferlisten laden, „lösbar" und „Treffer unter Top-k" je Anfrage, Sequenz-Aggregation |
 | [`sequence_hmm.py`](src/sequence_hmm.py), [`verification.py`](src/verification.py) | Nachbearbeitung der Top-k: Fahrt als Pfad (HMM), Umsortieren nach gespeicherten Inliern der geometrischen Verifikation |
 | [`locate.py`](src/locate.py) | der Inferenz-Einstieg: Foto → Encoder → exakte Suche → Koordinate mit Konfidenz; nutzt Demo und `locate.py`. Sucht mit numpy statt FAISS, weil Torch und FAISS auf macOS nicht in einen Prozess passen |
@@ -421,7 +421,7 @@ Referenz- gegen Anfragebildern.</sub>
 | **Nähe zur Referenz** | 63,9 % der Anfragen haben ein Datenbankbild im Umkreis von 25 m (Median 22 Nachbarn, Median 107 Tage Abstand); 9,3 % davon eines vom selben Fotografen am selben Tag, 83,3 % eines von einem anderen Fotografen |
 | **Ground Truth** | ein Datenbankbild zählt als richtig, wenn es höchstens 25 m entfernt liegt (Standard); Varianten: anderer Fotograf oder > 180 Tage Abstand („Hard"), Kompassabweichung ≤ 90° („Blickrichtung"; eine unbekannte Blickrichtung schließt nicht aus — Mapillary kodiert sie als −1, und roh verglichen läse sich das als 359°) |
 | **Beschaffung** | `01` holt Metadaten und würfelt den Split, `03` lädt die Bilder nach `image_root/<stadt>` (Standard `~/Downloads/mapillary/osnabrueck`; je Rechner per `VPR_IMAGE_ROOT`) und legt daneben `test/` für eigene Fotos an. Metadaten und Split-Listen liegen im Git |
-| **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,3 GB je Encoder (`Bilder × Dimension × 4 Byte`); für die 36 Varianten mit eigenen Embeddings zusammen (HMM und seq3 sortieren nur um) ergibt die Formel rund 84 GB. Ergebnisse 1,1 GB |
+| **Speicher** | Bilder rund 50 GB, Embeddings 0,7 bis 11,2 GB je Encoder (`Bilder × Dimension × 4 Byte`); für die 36 Varianten mit eigenen Embeddings zusammen (HMM und seq3 sortieren nur um) ergibt die Formel rund 84 GB. Ergebnisse 1,1 GB |
 
 **Warum 25 Meter.** Die Schwelle muss über dem GPS-Rauschen der Aufnahmen
 liegen, sonst misst der Recall die Ortung der Kamera statt die Leistung des
@@ -441,8 +441,9 @@ Der Split ist bewusst sparsam auf der Datenbankseite: 15 % der Sequenzen
 als Referenz heißt, dass 36 % der Anfragen kein Referenzbild im Umkreis von
 25 m haben. Diese Anfragen zählen im Recall nicht mit („lösbar" = 34.112),
 aber die Dichtekurve unter [Referenzdichte](#referenzdichte) zeigt, was mehr
-Referenz bringen würde. Alle Zahlen dieser Tabelle stehen in
-[`results/osnabrueck/dataset_audit.json`](results/osnabrueck/dataset_audit.json) (aus `02`).
+Referenz bringen würde. Die meisten Zahlen dieser Tabelle stehen in
+[`results/osnabrueck/dataset_audit.json`](results/osnabrueck/dataset_audit.json) (aus `02`),
+die zur Query-Struktur und zu den drei größten Konten in dessen Ausgabe.
 
 ## Projektstruktur
 
@@ -473,7 +474,7 @@ der Slug aus `city` in der `config.yaml` (`Osnabrück, Germany` →
 │   ├── 04_embeddings           Encoder → Embeddings
 │   ├── 05_adapter              linearen Adapter trainieren
 │   ├── 06_retrieval            nächste Nachbarn je Anfrage
-│   ├── 07_evaluation           Recall, vier Ground-Truth-Varianten
+│   ├── 07_evaluation           Recall, vier Auswertungen
 │   └── 08_localization         aus der Trefferliste eine Koordinate
 ├── src/                        geteilter Code, siehe Konzeptioneller Aufbau
 ├── tests/                      pytest, ohne Torch und ohne Bilder
@@ -672,10 +673,11 @@ Führt die Notebooks 01 bis 08 der Reihe nach aus. Eine Stufe wird
 übersprungen, wenn ihr Ergebnis vorliegt **und** laut Fingerabdruck zur
 `config.yaml` passt — nach einer Config-Änderung laufen also genau die
 betroffenen Stufen neu. 07 und 08 tragen zusätzlich eine Kennung des
-Auswertungscodes; ändert sich `src/evaluation.py`, werden sie neu
-gerechnet. Ausnahmen: 01 bis 03 werden nur auf Existenz ihres Ergebnisses
-geprüft (01 würde sonst den Split neu würfeln und alle Embeddings
-entwerten; 02 und 03 hängen nicht am Verfahren), und 05 entfällt, solange
+Auswertungscodes; ändert sich `src/evaluation.py`, `geo.py` oder
+`retrieval.py`, werden sie neu gerechnet. Ausnahmen: 01 und 02 werden nur
+auf Existenz ihres Ergebnisses geprüft (01 würde sonst die Mapillary-Daten
+neu holen und alle Embeddings entwerten; 02 prüft nur), 03 nach dem
+Bildbestand, und 05 entfällt, solange
 `vpr.adapter` auf `"none"` steht. Die Varianten des Aufrufs — anderer
 Encoder, alle Encoder, ab einer Stufe, alles neu — stehen kopierbar in der
 [Befehlsreferenz](#befehlsreferenz).
@@ -862,7 +864,8 @@ ihre Eingaben dagegen und bricht ab, statt mit einer Datei aus einem anderen
 Lauf falsche Zahlen zu rechnen. `run.py` nutzt dieselben Fingerabdrücke, um
 zu entscheiden, was übersprungen werden darf. Die Ergebnis-JSONs aus 07 und
 08 tragen zusätzlich den Fingerabdruck ihrer Trefferliste und eine Kennung
-des Auswertungscodes (Git-Commit und Hash von `src/evaluation.py`).
+des Auswertungscodes (Git-Commit und Hash von `src/evaluation.py`, `geo.py`
+und `retrieval.py`).
 
 **Zwei Rechner, ein Ergebnis.** Die Zahlen entstanden auf einem MacBook Pro
 M1 Pro (16 GB, MPS) für CLIP, MixVPR und EigenPlaces samt Adaptern, und auf
@@ -927,7 +930,7 @@ als Referenz wäre für ihn Leakage. Alle 18 Zeilen mit PCA-, Whitening- und
 Verkettungsvarianten: `--derived`. **Die Rangfolge ist dieselbe wie im
 Benchmark-Protokoll, jede Zahl liegt rund 0.2 höher.** MegaLoc auf 512
 gewhitent (0.778) und die Verkettung (0.778) liegen gleichauf, MegaLoc auf
-voller Breite 0.020 darüber — der Preis der Reduktion, bei einem
+voller Breite 0.019 darüber (gepaart, [0.015, 0.024]) — der Preis der Reduktion, bei einem
 Sechzehntel des Index.
 
 ### Recall, Benchmark-Protokoll
@@ -977,7 +980,7 @@ Frames scheitern gemeinsam. Der Bootstrap zieht deshalb 1.000-mal die
 Fahrten mit Zurücklegen, nicht die Bilder. Ergebnis: **die 95-%-Halbbreite
 einer einzelnen R@1-Zahl liegt bei ±0.03 (CLIP) bis ±0.10 (MegaLoc)** — der
 binomiale Standardfehler hätte ±0.005 behauptet. Gepaarte Differenzen
-zwischen zwei Encodern sind dagegen eng (±0.005 bis ±0.05), weil dieselben
+zwischen zwei Varianten sind dagegen eng (±0.005 bis ±0.09), weil dieselben
 Fahrten für beide schwer sind. „belegt" heißt: das Intervall schließt 0 aus.
 
 ```text
@@ -1144,7 +1147,7 @@ Fahrten zieht. Jena hat die meisten Fahrten (677) **und** die höchste
 Abdeckung. Welche der beiden Größen wirkt, ist hier nicht entscheidbar.
 
 Würzburg zeigt außerdem, warum `abdeckung_gesamt` ohnehin die falsche Größe
-misst: es hat die **höchste Abdeckung und den niedrigsten lösbaren Anteil**.
+misst: es hat die **zweithöchste Abdeckung und den niedrigsten lösbaren Anteil**.
 Die Kennzahl zählt den Gesamtbestand gegen das Straßennetz, die Datenbank
 sind aber 15 % der Sequenzen — eine Straße mit nur einer Befahrung liegt zu
 70 % in `train` und zählt trotzdem als abgedeckt. Der lösbare Anteil selbst
@@ -1152,8 +1155,8 @@ sagt die Intervallbreite auch nicht vorher (ρ = −0.09).
 
 **Was sich überträgt.** Der absolute R@1 spannt 0.336 bis 0.651. Die
 gepaarte Differenz EigenPlaces → MegaLoc spannt +0.072 bis +0.132 — rund
-siebenmal stabiler, aber nicht konstant: die Extreme (Kaiserslautern volle
-Referenz +0.077, Karlsruhe volle Referenz +0.132) haben keine überlappenden
+fünfmal stabiler, aber nicht konstant: die Extreme (Fürth volle Referenz
++0.072, Karlsruhe volle Referenz +0.132) haben keine überlappenden
 Intervalle. Über Städte hinweg lässt sich das **nicht gepaart** testen,
 weil die Anfragemengen disjunkt sind; es bleibt beim Vergleich unabhängiger
 Schätzer mit breiten Intervallen.
@@ -1639,10 +1642,11 @@ Drei Dinge lohnen dabei den Blick:
    `VPR_OVERPASS_URL` setzen.
 
 Ein Encoder auf einer Stadt von Osnabrücks Größe kostet auf dem M1 Pro eine
-Nacht (04) plus Minuten (06–08). Auf Mapillary dichter erschlossen als Osnabrück (2.808
-Bilder/km²) sind etwa Erlangen (7.943), Mainz (6.593), Jena (6.113),
-Würzburg (4.895) und Heidelberg (4.879);
-Bamberg (25.248/km², 1,38 Mio. Bilder auf 55 km²) ist ein Sonderfall.
+Nacht (04) plus Minuten (06–08). Auf Mapillary dichter erschlossen als
+Osnabrück (2.808 Bilder/km²) sind etwa Erlangen (7.943), Mainz (6.596),
+Jena (6.115), Würzburg (4.895) und Heidelberg (4.879). Dichte ist aber nicht
+Abdeckung: Erlangen, die dichteste davon, erreicht nur 63 % der Wohnstraßen
+([Stadtwahl](experiments/README.md#stadtwahl--welche-stadt-taugt-als-nächste)).
 
 **Nächster Schritt.** Die geometrische Verifikation
 ([`experiments/geometric_verification.py`](experiments/geometric_verification.py))

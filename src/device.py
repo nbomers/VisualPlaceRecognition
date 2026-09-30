@@ -1,4 +1,4 @@
-"""Geraetewahl -- eine Stelle statt vier Kopien in 04, 05 und den Experimenten."""
+"""Geraetewahl an einer Stelle, fuer 04, 05, locate.py und die Experimente."""
 
 
 def pick_device(wunsch=None):

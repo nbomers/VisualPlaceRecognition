@@ -83,8 +83,8 @@ def test_ein_frame_bleibt_bei_der_emission():
 
 def test_geometrisch_unmoeglicher_ausreisser_wird_zurueckgestuft():
     # Drei Frames auf einer Linie, 8 m Abstand. In Frame 1 ist der
-    # aehnlichste Kandidat sechs Kilometer entfernt -- die Verwechslung, die
-    # 88 % der Fehlgriffe ausmacht. Der richtige Ort steht dort auf Platz 2.
+    # aehnlichste Kandidat gut fuenf Kilometer entfernt -- ein einzelner
+    # grober Ausreisser. Der richtige Ort steht dort auf Platz 2.
     lat = np.array([[52.00000, 52.05000],
                     [52.00007, 52.05000],
                     [52.00014, 52.05000]])

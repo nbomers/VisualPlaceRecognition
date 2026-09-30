@@ -36,6 +36,8 @@ def main():
     ap.add_argument("--k", type=int, default=10)
     ap.add_argument("--json", action="store_true", help="Ergebnis als JSON ausgeben")
     args = ap.parse_args()
+    if args.k < 2:
+        ap.error("--k muss mindestens 2 sein: die Marge vergleicht Platz 1 mit Platz 2.")
 
     cfg = load_config(ROOT)
     # Ein Ordner steht fuer alle Bilder darin -- der Testordner aus config.yaml.

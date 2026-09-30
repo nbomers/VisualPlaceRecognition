@@ -57,8 +57,8 @@ def configure_osmnx(cfg=None, cache_dir=None):
 
     Der Cache ist der wichtigste Teil: eine wiederholte Abfrage geht dann
     gar nicht mehr ans Netz. Auf einem frisch geklonten Rechner ist er leer
-    (cache/ ist gitignored), dort laufen alle Abfragen das erste Mal
-    wirklich.
+    (die osmnx-Antworten unter cache/ sind gitignored), dort laufen alle
+    Abfragen das erste Mal wirklich.
 
     VPR_OVERPASS_URL sticht osm.overpass_url -- ein Spiegel laesst sich so
     je Rechner setzen, ohne die versionierte Datei zu aendern:

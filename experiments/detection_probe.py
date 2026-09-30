@@ -1,9 +1,7 @@
 """
 Wie gut deckt Mapillary die Bilder mit Detections ab?
 
-War urspruenglich die letzte Zelle in 03_image_download und ist von dort
-herausgeloest worden: eine einmalige Erhebung, die nichts mit dem Download zu
-tun hat und bei jedem Pipeline-Lauf nur im Weg stand.
+Eine einmalige Erhebung, unabhaengig vom Download in 03.
 
 Laedt keine Bilder, nur eine kleine JSON-Antwort je Bild. Das Ergebnis steht
 in detections_probe.json daneben; ein zweiter Aufruf gibt es nur aus.

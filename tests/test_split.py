@@ -7,7 +7,7 @@ import pytest
 
 from src.split import draw_split, read_split_lists, split_column, split_sequences, write_split_lists
 
-from src.config import load_config, paths  # noqa: E402
+from src.config import load_config, paths
 
 ROOT = Path(__file__).resolve().parent.parent
 PROCESSED = paths(load_config(ROOT), ROOT).processed
@@ -26,6 +26,14 @@ def test_draw_split_deterministisch_und_disjunkt():
     assert (len(train), len(database), len(query)) == (70, 15, 15)
     assert not (set(train) & set(database) | set(train) & set(query) | set(database) & set(query))
     assert draw_split(seqs, 43, 0.7, 0.15) != a
+
+
+@pytest.mark.parametrize("n", [3, 4, 5, 6, 7])
+def test_draw_split_wenige_sequenzen_fuellt_alle_drei(n):
+    # Die Fehlermeldung verspricht: drei Sequenzen reichen.
+    train, database, query = draw_split([f"s{i}" for i in range(n)], 42, 0.7, 0.15)
+    assert train and database and query
+    assert len(train) + len(database) + len(query) == n
 
 
 def test_split_sequences_wuerfelt_ohne_listen(tmp_path):

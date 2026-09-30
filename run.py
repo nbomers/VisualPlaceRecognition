@@ -5,11 +5,14 @@ Eine Stufe wird uebersprungen, wenn ihr Ergebnis vorliegt UND laut
 Fingerabdruck zur aktuellen config.yaml passt. Aendert man etwas an der
 Config, laufen genau die betroffenen Stufen neu.
 
-01 und 02 werden nur auf Existenz ihres Ergebnisses geprueft: 01 wuerfelt
-sonst den Split neu und entwertet damit alle vorhandenen Embeddings, 02
-haengt nicht an der config. 03 gilt als fertig, wenn der Bildbestand
-vollstaendig ist (_download_stand), nicht wenn eine Datei existiert. 05 entfaellt, solange vpr.adapter auf "none"
-steht. Welche Stufe woran erkannt wird, steht an einer Stelle: _stages().
+01 und 02 werden nur auf Existenz ihres Ergebnisses geprueft: 01 holt
+sonst die Mapillary-Daten neu, und ein veraenderter Bildbestand entwertet
+ueber den Fingerabdruck alle vorhandenen Embeddings. 02 prueft nur und hat
+keinen Fingerabdruck -- nach einer Aenderung an Radien oder Split-Anteilen
+mit --from 02 neu rechnen. 03 gilt als fertig, wenn der Bildbestand
+vollstaendig ist (_download_stand), nicht wenn eine Datei existiert. 05
+entfaellt, solange vpr.adapter auf "none" steht. Welche Stufe woran erkannt
+wird, steht an einer Stelle: _stages().
 
 --method und --adapter nehmen auch Listen ("clip,mixvpr") oder "all" und
 rechnen dann eine Kombination nach der anderen.
@@ -35,8 +38,8 @@ CONFIG_ORIGINAL = CONFIG_PATH.read_text(encoding="utf-8")
 sys.path.insert(0, str(ROOT))
 from src.config import apply_env, paths  # noqa: E402
 
-# Dieselbe Sicht wie die Notebooks: die lesen config.yaml bei jeder
-# Zellenausfuehrung neu und legen VPR_CITY/VPR_METHOD/VPR_ADAPTER darueber.
+# Dieselbe Sicht wie die Notebooks: die lesen config.yaml beim Start neu
+# und legen VPR_CITY/VPR_METHOD/VPR_ADAPTER darueber.
 # Wuerde run.py hier die rohe Datei nehmen, entschiede es ueber eine andere
 # Stadt, als die Notebooks dann rechnen.
 BASIS_CFG = apply_env(yaml.safe_load(CONFIG_ORIGINAL))
@@ -85,7 +88,14 @@ def _args():
     ap.add_argument("--adapter", metavar="LISTE",
                     help='vpr.adapter ueberschreiben. Mehrere durch Komma, "all" '
                          "entspricht none,linear.")
-    return ap.parse_args()
+    args = ap.parse_args()
+    if args.start is not None:
+        # "6" meint 06. Ohne fuehrende Null traefe keine Stufe, und der Lauf
+        # endete ohne Meldung mit Exit-Code 0.
+        args.start = args.start.zfill(2)
+        if not any(p.name.startswith(args.start) for p in (ROOT / "notebooks").glob("*.ipynb")):
+            ap.error(f"--from {args.start}: kein Notebook in notebooks/ beginnt so (01 bis 08).")
+    return args
 
 
 def _abgeleitet(cfg, name):
@@ -227,10 +237,8 @@ def _download_stand(cfg):
     Was 03 zuletzt hinterlassen hat: erwartete, vorhandene und fehlende
     Bilder. None, wenn 03 nie gelaufen ist.
 
-    03 nur auf die Existenz seiner Ausgabedatei zu pruefen war die stillste
-    Luecke der Pipeline: laeuft der Token mitten im Download ab, liegt die
-    Datei trotzdem da und 03 gilt als erledigt. Beurteilt wird deshalb der
-    Bestand.
+    Die Existenz der Ausgabedatei reicht nicht: laeuft der Token mitten im
+    Download ab, liegt sie trotzdem da. Beurteilt wird deshalb der Bestand.
     """
     pfad = paths(cfg, ROOT).processed / "image_download.json"
     if not pfad.exists():
@@ -250,15 +258,14 @@ def _nicht_auf_diesem_rechner(cfg, method, adapter, start=None):
     ohne --from ist "Datei fehlt" die normale Aufforderung, die Stufe zu
     rechnen.
 
-    Welche Datei die Eingabe ist, haengt an der Startstufe -- und genau das
-    fehlte hier:
+    Welche Datei die Eingabe ist, haengt an der Startstufe:
 
       --from 01..04   04 erzeugt die Embeddings selbst; es gibt nichts zu
                       pruefen, sonst haette "--from 04" nie laufen koennen.
       --from 05       05 liest die BASIS-Embeddings und schreibt die
-                      adaptierten. Auf die adaptierten zu pruefen hiess:
-                      "--from 05 --adapter linear" ging auf einem Rechner,
-                      der 05 noch nie gerechnet hatte, grundsaetzlich nicht.
+                      adaptierten -- geprueft wird auf die Basis, sonst
+                      liefe "--from 05 --adapter linear" nur auf einem
+                      Rechner, der 05 schon einmal gerechnet hat.
       --from 06..08   lesen die Embeddings des konfigurierten Adapters.
     """
     if start is not None and start[:2] <= "04":
@@ -422,10 +429,10 @@ def main():
         bestand(BASIS_CFG)
         return
 
-    # Ein Tippfehler in VPR_CITY sah bisher aus wie "der Encoder liegt auf dem
-    # anderen Rechner": jede Kombination wurde uebersprungen, Exit-Code 0. Die
-    # Stadt hat aber einen eigenen Zweig unter data/, und ohne ihre Metadaten
-    # gibt es dort ueberhaupt nichts -- ausser 01 soll sie gerade erst anlegen.
+    # Ohne Metadaten der Stadt gibt es in ihrem Zweig unter data/ nichts --
+    # ausser 01 soll sie gerade anlegen. Sonst saehe ein Tippfehler in
+    # VPR_CITY aus wie "der Encoder liegt auf dem anderen Rechner": jede
+    # Kombination uebersprungen, Exit-Code 0.
     stadt_meta = paths(BASIS_CFG, ROOT).processed / "metadata.parquet"
     if not stadt_meta.exists() and (args.start or "01")[:2] > "01":
         bekannt = sorted(d.name for d in (ROOT / "data").iterdir()
@@ -466,9 +473,7 @@ def main():
         validate_config(cfg)
 
         # Die Notebooks lesen Verfahren und Adapter aus der Umgebung, wenn
-        # sie gesetzt sind. Frueher wurde dafuer config.yaml ueberschrieben --
-        # eine versionierte Datei als Zustandsspeicher, die nach jedem Lauf
-        # als geaendert dastand und bei jedem git pull im Weg war.
+        # sie gesetzt sind -- config.yaml bleibt dabei unveraendert.
         os.environ["VPR_METHOD"] = method
         os.environ["VPR_ADAPTER"] = adapterwert
 

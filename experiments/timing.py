@@ -1,8 +1,8 @@
 """
 Laufzeit und Speicher je Encoder: Encodierdurchsatz, Suchzeit, Indexgroesse.
 
-Das README nennt eigenplaces_pcaw512 das effizienteste Modell. Hier stehen
-die Zahlen dazu -- drei Messungen, die verschiedene Dinge kosten:
+Ist eigenplaces_pcaw512 das effizienteste Modell? Hier stehen die Zahlen
+dazu -- drei Messungen, die verschiedene Dinge kosten:
 
   Encodieren   Bilder/s des Rueckgrats, 200 feste Bilder aus dem Query-Split
                (Seed), inklusive Laden und Dekodieren wie in 04. Ein
@@ -291,7 +291,7 @@ def recall_je_encoder(schwelle="25"):
         r = json.loads(pfad.read_text(encoding="utf-8"))
         if "auswertungen" not in r or r.get("variant", r.get("adapter")) != "none":
             continue
-        befund = r["auswertungen"].get("Standard") or next(iter(r["auswertungen"].values()))
+        befund = r["auswertungen"]["Alle Queries"]
         wert = befund["schwellen"][schwelle]["recall"]["1"]
         if wert is not None:
             raus[r["embedding_name"]] = wert

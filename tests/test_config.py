@@ -74,7 +74,7 @@ def test_ohne_vpr_city_gilt_die_datei(monkeypatch):
 
 
 def test_umgebung_aendert_die_datei_nicht(monkeypatch):
-    """Die versionierte Datei bleibt, wie sie ist -- das war der ganze Punkt."""
+    """Umgebungsvariablen aendern die versionierte Datei nicht."""
     vorher = (ROOT / "config.yaml").read_text(encoding="utf-8")
     monkeypatch.setenv("VPR_CITY", "Jena, Germany")
     monkeypatch.setenv("VPR_METHOD", "clip")

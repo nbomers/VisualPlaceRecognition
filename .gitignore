@@ -44,10 +44,6 @@ datasets/
 *.tar
 *.tar.gz
 
-# Ausnahme: kleine Beispieldateien bewusst freigeben
-!data/samples/**
-!**/.gitkeep
-
 # ---------- Heruntergeladene Bilder ----------
 # Mapillary-Bilder und sonstige Bilddaten gehoeren nie ins Repo.
 images/
@@ -102,8 +98,6 @@ events.out.tfevents.*
 
 # ---------- Editoren & IDEs ----------
 .vscode/
-!.vscode/settings.json
-!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
@@ -127,11 +121,9 @@ $RECYCLE.BIN/
 # Abbildungen (~67 KB je Bild); Trefferlisten, Embeddings und Gewichte
 # bleiben draussen.
 #
-# figures/coverage und figures/dataset sind seit dem README-Umbau nicht mehr
-# pauschal ausgeschlossen -- der Daten-Abschnitt zeigt sie. Die Karten unter
-# coverage/ koennen je nach Stadt mehrere MB gross werden: vor dem Hinzufuegen
-# `du -sh results/<stadt>/figures/coverage` pruefen und im Zweifel nur die
-# Hauptstadt des Projekts aufnehmen, nicht alle sechs.
+# figures/dataset/ und figures/coverage/ sind freigegeben; versioniert ist
+# bisher nur dataset/, die der Daten-Abschnitt der README zeigt. Die Karten
+# unter coverage/ werden je nach Stadt mehrere MB gross.
 /results/*
 !/results/*/
 /results/*/*

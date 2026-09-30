@@ -131,7 +131,7 @@ def test_eigene_stadt_geht_durch(tmp_path):
 
 def test_fehlende_bilder_sind_erlaubt(tmp_path):
     """Ein Encoder darf Bilder fehlen -- in Osnabrueck ist ein Download
-    gescheitert, bei MegaLoc zwei. Er darf nur keine fremden enthalten."""
+    gescheitert, bei MegaLoc drei. Er darf nur keine fremden enthalten."""
     md = _metadaten()
     root = _stadt_anlegen(tmp_path, md)
     require_city_match(root, CFG, md.iloc[2:].reset_index(drop=True))

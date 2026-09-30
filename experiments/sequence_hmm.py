@@ -15,9 +15,10 @@ Kandidaten gegen die Zeit zwischen den Frames. Ein Kandidat sechs Kilometer
 abseits faellt dann, weil man in 0,17 s keine sechs Kilometer faehrt -- nicht,
 weil der Nachbarframe ihn nicht auch gefunden haette.
 
-Bleibt der Gewinn trotzdem aus, ist der Befund bestaetigt: die Fehler sind
-kohaerent, und keine Sequenzmethode holt sie zurueck. Genau deshalb steht das
-Skript hier auch dann, wenn es nichts bringt.
+Gemessen in Osnabrueck (beta 30, sigma 25): R@1 +0.030 [+0.020, +0.041] bei
+MegaLoc, +0.017 [+0.006, +0.030] bei EigenPlaces (bootstrap_ci.json). Ein
+Teil der Fehlgriffe ist also geometrisch behebbar; der Rest ist kohaerent --
+eine ganze Fahrt auf der falschen Strasse ist als Pfad genauso stimmig.
 
     Emission   E[t, j] = beta * Aehnlichkeit(t, j)
     Uebergang  A[i, j] = -|d(i, j) - v * dt| / sigma

@@ -111,8 +111,7 @@ def survey(name, token, tiles_only=False):
     # (query_filter=~q_pano), nicht aus der Datenbank. Ein hoher Anteil
     # schrumpft also die Auswertung und laesst zugleich Bilder in der
     # Referenz, die ein perspektivisches Modell nur schlecht vergleichen
-    # kann. Halle lag bei 29 %, Wuerzburg bei 9 % -- das war der Grund
-    # gegen beide, und die Zahl stand bis hierher in keiner Tabelle.
+    # kann.
     mit_pano = [p["is_pano"] for p in pts if p.get("is_pano") is not None]
     pano = sum(1 for v in mit_pano if v)
     ges = sum(laenge.values())

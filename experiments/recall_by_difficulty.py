@@ -50,14 +50,25 @@ def _args():
 
 
 def query_properties(query, database, threshold, max_heading_diff):
-    """Je Anfrage: Nachbarn, Tage zum naechsten, Blickrichtung passt, Fotograf/Tag gleich."""
+    """
+    Je Anfrage: Nachbarn, ganze Tage zum naechsten, Blickrichtung passt,
+    Fotograf/Tag gleich. Ganze Tage, weil die Klassen ganzzahlig geschlossen
+    sind -- 7,5 Tage fielen sonst zwischen 0-7 und 8-30 durch.
+    """
     db_xy, crs = to_metric_xy(database["lat"].to_numpy(), database["lon"].to_numpy())
     q_xy, _ = to_metric_xy(query["lat"].to_numpy(), query["lon"].to_numpy(), crs=crs)
-    # UTM-Radius mit Aufschlag, exakt zaehlt dann nichts -- fuer Klassen reicht das.
-    listen = cKDTree(db_xy).query_ball_point(q_xy, r=threshold)
+    # Kandidaten aus UTM mit demselben Aufschlag wie localizable(), dann exakt
+    # nach Haversine. Ohne diesen zweiten Schritt fehlen Anfragen, die nach
+    # Haversine knapp innerhalb der Schwelle liegen, nach UTM knapp ausserhalb:
+    # sie waeren loesbar, haetten aber null Nachbarn und fielen aus jeder Klasse.
+    listen = cKDTree(db_xy).query_ball_point(q_xy, r=threshold * 1.01 + 2.0)
     laengen = np.array([len(n) for n in listen])
     qi = np.repeat(np.arange(len(query)), laengen)
     di = np.concatenate([np.asarray(n, dtype=int) for n in listen if len(n)]) if laengen.sum() else np.array([], int)
+    nah = haversine_distance(query["lat"].to_numpy()[qi], query["lon"].to_numpy()[qi],
+                             database["lat"].to_numpy()[di], database["lon"].to_numpy()[di]) <= threshold
+    qi, di = qi[nah], di[nah]
+    laengen = np.bincount(qi, minlength=len(query))
 
     q_t, db_t = query["captured_at"].to_numpy(), database["captured_at"].to_numpy()
     tage = np.abs(q_t[qi] - db_t[di]) / 86_400_000.0
@@ -73,7 +84,7 @@ def query_properties(query, database, threshold, max_heading_diff):
               & (tage < 1))
     gleicher_tag = np.zeros(len(query), dtype=bool)
     np.logical_or.at(gleicher_tag, qi, gleich)
-    return laengen, tage_min, blick_ok, gleicher_tag
+    return laengen, np.floor(tage_min), blick_ok, gleicher_tag
 
 
 def treffer_herkunft(query, database, indices, loesbar, threshold, min_days_apart):

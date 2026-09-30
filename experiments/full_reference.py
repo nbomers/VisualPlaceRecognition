@@ -85,10 +85,9 @@ def run_one(method, force):
             npz_passt = True
         except Exception:
             pass
-    # Auch die Kennung des Auswertungscodes pruefen, nicht nur die Existenz.
-    # run.py macht das in _result_current laengst so; hier fehlte es, und die
-    # fullref-Zeilen blieben nach einer Aenderung an src/evaluation.py mit
-    # veralteter Kennung liegen -- ohne dass irgendwo etwas rot wurde.
+    # Auch die Kennung des Auswertungscodes pruefen, nicht nur die Existenz
+    # (wie run.py in _result_current): sonst blieben die fullref-Zeilen nach
+    # einer Aenderung an src/evaluation.py unbemerkt veraltet liegen.
     if npz_passt and eval_json.exists() and not _auswertung_veraltet(eval_json):
         print(f"  liegt vor und passt: {name}")
         return

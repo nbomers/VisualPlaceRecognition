@@ -374,8 +374,8 @@ def main():
             "umsortieren": gewichte,
         }
 
-    # Ein Negativergebnis ist auch eins: ohne versionierte Datei steht die
-    # Zahl nur im README und niemand kann sie nachrechnen.
+    # Auch ein Negativergebnis wird versioniert, damit die Zahl
+    # nachrechenbar bleibt.
     out = RESULTS / f"detection_rerank_{name}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(befund, indent=2, ensure_ascii=False), encoding="utf-8")

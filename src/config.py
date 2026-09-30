@@ -37,15 +37,11 @@ def apply_env(cfg):
     """
     Umgebungsvariablen stechen die Datei: VPR_CITY, VPR_METHOD, VPR_ADAPTER.
 
-    Frueher wurde dafuer die config.yaml ueberschrieben -- eine versionierte
-    Datei als Zustandsspeicher, die nach jedem Lauf als geaendert dastand.
-    Fuer Verfahren und Adapter macht run.py das laengst so; `city` fehlte,
-    obwohl src/paths.py jede Stadt ohnehin in ihren eigenen Zweig legt.
-
-    Praktischer Nutzen: eine zweite Stadt laeuft neben einem laufenden
-    Durchgang im selben Klon. Die Notebooks lesen config.yaml bei JEDER
-    Zellenausfuehrung neu -- die Datei mittendrin umzustellen wuerde einem
-    laufenden run.py unter den Fuessen die Stadt wechseln.
+    config.yaml bleibt dabei unveraendert, und src/paths.py legt jede Stadt
+    in ihren eigenen Zweig. Praktischer Nutzen: eine zweite Stadt laeuft
+    neben einem laufenden Durchgang im selben Klon. Jedes Notebook liest
+    config.yaml beim Start neu -- die Datei mittendrin umzustellen wuerde
+    einem laufenden run.py bei der naechsten Stufe die Stadt wechseln.
 
         VPR_CITY="Würzburg, Germany" jupyter lab notebooks/01_mapillary_coverage.ipynb
     """

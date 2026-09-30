@@ -2,9 +2,12 @@
 Zwei oder mehr Encoder zu einem Deskriptor verketten.
 
 Die Erwartung: ein Ensemble schlaegt sein bestes Mitglied, weil der eine
-Encoder oft nicht verwechselt, was der andere verwechselt. Hier traf das
-nicht zu -- EigenPlaces + MegaLoc liegt +0.004 [-0.005, +0.014] ueber
-MegaLoc allein, das Intervall schliesst 0 ein (bootstrap_ci.json). Die Vektoren sind L2-normalisiert, also traegt jeder Encoder
+Encoder oft nicht verwechselt, was der andere verwechselt. Bei R@1 traf das
+nicht zu: EigenPlaces + MegaLoc liegt +0.004 [-0.005, +0.014] ueber MegaLoc
+in voller Breite, das Intervall schliesst 0 ein; bei R@5 und R@10 ist der
+Abstand klein, aber belegt (bootstrap_ci.json).
+
+Die Vektoren sind L2-normalisiert, also traegt jeder Encoder
 gleich viel zum inneren Produkt bei; nach dem Verketten wird noch einmal
 normalisiert, damit 06 wie gewohnt ueber das innere Produkt suchen kann.
 

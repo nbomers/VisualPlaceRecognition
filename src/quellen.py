@@ -11,7 +11,7 @@ Bilder darin stecken, in der Reihenfolge links nach rechts, oben nach unten:
 
 Daraus entstehen neben den Abbildungen quellen.json (die Daten) und
 QUELLEN.md (dasselbe als Links, auf GitHub lesbar). Die creator_id steht
-bewusst nicht darin -- siehe NOTICE.md, Personenbezug.
+bewusst nicht darin -- siehe README, Abschnitt Personenbezug, und NOTICE.md.
 """
 
 import json

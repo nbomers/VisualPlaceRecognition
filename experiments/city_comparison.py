@@ -216,7 +216,7 @@ def zerlegung(zeile):
     Er verschwindet genau dann, wenn r = 1 - anteil_dublette -- wenn also der
     Nenner im selben Mass schrumpft wie der Zaehler.
 
-    Gibt None zurueck, solange eine der vier Zahlen fehlt.
+    Gibt None zurueck, solange eines der Felder aus `noetig` fehlt.
     """
     noetig = ("n_korrekt", "dublette", "loesbar_hard", "loesbar_n", "hard", "alle")
     if any(zeile.get(k) is None for k in noetig):
@@ -281,9 +281,8 @@ def panorama(zeile):
 
         R@1_pano = (R_alle * L - R_ohne * L_ohne) / (L - L_ohne)
 
-    Das ist der direkte Wert, nicht die bisher berichtete Hochrechnung
-    "Differenz geteilt durch Panoramaanteil" -- und er sagt dasselbe, nur
-    ohne Umweg.
+    Das ist der direkte Wert, ohne Hochrechnung ueber den Panoramaanteil
+    ("Differenz geteilt durch Anteil").
     """
     noetig = ("alle", "loesbar_n", "ohne_panorama", "loesbar_ohne_panorama")
     if any(zeile.get(k) is None for k in noetig):
@@ -396,8 +395,8 @@ def _zusammenhang(titel, zeilen, a, b, deutung):
                   f"selbst perfekte Monotonie ergaebe p = {2/factorial(n):.3f}. "
                   f"Dafuer braucht es fuenf Staedte.")
         else:
-            print(f"  -> NICHT signifikant. Bei n = {n} reicht nur perfekte Monotonie "
-                  f"(p = {2/factorial(n):.3f}); so eng ist dieser Zusammenhang nicht.")
+            print(f"  -> NICHT signifikant (n = {n}, p > 0,05); perfekte Monotonie "
+                  f"ergaebe p = {2/factorial(n):.4f}.")
     return {"n": len(paare), "rho": rho, "p": p, "art": art}
 
 
@@ -425,7 +424,7 @@ def main():
     print(f"Encoder {args.method}  |  R@1 bei {schwelle} m  |  {len(zeilen)} Staedte\n")
     _tabelle(zeilen)
 
-    # Die drei Befunde, jeder mit seiner eigenen Stichprobe.
+    # Die Befunde, jeder mit seiner eigenen Stichprobe.
     befunde = {}
     befunde["abdeckung_intervall"] = _zusammenhang(
         "Abdeckung gegen Intervallbreite", zeilen, "abdeckung", "halbbreite",

@@ -8,7 +8,9 @@
 #             geopandas, BLAS hinter numpy). Hier zickt pip am ehesten.
 #   pip    -- torch und alles, was darauf aufbaut. Die pip-Wheels waehlen
 #             CUDA auf Linux und MPS auf dem Mac von selbst; ueber conda
-#             muesste man das je Plattform getrennt pflegen.
+#             muesste man das je Plattform getrennt pflegen. Dazu drei
+#             kleine reine Python-Pakete (mapbox-vector-tile, gdown,
+#             huggingface_hub).
 #
 # Untere Grenzen statt fester Versionen, damit dieselbe Datei auf beiden
 # Plattformen aufloest. Welche Kombination nachgemessen ist, steht im Kopf

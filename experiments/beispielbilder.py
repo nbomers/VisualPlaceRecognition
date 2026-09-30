@@ -4,7 +4,8 @@ Beispielaufnahmen aus dem Datensatz fuer das README.
 Zwei Fragen, zwei Wege:
 
   Was ist TYPISCH?  Automatisch oder --auswahl: vier Fotografen aus
-                    moeglichst verschiedenen Jahren, zufaellig gezogen. Weil
+                    moeglichst verschiedenen Jahren, zufaellig gezogen,
+                    zuerst ein Panorama, falls vorhanden. Weil
                     ein Konto fast die Haelfte der Bilder stellt und die
                     meisten Fahrten Strassen abfahren, sieht das aus wie
                     eine Dashcam -- und das ist ehrlich.
@@ -369,7 +370,7 @@ def main():
         zeilen = nach_ids(meta, ids)
     else:
         zeilen = automatisch(meta, args.n, rng)
-    # Mit Beschriftung: "Text · Jahr"; ohne: nur das Jahr, wie bisher.
+    # Mit Beschriftung: "Text · Jahr"; ohne: nur das Jahr.
     if texte and any(texte):
         jahre = pd.to_datetime(zeilen["captured_at"], unit="ms").dt.year
         titel = [f"{t}  ·  {j}" if t else str(j) for t, j in zip(texte, jahre)]

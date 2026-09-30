@@ -10,7 +10,9 @@
 #
 #   requirements.txt       untere Grenzen. Laeuft weiter, wenn eine Library
 #                          nachzieht. Das ist die Datei fuer "einmal
-#                          anschauen" und fuer die CI.
+#                          anschauen". Die CI installiert dieselben Pakete
+#                          ohne Pin (check.yml), prueft also die neuesten
+#                          Versionen, nicht die Grenzen.
 #   requirements.lock.txt  exakte Versionen eines Laufs, der nachweislich
 #                          durchlief. Das ist die Datei fuer "dieselben
 #                          Zahlen noch einmal rechnen".
@@ -39,7 +41,7 @@ pandas>=2.2
 scikit-learn>=1.4
 scipy>=1.13
 pyarrow>=16.0
-faiss-cpu>=1.9.0   # 1.8.x verlangt numpy<2 und ist mit numpy>=2 nicht installierbar
+faiss-cpu>=1.9.0   # 1.8.x bricht mit numpy>=2 (Importfehler bzw. Pin auf numpy<2)
 
 torch>=2.2
 torchvision>=0.17

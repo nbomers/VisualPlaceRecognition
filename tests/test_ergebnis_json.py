@@ -1,7 +1,7 @@
 """
 Die versionierten Ergebnis-JSONs müssen gültiges JSON sein.
 
-Klingt selbstverständlich, war es nicht: `json.dumps` schreibt für
+Die Falle: `json.dumps` schreibt für
 float("nan") ein bares `NaN` in die Datei. Pythons Parser nimmt das, weil
 `allow_nan` standardmäßig an ist -- jeder strenge Parser lehnt es ab, denn
 RFC 8259 kennt weder NaN noch Infinity. Betroffen waren

@@ -8,10 +8,13 @@ aber, wie duenn die Referenz ist. Die 70 % train liegen ungenutzt daneben.
 Hier wird train stufenweise zur Datenbank dazugenommen und Recall gegen die
 Dichte aufgetragen. Fuer die Baseline-Encoder ist das sauber: sie haben
 diese Bilder nie gesehen. Fuer die Adapter-Varianten NICHT -- der Adapter
-wurde auf train trainiert. Das Skript nimmt deshalb nur Baselines an.
+wurde auf train trainiert. Das Skript lehnt sie deshalb ab. PCA-Varianten
+laufen mit, ihre PCA ist aber auf train angepasst -- sauber sind sie nur
+eingeschraenkt.
 
 Die Treppe laeuft ueber Sequenzen, nicht ueber Einzelbilder, so wie der
-Split selbst. Ergebnis: eine Tabelle und eine Kurve unter experiments/results/.
+Split selbst. Ergebnis: eine Tabelle und eine Kurve unter
+experiments/results/<stadt>/ (database_density_<method>.json und .png).
 
     python experiments/database_density.py                     # eigenplaces
     python experiments/database_density.py --method megaloc

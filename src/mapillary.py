@@ -4,8 +4,8 @@ Vector Tiles, aus denen 01 die Bildpositionen holt.
 
 Warum Vector Tiles und nicht die Bbox-Suche der Graph-API: die Kacheln
 liefern alle Bildpunkte einer Stadt in rund 130 Anfragen (Osnabrueck,
-Zoom 14), die Bbox-Suche
-kappt bei 2.000 Treffern je Aufruf.
+Zoom 14); die Bbox-Suche antwortet nachweislich unvollstaendig, ohne Fehler
+oder Warnung (gemessen in 01, Abschnitt "Warum Vector Tiles").
 """
 
 import math

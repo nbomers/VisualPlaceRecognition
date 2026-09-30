@@ -33,8 +33,9 @@ ein abgebrochener Lauf setzt beim naechsten Start dort fort, wo er stand --
 bei gleichen Parametern. Ein Lauf ueber alle Anfragen einer grossen Stadt
 dauert einen halben Tag.
 
-Ergebnis: bei einer Stichprobe nach experiments/results/, bei allen Anfragen
-als eigene Zeile nach results/<stadt>/evaluation/ (Variante "gv<k>").
+Ergebnis: bei einer Stichprobe experiments/results/<stadt>/
+geometric_verification_<name>.json, bei allen Anfragen eine eigene Zeile
+results/<stadt>/evaluation/<name>_gv<k>.json (Variante "gv<k>").
 """
 
 import argparse

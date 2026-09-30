@@ -33,10 +33,12 @@ def draw_split(sequence_ids, seed, train_fraction, database_fraction):
     rng = random.Random(seed)
     rng.shuffle(seq_ids)
     n = len(seq_ids)
-    n_train = max(1, round(n * train_fraction))
+    # Bei sehr wenigen Sequenzen rundet train sonst bis n-1 hoch, und fuer
+    # query bleibt nichts. Ab etwa zehn Sequenzen greift keine der Schranken.
+    n_train = min(max(1, round(n * train_fraction)), n - 2)
     n_database = max(1, round(n * database_fraction))
     if n_train + n_database >= n:
-        n_database = max(1, n - n_train - 1)
+        n_database = n - n_train - 1
     return (seq_ids[:n_train],
             seq_ids[n_train:n_train + n_database],
             seq_ids[n_train + n_database:])

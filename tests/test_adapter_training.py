@@ -38,8 +38,8 @@ def _daten(n_seq=12, je=20, seed=0):
 
 def test_negative_liegen_ausserhalb_der_unsicherheitszone():
     meta, emb = _daten()
-    # Paare: benachbarte Frames verschiedener "Fahrten" -- hier konstruiert
-    # als (i, i+1) innerhalb derselben Kette, das Dataset filtert nicht
+    # Paare (i, i+1) aus derselben Kette -- das Dataset filtert nicht, hier
+    # geht es nur um die Negative.
     paare = [(i, i + 1, 3.0) for i in range(0, len(meta) - 1, 7)]
     ds = TripletDataset(emb, paare, meta, positive_radius_m=10.0, uncertain_radius_m=25.0,
                         hard_negative_min_m=25.0, hard_negative_max_m=100.0)

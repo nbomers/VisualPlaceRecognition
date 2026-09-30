@@ -4,10 +4,12 @@ Konfidenz "weiss ich nicht" sagen darf?
 
 Drei Konfidenzmasse, alle aus der Trefferliste von 06, ohne neue Modelle:
 
-  aehnlichkeit   Cosinus des besten Treffers
-  marge          Cosinus Platz 1 minus Platz 2 -- das, was locate.py meldet
+  aehnlichkeit   Cosinus des besten Treffers -- was locate.py als
+                 Konfidenz meldet
+  marge          Cosinus Platz 1 minus Platz 2 (locate.py gibt sie mit aus)
   geschlossenheit  Anteil der Top-k, die innerhalb der Schwelle um Platz 1
-                 liegen -- die Konfidenz aus 08, ohne DBSCAN
+                 liegen -- die Gruppenkonfidenz des Gated-Verfahrens aus
+                 localization_aggregation.py, ohne DBSCAN
 
 Fuer jede Konfidenz wird die Schwelle von "alles beantworten" bis "nichts
 beantworten" gesenkt; Abdeckung = Anteil beantworteter Anfragen, Praezision

@@ -7,8 +7,8 @@ Zwei Fragen stehen dahinter:
      Vorsprungs ist Koennen und wieviel nur Breite?
   2. Adapter-Test. Der lineare Adapter ist eine d-x-d-Matrix, seine
      Parameterzahl waechst also quadratisch: 4,2 Mio bei 2048, 71,4 Mio bei
-     8448. Vor dieser Messung sah es so aus, als wachse der Schaden mit der
-     Breite. Auf gleicher Breite hat jeder Encoder dieselben 262.144
+     8448. Naheliegende Vermutung: der Schaden waechst mit der Breite. Auf
+     gleicher Breite hat jeder Encoder dieselben 262.144
      Parameter. Bleibt die Rangfolge des Schadens, liegt es am Encoder;
      wird sie flach, war es die Parameterzahl. Ergebnis: sie bleibt --
      MegaLoc verliert auf 8448 und auf 512 dasselbe (experiments/README.md).
@@ -138,7 +138,7 @@ def reduce_one(name, force, projection_only=False):
 
     print(f"  Quelle {quelle}  {n:,} x {d_quelle}  ->  {dim}")
     print(f"  PCA angepasst auf {len(gezogen):,} train-Zeilen"
-          f"{' , mit Whitening' if whiten else ''}")
+          f"{', mit Whitening' if whiten else ''}")
 
     fit_daten = np.ascontiguousarray(quelle_emb[gezogen], dtype=np.float32)
     pca = PCA(n_components=dim, svd_solver="randomized", whiten=whiten,

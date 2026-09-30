@@ -12,7 +12,7 @@ nur bei einem auftaucht, faellt.
 Das ist eine ANDERE Aufgabe als Einzelbild-Retrieval -- Sequenzlokalisierung
 -- und wird deshalb als eigene Zeile berichtet, nicht als bessere Version
 derselben. Bewertet wird trotzdem exakt wie in 07: gegen die echte Position
-des mittleren Frames, mit denselben vier Ground-Truth-Varianten.
+des mittleren Frames, mit denselben vier Auswertungen.
 
 Reines Nachbearbeiten der .npz aus 06; kein Modell, keine GPU.
 

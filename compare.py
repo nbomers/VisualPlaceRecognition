@@ -29,9 +29,8 @@ def _config():
 CFG, PATHS = _config()
 EVAL_DIR = PATHS.evaluation
 
-# Die Schwelle der Ground Truth steht in der config, nicht zweimal. Frueher
-# war die 25 hier ein argparse-Literal -- wer vpr.uncertain_radius_m aenderte,
-# aenderte die Tabelle nicht mit.
+# Die Schwelle der Ground Truth steht in der config, nicht zweimal: wer
+# vpr.uncertain_radius_m aendert, aendert die Tabelle mit.
 STANDARD_SCHWELLE = int(float(CFG["vpr"]["uncertain_radius_m"]))
 
 
@@ -169,6 +168,12 @@ def localization_table(args):
         raise SystemExit("Keine Lokalisierungsergebnisse." + _derived_hinweis(args, LOC_DIR))
 
     schluessel = f"unter_{args.threshold}m"
+    if not any(schluessel in e for r in laeufe for e in r["verfahren"].values()):
+        vorhanden = sorted({int(k[len("unter_"):-1]) for r in laeufe
+                            for e in r["verfahren"].values() for k in e
+                            if k.startswith("unter_") and k.endswith("m")})
+        raise SystemExit(f"08 schreibt keinen Anteil unter {args.threshold} m -- "
+                         f"vorhanden: {', '.join(map(str, vorhanden))} m.")
     # Alle Verfahren, die 08 geschrieben hat -- die zwei Vergleichswerte
     # (Zufall, Stadtmitte) kommen als Fussnote.
     vergleich = ("Zufaelliges DB-Bild", "Stadtmittelpunkt")
@@ -468,7 +473,7 @@ def plot(laeufe, args):
             geschrieben.append(ziel)
 
     # ------------------------------------------------------------------
-    # 3. R@1 ueber die Distanzschwelle -- zeigt, wie streng die 25 m sind.
+    # 3. R@1 ueber die Distanzschwelle -- zeigt, wie streng die Schwelle ist.
     # ------------------------------------------------------------------
     schwellen = sorted({int(s)
                         for r in laeufe

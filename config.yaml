@@ -168,8 +168,9 @@ vpr:
   # Geografische Definition
   # ----------------------------------------------------------
 
-  # Database-Bild gilt als positives Beispiel,
-  # wenn es höchstens diesen Abstand zum Query hat.
+  # Zwei train-Bilder aus verschiedenen Sequenzen gelten in 05 als
+  # Positiv-Paar (Anchor/Positive), wenn sie höchstens so weit auseinander
+  # liegen. Die Auswertung in 07 nutzt retrieval.thresholds.
 
   positive_radius_m: 10.0
 
@@ -207,9 +208,9 @@ vpr:
   # Adapter Training
   # ----------------------------------------------------------
 
-  # Ground-Truth-Radius der Validierungsmetrik in 05. Standardmaessig
-  # derselbe Wert wie uncertain_radius_m, damit val Recall@1 mit der
-  # entsprechenden Zeile in 07 vergleichbar bleibt.
+  # Ground-Truth-Radius der Validierungsmetrik in 05. Eigener Schluessel,
+  # steht aber auf demselben Wert wie uncertain_radius_m, damit val Recall@1
+  # mit der entsprechenden Zeile in 07 vergleichbar bleibt.
   val_radius_m: 25.0
 
 
@@ -238,7 +239,7 @@ vpr:
     # Abstandsmarge der Triplet Loss
     margin: 0.2
 
-    # Negative Sampling
+    # Wahrscheinlichkeit, ein Hard Negative statt eines Easy Negatives zu ziehen
     hard_negative_probability: 0.75
 
     # Abbruch nach so vielen Epochen ohne Verbesserung von val Recall@1.
@@ -262,7 +263,7 @@ vpr:
 
 retrieval:
 
-  # Aktuelle Retrieval-Implementierung
+  # faiss | numpy
   method: "faiss"
 
   # Wieviele Nachbarn 06 je Query speichert. Begrenzt, was 07 auswerten
@@ -332,13 +333,11 @@ download_image_size: 1024
 
 # Wieviele Bilder fehlen duerfen, bevor 03 und 04 abbrechen.
 #
-# Ohne diese Schranke war das die stillste Fehlerquelle des Projekts: laeuft
-# der Token mitten im Download ab, schreibt 03 eine lange Fehlerliste und
-# gilt trotzdem als fertig; 04 filtert die fehlenden Bilder heraus, bildet
-# den Fingerabdruck aus den GEFILTERTEN Metadaten -- er passt also -- und
-# liefert einen sauber abgestempelten, unvollstaendigen Encoder. Die Warnung
-# dazu ist ein print in einem Notebook, das run.py ohne Konsole ausfuehrt.
-# Lieber ein Abbruch als eine Zahl, der niemand ansieht, dass sie falsch ist.
+# Ohne Schranke gilt 03 auch nach einem abgelaufenen Token als fertig; 04
+# filtert die fehlenden Bilder heraus, bildet den Fingerabdruck aus den
+# GEFILTERTEN Metadaten -- er passt also -- und liefert einen sauber
+# abgestempelten, unvollstaendigen Encoder. Die Warnung dazu waere nur ein
+# print in einem Notebook, das run.py ohne Konsole ausfuehrt.
 #
 # 0.01 = bis zu 1 % darf fehlen (in Osnabrueck 1 Bild von 332.868, bei MegaLoc 3).
 max_missing_images_frac: 0.01
@@ -371,8 +370,9 @@ image_root: "~/Downloads/mapillary"
 osm:
 
   # Antworten landen unter cache/ und werden bei einer Wiederholung nicht
-  # erneut geholt. cache/ ist gitignored -- ein frischer Klon faengt leer an
-  # und stellt jede Abfrage genau einmal wirklich.
+  # erneut geholt. Diese Antworten sind gitignored (versioniert ist unter
+  # cache/ nur detections.jsonl) -- ein frischer Klon stellt jede Abfrage
+  # genau einmal wirklich.
 
   # Endpunkt ohne /interpreter. Der Standard ist haeufig ausgelastet;
   # Spiegel mit meist kuerzeren Wartezeiten:
@@ -405,12 +405,14 @@ osm:
 districts:
 
   # true  = Stadtteile berechnen und auswerten
-  # false = Stadtteilberechnung komplett überspringen
+  # false = 01 berechnet keine Stadtteile (recall_by_district.py und
+  #         confusion_atlas.py laden sie trotzdem)
 
   enabled: true
 
 
-  # OSM-place-Tags, die als Stadtteil gelten
+  # Rueckfall, wenn keine admin_level-Ebene brauchbar ist: OSM-place-Tags,
+  # die als Stadtteil gelten
 
   place_tags:
     - suburb

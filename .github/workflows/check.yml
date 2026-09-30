@@ -5,11 +5,10 @@
 # ueberspringt tests/test_retrieval.py das blockweise FAISS-Merging still,
 # und genau das ist die Stelle, an der ein Fehler falsche Zahlen statt eines
 # Absturzes ergaebe. requests und pillow aus demselben Grund: ohne sie
-# uebersprungen die Tests, die einen abgebrochenen Download erkennen.
+# wuerden die Tests uebersprungen, die einen abgebrochenen Download erkennen.
 #
-# Zwei Versionen, weil requirements.txt untere Grenzen nennt: 3.11 ist die
-# aelteste unterstuetzte (src/config.py -> MIN_PYTHON), 3.14 die, mit der
-# entwickelt wird.
+# Zwei Python-Versionen: 3.11 ist die aelteste unterstuetzte
+# (src/config.py -> MIN_PYTHON), 3.14 die, mit der entwickelt wird.
 name: check
 
 on: [push, pull_request]

@@ -1,6 +1,6 @@
 """
 Die versionierten Ergebnis-JSONs muessen zueinander passen: gleicher Split,
-und der Bootstrap reproduziert jede 07-Zahl exakt.
+und der Bootstrap reproduziert die 07-Recalls bei seiner Schwelle exakt.
 """
 
 import json
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from src.config import load_config, paths  # noqa: E402
+from src.config import load_config, paths
 
 ROOT = Path(__file__).resolve().parent.parent
 PATHS = paths(load_config(ROOT), ROOT)

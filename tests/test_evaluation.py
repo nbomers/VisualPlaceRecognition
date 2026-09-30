@@ -1,6 +1,6 @@
 """
 Fuenf Anfragen, zehn Datenbankbilder, handgerechnete Erwartung -- fuer die
-Standardauswertung, die Blickrichtung und "Hard". Rechnet ein Aenderung an
+Standardauswertung, die Blickrichtung und "Hard". Rechnet eine Aenderung an
 src/evaluation.py an dieser Rechnung vorbei, faellt es hier auf.
 """
 
