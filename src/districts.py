@@ -7,6 +7,10 @@ die Abdeckungskarte und die Experimente fuer Recall je Stadtteil und den
 Verwechslungsatlas nutzen. Antworten kommen aus dem osmnx-Cache unter
 cache/; ohne Cache geht die Abfrage an Overpass.
 
+Datenquelle: OpenStreetMap (https://www.openstreetmap.org), (c)
+OpenStreetMap-Mitwirkende, ODbL (https://www.openstreetmap.org/copyright);
+abgefragt ueber Nominatim und Overpass (https://overpass-api.de) mit OSMnx.
+
     configure_osmnx(cfg, PATHS.cache)
     districts, city_polygon, utm_crs = load_districts(cfg, PATHS.cache)
     zuordnung = assign_district(lat, lon, districts)

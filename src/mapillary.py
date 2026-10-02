@@ -2,6 +2,10 @@
 Zugang zu Mapillary: Token aus .env, Sessions mit Wiederholung, und die
 Vector Tiles, aus denen 01 die Bildpositionen holt.
 
+Datenquelle: Mapillary (https://www.mapillary.com), Bilder und Metadaten
+unter CC BY-SA 4.0 (https://www.mapillary.com/terms); Schnittstellen unter
+https://www.mapillary.com/developer. Namensnennung siehe NOTICE.md.
+
 Warum Vector Tiles und nicht die Bbox-Suche der Graph-API: die Kacheln
 liefern alle Bildpunkte einer Stadt in rund 130 Anfragen (Osnabrueck,
 Zoom 14); die Bbox-Suche antwortet nachweislich unvollstaendig, ohne Fehler

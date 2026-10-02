@@ -81,6 +81,7 @@ Urheber je Bild in [QUELLEN.md](results/osnabrueck/figures/demo/QUELLEN.md).</su
 - [Befehlsreferenz](#befehlsreferenz)
 - [Fehlerbehebung](#fehlerbehebung)
 - [Team](#team)
+- [KI-Nutzung](#ki-nutzung)
 - [Credits](#credits)
 - [Lizenz](#lizenz)
 
@@ -2020,6 +2021,25 @@ einem Rebase auf einen Commit, den es nicht mehr gibt, und
 Notebook-Ausgaben entfernt `nbstripout` beim Commit von selbst, `ruff` und
 `pytest` laufen bei jedem Push.
 
+## KI-Nutzung
+
+KI-Assistenten waren im Projekt erlaubt und wurden genutzt, vor allem
+Claude (Anthropic) über [claude.ai](https://claude.ai)
+Wofür:
+
+- **Code schreiben** — Entwürfe für Module, Experimente und Tests; vor der
+  Übernahme gelesen, ausgeführt und mit `pytest` geprüft.
+- **Code-Review und Fehlersuche** — Durchsicht von Code, Kommentaren und
+  Dokumentation auf Fehler; Eingrenzen von Abstürzen wie dem
+  [OpenMP-Konflikt auf macOS](#fehlerbehebung).
+- **Dokumentation** — Formulieren und Überarbeiten der READMEs und
+  Docstrings.
+- **Recherche** — Einordnung von Verfahren, Literatur und Lizenzen.
+
+Jede Zahl in diesem Repository stammt aus dem Code hier und den
+versionierten Ergebnis-JSONs, nicht aus einer KI-Ausgabe; `pytest` rechnet
+die Ergebnisse gegeneinander nach.
+
 ## Credits
 
 **Genutzte Repositories und Datensätze**
@@ -2050,7 +2070,7 @@ beachten.
 
 **Werkzeuge**
 
-- [claude.ai](https://claude.ai) — Unterstützung bei Recherche und Entwicklung
+- [claude.ai](https://claude.ai) und Claude Code — wofür, steht unter [KI-Nutzung](#ki-nutzung)
 
 **Literatur**
 

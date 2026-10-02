@@ -4,6 +4,9 @@ clip.py -- CLIP-Bildembeddings.
 Laden, Batching und Checkpointing kommen aus BaseEmbedder. Hier steht nur,
 was an CLIP anders ist: der Processor arbeitet auf PIL-Bildern und batcht
 selbst, und die Bildmerkmale kommen ueber get_image_features().
+
+Gewichte: https://huggingface.co/openai/clip-vit-base-patch32 (MIT,
+https://github.com/openai/CLIP), geladen ueber Hugging Face Transformers.
 """
 
 from __future__ import annotations

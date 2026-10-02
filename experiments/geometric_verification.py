@@ -12,6 +12,10 @@ geprueft, und die Kandidaten nach Inlier-Zahl neu sortiert. Wer unterhalb
 von --min-inliers bleibt, behaelt seine alte Reihenfolge hinter den
 verifizierten.
 
+SuperPoint und LightGlue kommen aus https://github.com/cvg/LightGlue
+(Apache-2.0); die SuperPoint-Gewichte stehen unter einer Lizenz nur fuer
+nichtkommerzielle Forschung (Magic Leap, siehe NOTICE.md).
+
 Bewertet wird exakt wie in 07. Das ist der teuerste Hebel: je Anfrage k
 Bildpaare durch ein Matching-Netz. Auf der GPU rund 50 Paare je Sekunde,
 auf CPU ein Bruchteil davon -- deshalb standardmaessig eine Stichprobe.
