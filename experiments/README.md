@@ -280,6 +280,37 @@ zu korrigieren (Identität als Epoche 0) ändert die Adapter-Zahlen in
 `results/` und damit jede davon abgeleitete Zeile; die Zahlen oben stehen
 deshalb neben den bestehenden, nicht an ihrer Stelle.
 
+### `adapter_sweep.py` — liegt es an Marge und Lernrate?
+
+**Frage:** Schadet der Adapter, weil die Trainingswerte zu grob sind? Die
+Marge von 0.2 auf dem Cosinus-Abstand entspricht 0.4 auf dem quadrierten
+L2-Abstand (‖a−b‖² = 2(1−cos)); NetVLAD nimmt dort 0.1. Mit Lernrate 1e-3
+auf einer d×d-Matrix kann das den gelernten Raum weit verschieben.
+
+Das Skript trainiert je Kombination einen Adapter wie 05 — dieselben
+Bausteine, derselbe fit/val-Split, derselbe Seed —, hält ihn aber nur im
+Speicher und schreibt nichts nach `results/` oder `data/`. Anders als 05
+steht die Identität als Epoche 0 zur Wahl. Gewählt wird nur nach val; test
+wird je Kombination berichtet, für die beste trainierte Epoche und für die
+Wahl. Die Identität läuft auf test mit und muss die Zahl aus 07 treffen.
+
+```bash
+python experiments/adapter_sweep.py --method eigenplaces
+python experiments/adapter_sweep.py --method clip
+python experiments/adapter_sweep.py --method megaloc --margins 0.2 0.05 --lrs 1e-3 1e-4
+```
+
+Standardraster: Marge 0.2 / 0.1 / 0.05, Lernrate 1e-3 / 1e-4; 0.2 und 1e-3
+sind die Werte aus `config.yaml` und damit die Kontrolle. Ergebnis in
+`results/<stadt>/adapter_sweep_<method>.json`.
+
+**Vorab festgelegt:** Trifft die Vermutung zu, rückt bei EigenPlaces und
+MegaLoc mit kleinerer Marge und Lernrate der test-Verlust gegen 0, und die
+Wahl fällt seltener auf einen schädlichen Adapter; ein Gewinn über die
+Identität hinaus wird nicht erwartet. Bei CLIP muss der Gewinn bleiben.
+
+**Stand: noch nicht gelaufen.**
+
 ---
 
 ## Volle Referenz — das zweite Protokoll
@@ -724,25 +755,31 @@ python experiments/recall_by_difficulty.py --method megaloc
 python experiments/recall_by_difficulty.py --method eigenplaces_pcaw512
 ```
 
-Gemessen 2026-09-14, MegaLoc, R@1 gesamt 0.568:
+Gemessen 2026-09-30, MegaLoc, R@1 gesamt 0.568:
 
 | Merkmal | Klasse | n | R@1 |
 |---|---|---|---|
-| Nachbarn | 1–2 | 1,709 | 0.526 |
-| | 3–5 | 3,508 | 0.481 |
-| | 6–10 | 3,880 | 0.535 |
-| | 11–20 | 6,832 | 0.448 |
-| | 21–50 | 14,056 | 0.601 |
-| | 51+ | 4,120 | **0.781** |
-| Tage zum nächsten | 0–7 | 4,688 | 0.575 |
+| Nachbarn | 1–2 | 1,705 | 0.523 |
+| | 3–5 | 3,496 | 0.483 |
+| | 6–10 | 3,883 | 0.534 |
+| | 11–20 | 6,808 | 0.448 |
+| | 21–50 | 14,076 | 0.600 |
+| | 51+ | 4,144 | **0.780** |
+| Tage zum nächsten | 0–7 | 4,850 | 0.575 |
 | | 8–30 | 3,675 | **0.819** |
 | | 31–180 | 10,450 | 0.539 |
-| | 181–365 | 5,769 | 0.612 |
-| | 366+ | 9,366 | 0.473 |
-| Blickrichtung passt | ja | 29,157 | 0.653 |
-| | nein | 4,955 | **0.071** |
-| Selber Fotograf, selber Tag | ja | 3,164 | 0.690 |
-| | nein | 30,948 | 0.556 |
+| | 181–365 | 5,772 | 0.612 |
+| | 366+ | 9,365 | 0.472 |
+| Blickrichtung passt | ja | 29,167 | 0.653 |
+| | nein | 4,945 | **0.071** |
+| Selber Fotograf, selber Tag | ja | 3,168 | 0.690 |
+| | nein | 30,944 | 0.556 |
+
+Jede lösbare Anfrage liegt in genau einer Klasse je Merkmal; die Zahl ohne
+passende Blickrichtung (4,945) ist dieselbe wie in 07. Die Läufe der
+übrigen fünf Städte stammen noch von vor dieser Korrektur (0,5 bis 2 % der
+lösbaren Anfragen fielen dort zwischen die Klassen). `city_comparison.py` liest aus
+ihnen nur die Herkunft des Top-1-Treffers, die davon unberührt ist.
 
 „Selber Fotograf" heißt hier wie überall: selbes hochladendes **Konto**
 (`creator_id`). Die Beschriftung steht so in den bereits gerechneten JSONs
@@ -753,16 +790,16 @@ EigenPlaces (pcaw512) zeigt dieselben Muster auf niedrigerem Niveau
 
 **Befund — drei Faktoren, in dieser Reihenfolge.**
 
-1. **Blickrichtung.** 4,955 lösbare Anfragen (14.5%) haben
+1. **Blickrichtung.** 4,945 lösbare Anfragen (14.5%) haben
    keinen Nachbarn, der in dieselbe Richtung schaut: R@1 0.071. Ohne sie
    läge MegaLoc bei 0.653. Das ist der Befund „Blickrichtung" aus 07,
    je Anfrage.
 2. **Zeit — schwächer, und nicht monoton.** 8–30 Tage Abstand: 0.819;
-   über ein Jahr: 0.473. Aber 0–7 Tage liegen nur bei 0.575 und 181–365
+   über ein Jahr: 0.472. Aber 0–7 Tage liegen nur bei 0.575 und 181–365
    Tage bei 0.612 — ein gleichmäßiger Verfall mit dem Alter ist das nicht.
    Belastbar ist nur die Richtung an den Rändern; Intervalle je Klasse
    gibt es nicht.
-3. **Dichte.** Ab 51 Nachbarn 0.781, darunter zwischen 0.45 und 0.60
+3. **Dichte.** Ab 51 Nachbarn 0.780, darunter zwischen 0.45 und 0.60
    ohne klaren Verlauf. Der Dichte-Befund hält — aber als „viele Nachbarn
    helfen", nicht als „wenige schaden": bei 1–2 Nachbarn ist R@1 nicht
    schlechter als bei 11–20. Die Dichtekurve (+0.22 mit `train`) gewinnt

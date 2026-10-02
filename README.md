@@ -174,8 +174,8 @@ Acht Befunde, jeder gemessen, fünf davon (1, 3, 4, 5, 8) mit Intervall belegt:
    zerlegt ([Schwierigkeit je Anfrage](#schwierigkeit-je-anfrage)): was
    zählt, ist **ein Nachbar, der in dieselbe Richtung schaut** (0.653 gegen
    0.071 ohne). Zeitabstand und Nachbarzahl wirken schwächer und nicht
-   monoton — über ein Jahr 0.473, 8–30 Tage 0.819, aber 0–7 Tage nur 0.575;
-   erst ab 51 Nachbarn klar mehr (0.781). Auf Stadtteil-Ebene ist mit
+   monoton — über ein Jahr 0.472, 8–30 Tage 0.819, aber 0–7 Tage nur 0.575;
+   erst ab 51 Nachbarn klar mehr (0.780). Auf Stadtteil-Ebene ist mit
    „Bilder je km²" nichts davon sichtbar (ρ = 0.27) — die Referenz muss an
    der Straße der Anfrage stehen, nicht im Stadtteil.
 3. **Ein trainierter linearer Adapter fügt nichts hinzu, was ein festes
@@ -474,7 +474,7 @@ der Slug aus `city` in der `config.yaml` (`Osnabrück, Germany` →
 │
 ├── experiments/                je Skript eine Frage; Zahlen in experiments/README.md
 │   ├── pca_reduce  concat_embeddings                     abgeleitete Encoder
-│   ├── adapter_diagnose                                  warum der Adapter schadet
+│   ├── adapter_diagnose  adapter_sweep                   warum der Adapter schadet
 │   ├── full_reference  bootstrap_ci                      zweites Protokoll, Intervalle
 │   ├── recall_by_difficulty  recall_by_district
 │   │   confusion_atlas  rejection_curve
@@ -801,7 +801,7 @@ CC BY-SA 4.0, Urheber je Bild in
 pytest tests/
 ```
 
-19 Dateien, unter einer Minute, für fast alle kein Torch: die Recall-Auswertung gegen eine
+21 Dateien, unter einer Minute, für fast alle kein Torch: die Recall-Auswertung gegen eine
 handgerechnete Erwartung (Standard, Hard, Blickrichtung, Panorama), der Split gegen
 die versionierten Listen, die Paarbildung, `validate_config` gegen die
 echte `config.yaml` und gegen Tippfehler, die PCA-Projektion gegen sklearn,
@@ -1301,24 +1301,24 @@ R@1 = 1.0:
 R@1 bei 25 m je Klasse, 34,112 lösbare Anfragen      n   MegaLoc   EP pcaw512
 alle                                         34,112    0.568       0.507   ██████████████████▏
 Ein Nachbar schaut in dieselbe Richtung
-  ja                                         29,157    0.653       0.583   ████████████████████▉
-  nein                                        4,955    0.071       0.055   ██▎
+  ja                                         29,167    0.653       0.583   ████████████████████▉
+  nein                                        4,945    0.071       0.054   ██▎
 Tage bis zum zeitlich nächsten Nachbarn
-  0–7                                         4,688    0.575       0.540   ██████████████████▍
+  0–7                                         4,850    0.575       0.542   ██████████████████▍
   8–30                                        3,675    0.819       0.766   ██████████████████████████▎
   31–180                                     10,450    0.539       0.491   █████████████████▎
-  181–365                                     5,769    0.612       0.543   ███████████████████▋
-  über 365                                    9,366    0.473       0.382   ███████████████▏
+  181–365                                     5,772    0.612       0.542   ███████████████████▋
+  über 365                                    9,365    0.472       0.382   ███████████████▏
 Nachbarn im Umkreis von 25 m
-  1–2                                         1,709    0.526       0.417   ████████████████▉
-  3–5                                         3,508    0.481       0.364   ███████████████▍
-  6–10                                        3,880    0.535       0.444   █████████████████▏
-  11–20                                       6,832    0.448       0.390   ██████████████▍
-  21–50                                      14,056    0.601       0.564   ███████████████████▎
-  51+                                         4,120    0.781       0.724   █████████████████████████
+  1–2                                         1,705    0.523       0.415   ████████████████▊
+  3–5                                         3,496    0.483       0.365   ███████████████▌
+  6–10                                        3,883    0.534       0.443   █████████████████▏
+  11–20                                       6,808    0.448       0.390   ██████████████▍
+  21–50                                      14,076    0.600       0.563   ███████████████████▎
+  51+                                         4,144    0.780       0.724   █████████████████████████
 Nachbar vom selben Konto am selben Tag
-  ja                                          3,164    0.690       0.660   ██████████████████████▏
-  nein                                       30,948    0.556       0.491   █████████████████▊
+  ja                                          3,168    0.690       0.659   ██████████████████████▏
+  nein                                       30,944    0.556       0.491   █████████████████▊
 ```
 
 <sub>Auszug aus `experiments/results/osnabrueck/recall_by_difficulty_*.json`,
@@ -1329,7 +1329,7 @@ erzeugt von `python experiments/recall_by_difficulty.py` (MegaLoc) und mit
 dieselbe Richtung schaut, trifft MegaLoc in 7 % der Fälle, mit einem in
 65 %. Zeitabstand und Nachbarzahl wirken schwächer und **nicht monoton** —
 8–30 Tage sind die beste Klasse (0.819), 0–7 Tage liegen mit 0.575 nur im
-Mittelfeld; bei den Nachbarn hebt sich allein 51+ ab (0.781). Die Dichte
+Mittelfeld; bei den Nachbarn hebt sich allein 51+ ab (0.780). Die Dichte
 wirkt also als „viele Nachbarn helfen", nicht als „wenige schaden". Ein
 Nachbar vom selben Konto am selben Tag hilft sichtbar (0.690 gegen 0.556) —
 das ist der Dubletteneffekt aus [Sechs Städte](#sechs-städte) in einer
@@ -1857,6 +1857,12 @@ Warum der Adapter schadet — val ohne Training gegen die beste Epoche aus 05, b
 
 ```bash
 python experiments/adapter_diagnose.py
+```
+
+Ob es an Marge und Lernrate liegt — ein Raster, gewählt nach val, ohne Pipeline-Artefakte zu schreiben:
+
+```bash
+python experiments/adapter_sweep.py --method eigenplaces
 ```
 
 Recall gegen Referenzdichte (Standard: EigenPlaces):
