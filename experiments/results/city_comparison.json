@@ -270,5 +270,19 @@
       "se_binomial": 0.04600905228676722
     }
   },
-  "geometrische_verifikation": {}
+  "geometrische_verifikation": {
+    "osnabrueck": {
+      "name": "megaloc_gv20",
+      "top_k": 20,
+      "gv": 0.5391651031894934,
+      "anteil_verifiziert": 0.8677231611521067,
+      "n_verifiziert": 42010,
+      "stunden": 8.584166666666667,
+      "differenz": -0.029139305816135108,
+      "ci": [
+        -0.06190705431493155,
+        0.00029691581286580947
+      ]
+    }
+  }
 }
