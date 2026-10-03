@@ -2062,7 +2062,7 @@ Notebook-Ausgaben entfernt `nbstripout` beim Commit von selbst, `ruff` und
 ## KI-Nutzung
 
 KI-Assistenten waren im Projekt erlaubt und wurden genutzt, vor allem
-Claude (Anthropic) über [claude.ai](https://claude.ai)
+Claude (Anthropic) über [claude.ai](https://claude.ai).  
 Wofür:
 
 - **Code schreiben** — Entwürfe für Module, Experimente und Tests; vor der
@@ -2108,7 +2108,7 @@ beachten.
 
 **Werkzeuge**
 
-- [claude.ai](https://claude.ai) und Claude Code — wofür, steht unter [KI-Nutzung](#ki-nutzung)
+- [claude.ai](https://claude.ai) — wofür, steht unter [KI-Nutzung](#ki-nutzung)
 
 **Literatur**
 
