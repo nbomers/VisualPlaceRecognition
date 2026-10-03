@@ -17,8 +17,9 @@ SuperPoint und LightGlue kommen aus https://github.com/cvg/LightGlue
 nichtkommerzielle Forschung (Magic Leap, siehe NOTICE.md).
 
 Bewertet wird exakt wie in 07. Das ist der teuerste Hebel: je Anfrage k
-Bildpaare durch ein Matching-Netz. Auf der GPU rund 50 Paare je Sekunde,
-auf CPU ein Bruchteil davon -- deshalb standardmaessig eine Stichprobe.
+Bildpaare durch ein Matching-Netz. Auf einer RTX 3070 gemessen rund 27
+Paare je Sekunde (Osnabrueck: 42.010 Anfragen in 8,6 h), auf CPU ein
+Bruchteil davon -- deshalb standardmaessig eine Stichprobe.
 Ein Lauf ueber alle Anfragen gehoert auf den Rechner mit der GPU.
 
     python experiments/geometric_verification.py                   # Stichprobe, 2.000 Anfragen

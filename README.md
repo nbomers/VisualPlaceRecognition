@@ -32,7 +32,7 @@ zurück. Der Eigenanteil ist nicht das Modell — die Encoder kommen fertig
 vortrainiert — sondern der **Benchmark**: ein sequenzbasierter Split ohne
 Leakage, drei Ground-Truth-Definitionen, eine Zufallsbasis, Fingerabdrücke
 gegen vertauschte Artefakte, Konfidenzintervalle über Fahrten statt über
-Bilder, und 39 vergleichbare Zeilen über fünf Encoder und ihre Varianten.
+Bilder, und 40 vergleichbare Zeilen über fünf Encoder und ihre Varianten.
 
 **Eingabe:** ein Straßenfoto aus dem Stadtgebiet
 **Ausgabe:** geschätzte Koordinate, eine Konfidenz, und die ähnlichsten
@@ -139,7 +139,7 @@ Zwei Protokolle, dieselben 53.414 Anfragen aus **Osnabrück** (fünf weitere
 Städte weiter unten). **Volle Referenz**: alle
 279.453 Bilder außerhalb der Anfragen als Datenbank — das, was ein System
 mit dem ganzen Material leistet. **Benchmark**: nur 15 % der Sequenzen als
-Datenbank — das strengere Protokoll, auf dem alle 39 Zeilen inklusive
+Datenbank — das strengere Protokoll, auf dem alle 40 Zeilen inklusive
 Adapter und Varianten verglichen werden. R@1 bei 25 m über die lösbaren
 Anfragen (90,2 % bzw. 63,9 %); klein dahinter das 95-%-Intervall aus 1.000
 Ziehungen der 198 Query-Fahrten, fett der Bestwert je Spalte. Raten trifft
@@ -188,6 +188,10 @@ Acht Befunde, jeder gemessen, fünf davon (1, 3, 4, 5, 8) mit Intervall belegt:
    stellte „nicht trainieren" nie zur Wahl — MegaLoc bliebe sonst bei 0.568
    ([Adapter-Diagnose](experiments/README.md#adapter_diagnosepy--warum-der-adapter-schadet)).
    Einzige Einschränkung: `anyloc_pcaw512` behält +0.045 [+0.009, +0.088].
+   Ein Raster über Marge und Lernrate zeigt den Hebel: die Lernrate, nicht
+   die Marge. Mit 1e-4 statt 1e-3 bleibt EigenPlaces bei R@1 auf Höhe der
+   Identität (0.483 gegen 0.484), CLIP steigt auf 0.137; gewählt nach val,
+   ohne Intervall ([Adapter-Raster](experiments/README.md#adapter_sweeppy--liegt-es-an-marge-und-lernrate)).
 4. **Die Rangfolge hängt nicht an der Deskriptorbreite.** Auf 512
    Dimensionen bleibt sie identisch; MegaLoc verliert von 8448 auf 512 per
    PCA 0.023 [0.017, 0.031], mit Whitening 0.028 [0.020, 0.038]. Der
@@ -202,8 +206,9 @@ Acht Befunde, jeder gemessen, fünf davon (1, 3, 4, 5, 8) mit Intervall belegt:
    die Fahrt als Pfad liest: +0.030 [+0.020, +0.041] bei MegaLoc, +0.017
    [+0.006, +0.030] bei EigenPlaces — bei EigenPlaces erkauft mit R@10
    (0.650 → 0.633), siehe [Die Fahrt als Pfad](#die-fahrt-als-pfad). Die
-   [geometrische Verifikation](#geometrische-verifikation) ist gebaut, ihre
-   Läufe stehen aus.
+   [geometrische Verifikation](#geometrische-verifikation) der Top-20
+   schärft die Position (R@1 bei 5 m +0.013) und kostet bei 25 m −0.029
+   [−0.062, +0.000] — belegt ist der Verlust nicht, ein Gewinn sicher nicht.
 6. **Fehler sind bimodal.** Unter den 14.726 Fehlgriffen von MegaLoc liegen
    45 % unter 100 m (dieselbe Straße, knapp jenseits der Schwelle) und
    44 % über 1 km (ein anderes Viertel); nur 11 % dazwischen. Ein Median
@@ -940,6 +945,7 @@ eigenplaces   none        2048      0.484  [0.405, 0.574]   0.608   0.650   0.69
 eigenplaces   hmm30-25    2048      0.501  [0.415, 0.596]   0.603   0.633   0.675
 eigenplaces   linear      2048      0.444  [0.372, 0.523]   0.593   0.648   0.696
 megaloc       none        8448      0.568  [0.475, 0.666]   0.676   0.719   0.763
+megaloc       gv20        8448      0.539  [0.456, 0.631]   0.678   0.726   0.763
 megaloc       hmm30-25    8448      0.598  [0.500, 0.699]   0.690   0.725   0.764
 megaloc       linear      8448      0.442  [0.372, 0.517]   0.580   0.628   0.667
 mixvpr        none        4096      0.426  [0.354, 0.509]   0.543   0.590   0.642
@@ -955,7 +961,8 @@ Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueb
 
 Spalte „Variante": `none` = Encoder wie veröffentlicht, `linear` = mit
 trainiertem linearem Adapter, `hmm30-25` = Trefferlisten einer Fahrt über
-ein HMM umsortiert (β = 30, σ = 25 m). `--derived` zeigt alle 39 Zeilen:
+ein HMM umsortiert (β = 30, σ = 25 m), `gv20` = Top-20 nach geometrischer
+Verifikation umsortiert. `--derived` zeigt alle 40 Zeilen:
 Namen mit `_pca512` sind per PCA auf 512 reduziert, `_pcaw512` zusätzlich
 gewhitent, `_pcaw4096` / `_pcaw2048` gewhitent ohne Reduktion, `_concat`
 verkettet, `seq3` = Trefferlisten über ±3 Nachbarframes aufsummiert.
@@ -985,12 +992,13 @@ eigenplaces → eigenplaces_pcaw2048          -0.025   [-0.042, -0.010]   ja
 anyloc → anyloc_pcaw4096                    +0.117   [+0.078, +0.162]   ja
 megaloc → eigenplaces_megaloc_concat        +0.004   [-0.005, +0.014]   nein
 megaloc → megaloc_hmm30-25                  +0.030   [+0.020, +0.041]   ja
+megaloc → megaloc_gv20                      -0.029   [-0.062, +0.000]   nein
 megaloc → megaloc_linear                    -0.126   [-0.179, -0.073]   ja
 clip_pcaw512 → clip_pcaw512_linear          +0.009   [-0.002, +0.021]   nein
 ```
 
 <sub>Auszug aus [`experiments/results/osnabrueck/bootstrap_ci.json`](experiments/results/osnabrueck/bootstrap_ci.json),
-erzeugt von `python experiments/bootstrap_ci.py`. Dort stehen alle 38 Paare,
+erzeugt von `python experiments/bootstrap_ci.py`. Dort stehen alle 39 Paare,
 auch für R@5 bis R@20.</sub>
 
 ### Sechs Städte
@@ -1423,17 +1431,6 @@ zeigt, ist als Pfad genauso konsistent wie die richtige.
 
 ### Geometrische Verifikation
 
-<!-- GV-PLATZHALTER. Sobald die Läufe durch sind, den Block unten durch die
-     wörtliche Ausgabe von `python experiments/city_comparison.py` ersetzen
-     (Abschnitt "Geometrische Verifikation"), die Notiz darunter löschen und
-     den Absatz "Befund" schreiben. Danach Befund 5 unter "Ergebnisse auf
-     einen Blick" nachziehen. -->
-
-> [!NOTE]
-> Die Läufe über alle Anfragen stehen noch aus. Der Block zeigt die
-> Struktur, in die sie gehören; was schon feststeht, ist eingetragen,
-> offene Werte stehen als „…".
-
 Die einzige Nachbearbeitung, die die **grobe Verwechslung** direkt angreift
 — global ähnliche, lokal verschiedene Orte; 44 % der Fehlgriffe von MegaLoc
 liegen über einen Kilometer daneben ([Struktur der Fehler](#struktur-der-fehler)). Für jede
@@ -1447,7 +1444,7 @@ bleibt, behält seine alte Reihenfolge hinter den verifizierten.
 `--max-side 640` — die Voreinstellungen des Skripts, nicht an diesen
 Anfragen abgestimmt; woher sie kommen, steht in
 [`experiments/README.md`](experiments/README.md#geometric_verificationpy--top-k-lokal-nachprüfen).
-Berichtet wird diese eine Zeile je Stadt. Verifiziert
+Berichtet wird diese eine Zeile; gerechnet ist sie für Osnabrück. Verifiziert
 werden nur Anfragen, die bei 100 m überhaupt ein Datenbankbild haben; die
 übrigen zählen in keinem Recall mit.
 
@@ -1455,25 +1452,63 @@ werden nur Anfragen, die bei 100 m überhaupt ein Datenbankbild haben; die
 Geometrische Verifikation   Top-k nach SuperPoint + LightGlue umsortiert, Differenz gepaart
 Stadt               R@1    +GV    dR@1     95-%-Intervall  verif.  Anfragen     h
 ---------------------------------------------------------------------------------
-osnabrueck        0.568      …       …                  …       …    42,010     …
-fuerth            0.549      …       …                  …       …    19,957     …
-karlsruhe         0.419      …       …                  …       …    71,965     …
-kaiserslautern    0.651      …       …                  …       …    54,034     …
-wuerzburg         0.336      …       …                  …       …    40,454     …
-jena              0.417      …       …                  …       …    91,645     …
+osnabrueck        0.568  0.539  -0.029   [-0.062, +0.000]   86.8%    42,010   8.6
+fuerth            0.549      —       —                  —       —         —     —
+karlsruhe         0.419      —       —                  —       —         —     —
+kaiserslautern    0.651      —       —                  —       —         —     —
+wuerzburg         0.336      —       —                  —       —         —     —
+jena              0.417      —       —                  —       —         —     —
 ```
 
-<sub>Struktur der Ausgabe von `python experiments/city_comparison.py`. Je
-Stadt nach `python experiments/geometric_verification.py --n-queries 0` und
-danach `python experiments/bootstrap_ci.py`. „Anfragen" ist die Zahl der
-lösbaren Anfragen bei 100 m, also das, was verifiziert wird.</sub>
+<sub>Abschnitt aus der Ausgabe von `python experiments/city_comparison.py`,
+nach `python experiments/geometric_verification.py --n-queries 0` und
+`python experiments/bootstrap_ci.py`. „verif." ist der Anteil der
+Kandidatenpaare mit mindestens 15 Inliern, „Anfragen" die Zahl der bei
+100 m lösbaren Anfragen, also das, was verifiziert wird, „h" die Laufzeit
+auf einer RTX 3070. Die übrigen fünf Städte sind nicht gerechnet.</sub>
 
-Zusammen sind das rund 320.000 Anfragen oder 6,4 Millionen Bildpaare —
-bei den etwa 50 Paaren je Sekunde, die das Skript für eine GPU ansetzt,
-rund 36 Stunden; die tatsächliche Rate druckt es am Ende jedes Laufs. Es
-speichert die Inlier alle zwei Minuten und setzt nach einem Abbruch dort
-fort; der Bootstrap rechnet die Zeile aus den gespeicherten Inliern nach,
-ohne ein Bild erneut zu matchen.
+**Befund: die Verifikation sortiert um, aber nicht zum richtigen Ort.**
+R@1 bei 25 m sinkt von 0.568 auf 0.539, gepaart −0.029 [−0.062, +0.000].
+Das Intervall berührt 0 — belegt ist der Verlust nicht, ein Gewinn ist es
+sicher nicht. R@5 und R@10 bleiben, wo sie waren (+0.002 [−0.018, +0.024],
++0.007 [−0.005, +0.019]); R@20 bleibt es zwingend, umsortiert wird nur
+innerhalb der Top-20. Über die Schwellen kippt das Vorzeichen:
+
+```text
+R@1               5 m     10 m     25 m     50 m    100 m
+megaloc         0.230    0.353    0.568    0.666    0.637
+megaloc_gv20    0.242    0.363    0.539    0.632    0.599
+Differenz      +0.013   +0.010   -0.029   -0.034   -0.039
+```
+
+<sub>Alle Queries, aus `results/osnabrueck/evaluation/megaloc.json` und
+`megaloc_gv20.json`. Ein Intervall gibt es nur bei 25 m.</sub>
+
+Die naheliegende Lesart, einzeln nicht geprüft: die Inlier-Zahl misst
+Bildüberlappung, nicht Ortsgleichheit. Sie zieht den Kandidaten nach vorn,
+der fast denselben Ausschnitt zeigt — das schärft die Position auf wenige
+Meter, verdrängt bei 25 m und mehr aber öfter einen richtigen Treffer durch
+einen falschen mit mehr Inliern. Die Schwelle trennt dabei kaum: 87 % aller
+Kandidatenpaare kommen über 15 Inlier (Median 40). Auf Straßenbildern
+finden SuperPoint und LightGlue auch zwischen verschiedenen Orten genug
+Geometrie — Fahrbahn, Bordsteine, Fassadenraster wiederholen sich.
+
+Was daraus nicht folgt: dass geometrische Verifikation für VPR nichts
+taugt. Gemessen ist eine Einstellung, auf einer Stadt, mit reinem
+Umsortieren nach Inliern. Eine Bewertung, die Inlier mit der globalen
+Ähnlichkeit verrechnet, oder eine höhere Schwelle ist nicht geprüft; die
+Schwelle ließe sich aus den gespeicherten Inliern nachrechnen, ohne neu zu
+matchen — auf Osnabrück wäre das aber Abstimmen an der berichteten
+Stichprobe.
+
+**Laufzeit.** 42.010 Anfragen mal 20 Kandidaten sind 840.200 Bildpaare in
+8,6 Stunden, rund 27 Paare je Sekunde auf der RTX 3070 — gut die Hälfte der
+50, die das Skript vorher ansetzte. Die übrigen fünf Städte (278.055
+Anfragen, 5,6 Millionen Paare) hätten danach rund 57 Stunden gekostet; bei
+einem Ergebnis ohne Gewinn in Osnabrück sind sie nicht gerechnet. Das
+Skript speichert die Inlier alle zwei Minuten und setzt nach einem Abbruch
+dort fort; der Bootstrap rechnet die Zeile aus den gespeicherten Inliern
+nach, ohne ein Bild erneut zu matchen.
 
 Die SuperPoint-Gewichte stehen unter einer **Lizenz nur für
 nichtkommerzielle Forschung**; das betrifft allein dieses Skript, siehe
@@ -1567,7 +1602,7 @@ Bootstrap-Intervall, liegende Balken nach Wert sortiert, Farbe = Encoder),
 `vergleich_recall_k_25m.png` und `vergleich_schwellen.png` (Kurven, Farbe =
 Encoder, gestrichelt = Adapter). Mit `--derived` heißen sie `_derived` und
 werden zu kleinen Vielfachen: ein Feld je Encoder, Farbe und Markerform =
-Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 39 Zeilen in eine
+Deskriptorvariante, Linienstil = Adapter bzw. Sequenz. 40 Zeilen in eine
 Legende zu zwingen war vorher der Punkt, an dem die Abbildung unlesbar wurde.
 
 <p align="center">
@@ -1649,17 +1684,20 @@ Jena (6.115), Würzburg (4.895) und Heidelberg (4.879). Dichte ist aber nicht
 Abdeckung: Erlangen, die dichteste davon, erreicht nur 63 % der Wohnstraßen
 ([Stadtwahl](experiments/README.md#stadtwahl--welche-stadt-taugt-als-nächste)).
 
-**Nächster Schritt.** Die geometrische Verifikation
+**Offen.** Die geometrische Verifikation
 ([`experiments/geometric_verification.py`](experiments/geometric_verification.py))
-ist gebaut, ihre Läufe über alle Anfragen der sechs Städte stehen aus; die
-Zahlen gehören unter [Geometrische Verifikation](#geometrische-verifikation).
-Sie ist der einzige Hebel, der die grobe Verwechslung direkt angreift:
-global ähnliche, lokal verschiedene Orte. Wie groß der Gewinn ausfällt, ist
-bis dahin nicht belegt.
+ist nur auf Osnabrück gerechnet und dort in dieser Einstellung kein Hebel
+für R@1 bei 25 m ([Geometrische Verifikation](#geometrische-verifikation)).
+Ob eine Bewertung, die Inlier mit der globalen Ähnlichkeit verrechnet, die
+grobe Verwechslung doch angreift, gehört auf eine Stadt, die nicht
+berichtet wird.
 
-Danach bleibt als einziger offener Punkt ein **zweiter Split-Seed**: alle
-Zahlen stehen auf `split_seed: 42`, und wie viel davon am Seed hängt, ist
-nicht gemessen.
+Der Adapter in 05 lernt mit 1e-4 besser als mit 1e-3
+([Adapter-Raster](experiments/README.md#adapter_sweeppy--liegt-es-an-marge-und-lernrate));
+umgestellt ist das nicht, weil es jede Adapter-Zeile in `results/` ändert.
+
+Und ein **zweiter Split-Seed**: alle Zahlen stehen auf `split_seed: 42`,
+und wie viel davon am Seed hängt, ist nicht gemessen.
 
 **An den Fremd-Repositories.** MixVPR hat keine Lizenzdatei. AnyLocs
 Download-Links für das Vokabular sind tot; `setup_external.py` holt es aus

@@ -309,7 +309,63 @@ MegaLoc mit kleinerer Marge und Lernrate der test-Verlust gegen 0, und die
 Wahl fällt seltener auf einen schädlichen Adapter; ein Gewinn über die
 Identität hinaus wird nicht erwartet. Bei CLIP muss der Gewinn bleiben.
 
-**Stand: noch nicht gelaufen.**
+**Ergebnis** (Osnabrück, 2026-10-02; R@1 bei 25 m, val und test; die
+Identität ist der Encoder ohne Adapter, fett die Wahl nach val; MegaLoc ist
+nicht gelaufen):
+
+| Encoder | Marge | Lernrate | Epoche | val R@1 | test R@1 | test R@5 | test R@20 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| eigenplaces | Identität | — | 0 | 0.118 | 0.484 | 0.608 | 0.695 |
+| | 0.2 | 1e-3 | 2 | 0.137 | 0.446 | 0.592 | 0.695 |
+| | 0.2 | 1e-4 | 3 | 0.150 | 0.468 | 0.613 | 0.715 |
+| | 0.1 | 1e-3 | 3 | 0.146 | 0.458 | 0.610 | 0.712 |
+| | 0.1 | 1e-4 | 3 | **0.153** | 0.483 | 0.630 | 0.728 |
+| | 0.05 | 1e-3 | 2 | 0.142 | 0.452 | 0.609 | 0.711 |
+| | 0.05 | 1e-4 | 3 | 0.149 | 0.483 | 0.636 | 0.733 |
+| clip | Identität | — | 0 | 0.015 | 0.073 | 0.106 | 0.158 |
+| | 0.2 | 1e-3 | 1 | 0.033 | 0.115 | 0.207 | 0.332 |
+| | 0.2 | 1e-4 | 1 | 0.038 | 0.133 | 0.232 | 0.357 |
+| | 0.1 | 1e-3 | 1 | 0.031 | 0.115 | 0.208 | 0.334 |
+| | 0.1 | 1e-4 | 1 | **0.039** | 0.137 | 0.235 | 0.364 |
+| | 0.05 | 1e-3 | 1 | 0.032 | 0.115 | 0.208 | 0.337 |
+| | 0.05 | 1e-4 | 1 | 0.034 | 0.136 | 0.234 | 0.365 |
+
+Aus [`results/osnabrueck/adapter_sweep_eigenplaces.json`](results/osnabrueck/adapter_sweep_eigenplaces.json)
+und [`adapter_sweep_clip.json`](results/osnabrueck/adapter_sweep_clip.json).
+
+- **Die Kontrolle hält.** Die Identität trifft 07 auf drei Stellen (0.484,
+  0.073). Die Zeile 0.2 / 1e-3 ist die Einstellung aus 05, aber nicht
+  bitgleich mit ihr: 0.446 gegen 0.444 (EigenPlaces), 0.115 gegen 0.123
+  (CLIP). Beide 05-Zeilen stammen aus einem älteren Lauf (siehe
+  Diagnose oben), und Training auf der GPU ist ohnehin nicht bitgenau.
+  Unterschiede unter etwa 0.01 zwischen zwei Zeilen sind nicht zu deuten.
+- **Die Marge ist es nicht.** Bei gleicher Lernrate liegen die drei Margen
+  bei EigenPlaces innerhalb von 0.015, bei CLIP mit 1e-3 auf drei Stellen
+  gleich (0.115). Die Vermutung aus der Frage trägt nicht.
+- **Die Lernrate ist es.** In allen sechs Paaren (zwei Encoder, drei
+  Margen) ist 1e-4 besser als 1e-3, auf val wie auf test. Bei EigenPlaces
+  schrumpft der test-Verlust von −0.027 bis −0.038 auf −0.001 bis −0.016,
+  bei CLIP wächst der Gewinn von +0.042 auf +0.061 bis +0.064.
+- **Auch die beste Einstellung schlägt die Identität bei R@1 nicht.**
+  EigenPlaces 0.483 gegen 0.484. Was bleibt, liegt weiter hinten: R@5
+  +0.023 / +0.028, R@20 +0.033 / +0.038 (1e-4, Marge 0.1 / 0.05). Ein
+  Intervall dazu gibt es nicht — das Skript speichert keine Trefferlisten,
+  der Bootstrap kann es nicht nachrechnen.
+- **val ordnet richtig, steht aber falsch zur Identität.** Unter den sechs
+  Kombinationen folgt test der val-Reihenfolge (Spearman ρ = 0.94 bei
+  EigenPlaces, 0.89 bei CLIP); die val-Beste ist beide Male auch die
+  test-Beste. Trotzdem liegt bei EigenPlaces jede Kombination auf val über
+  der Identität (+0.019 bis +0.034) und auf test darunter oder gleichauf.
+  Die Wahl nach val nimmt deshalb überall den Adapter — bei CLIP zu Recht,
+  bei EigenPlaces ohne Gewinn. Dasselbe „val steigt, test fällt" wie in der
+  Diagnose, jetzt über ein ganzes Raster.
+
+Gegen die Vorab-Festlegung: der test-Verlust rückt bei EigenPlaces gegen
+0, aber über die Lernrate, nicht über die Marge; die Wahl fällt nicht
+seltener auf den Adapter, nur auf einen, der nicht mehr schadet; ein
+Gewinn über die Identität hinaus bleibt aus; bei CLIP bleibt der Gewinn
+und wächst. Die Pipeline steht weiter auf 1e-3 — 1e-4 in `config.yaml`
+änderte jede Adapter-Zeile in `results/` und jede davon abgeleitete Zahl.
 
 ---
 
@@ -379,9 +435,9 @@ zählt sie als unabhängig.
 ### `bootstrap_ci.py`
 
 Zieht 1.000-mal die 198 Query-Sequenzen mit Zurücklegen und rechnet Recall
-über die gezogenen Sequenzen — dieselben Ziehungen für alle 39 Zeilen, damit
+über die gezogenen Sequenzen — dieselben Ziehungen für alle 40 Zeilen, damit
 Differenzen gepaart ausgewertet werden. Distanzen einmal je Anfrage, der
-Bootstrap ist Arithmetik auf Sequenz-Summen; 39 Zeilen in rund einer Minute.
+Bootstrap ist Arithmetik auf Sequenz-Summen; 40 Zeilen in rund einer Minute.
 Prüft jede Zeile gegen ihre 07-JSON und bricht bei Abweichung ab.
 
 ```bash
@@ -390,7 +446,7 @@ python experiments/bootstrap_ci.py --reference full  # -> results/bootstrap_ci_f
 python compare.py --ci                               # Intervall neben R@1
 ```
 
-Gemessen 2026-09-14, R@1 bei 25 m, Seed 42.
+Gemessen 2026-09-14, die GV-Zeile 2026-10-03; R@1 bei 25 m, Seed 42.
 
 **Die absoluten Zahlen sind unsicherer als gedacht.** Die 95-%-Halbbreite
 liegt bei ±0.03 (CLIP) bis ±0.10 (MegaLoc) statt ±0.005 — ein Design-Effekt
@@ -413,6 +469,7 @@ schwer; in der gepaarten Differenz fällt das heraus. Halbbreiten von
 | megaloc → megaloc_pca512 | −0.023 | [−0.031, −0.017] | nein |
 | megaloc → eigenplaces_megaloc_concat | +0.004 | [−0.005, +0.014] | **ja** |
 | eigenplaces_pcaw512 → seq3 | −0.009 | [−0.017, −0.001] | nein |
+| megaloc → megaloc_gv20 | −0.029 | [−0.062, +0.000] | **ja** |
 | clip → clip_linear | +0.050 | [+0.038, +0.064] | nein |
 | clip_pcaw512 → clip_pcaw512_linear | +0.009 | [−0.002, +0.021] | **ja** |
 | anyloc → anyloc_linear | +0.130 | [+0.081, +0.187] | nein |
@@ -462,7 +519,9 @@ hat (README, „Ergebnisse auf einen Blick"):
    **Aber: die Verkettung schlägt MegaLoc nicht.** +0.004 [−0.005, +0.014]
    schließt 0 ein. Richtig ist: `eigenplaces_megaloc_concat` ist bei einem
    Achtel der Breite *gleichauf* mit MegaLoc, nicht besser. README und
-   Tabelle oben sind entsprechend zu lesen.
+   Tabelle oben sind entsprechend zu lesen. Die später gerechnete
+   geometrische Verifikation schlägt Top-1 ebenfalls nicht: −0.029
+   [−0.062, +0.000].
 7. *Blickrichtung 14,5 %* — eine Zählung, kein Vergleich; nicht Gegenstand.
 
 Ebenfalls bestätigt: 0.484 gegen 0.481 (eigenplaces vs pca512) ist
@@ -1251,8 +1310,9 @@ SuperPoint + LightGlue auf die Top-20, RANSAC gegen eine Fundamentalmatrix,
 nach Inliern umsortieren. Der einzige Hebel, der die Fehlerart direkt
 angreift: global ähnliche, lokal verschiedene Orte. Braucht die Bilder und
 eine GPU, auf CPU nicht sinnvoll. Standard ist `megaloc` — der Encoder, den
-es in allen sechs Städten gibt. **Als Benchmark-Zeile noch nicht gemessen**;
-dafür braucht es `--n-queries 0`, auf dem GPU-Rechner je Stadt:
+es in allen sechs Städten gibt. Als Benchmark-Zeile gemessen auf
+Osnabrück, die übrigen fünf Städte nicht (Ergebnis unten). Dafür braucht es
+`--n-queries 0`, auf dem GPU-Rechner je Stadt:
 
 ```bash
 python experiments/geometric_verification.py --n-queries 0
@@ -1288,6 +1348,29 @@ vor dem Lauf festgelegt. `--min-inliers` lässt sich nachträglich prüfen,
 ohne neu zu matchen — es wirkt erst beim Umsortieren der gespeicherten
 Inlier. Eine Variation der übrigen gehört auf eine Stadt, die nicht
 berichtet wird.
+
+**Ergebnis** (Osnabrück, MegaLoc, 2026-10-03; gepaart gegen MegaLoc, 25 m):
+
+| | MegaLoc | + GV | Diff | 95 % |
+|---|---:|---:|---:|---|
+| R@1 | 0.568 | 0.539 | −0.029 | [−0.062, +0.000] |
+| R@5 | 0.676 | 0.678 | +0.002 | [−0.018, +0.024] |
+| R@10 | 0.719 | 0.726 | +0.007 | [−0.005, +0.019] |
+| R@20 | 0.763 | 0.763 | 0 | — |
+
+Aus [`results/osnabrueck/bootstrap_ci.json`](results/osnabrueck/bootstrap_ci.json).
+R@20 ändert sich zwingend nicht: umsortiert wird nur innerhalb der Top-20.
+Bei 5 und 10 m steigt R@1 dagegen (+0.013, +0.010), bei 50 und 100 m sinkt
+es wie bei 25 m (−0.034, −0.039). Naheliegende, einzeln nicht geprüfte
+Lesart: die Verifikation zieht den Kandidaten mit der größten
+Bildüberlappung nach vorn, und der ist öfter sehr nah, aber auch öfter ein
+falscher Ort. 87 % aller Kandidatenpaare kommen über
+15 Inlier, Median 40: die Schwelle trennt kaum. Einordnung im README unter
+„Geometrische Verifikation".
+
+Laufzeit: 42.010 Anfragen, 840.200 Paare in 8,6 Stunden auf einer RTX 3070,
+rund 27 Paare je Sekunde. Die übrigen fünf Städte hätten danach rund 57
+Stunden gekostet und sind nicht gerechnet.
 
 Lizenz: die SuperPoint-Gewichte stehen unter einer Lizenz **nur für
 nichtkommerzielle Forschung** (Magic Leap), siehe [NOTICE.md](../NOTICE.md).
