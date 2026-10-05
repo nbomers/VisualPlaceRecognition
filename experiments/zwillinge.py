@@ -118,13 +118,21 @@ def main():
     fenster_ms = int(args.fenster_s * 1000)
     schwelle = str(int(float(CFG["vpr"]["uncertain_radius_m"])))
     raus = {"fenster_s": args.fenster_s, "schwelle_m": float(schwelle), "encoder": {}}
+    out = RESULTS / "zwillinge.json"
+    # Die Trefferlisten einer Stadt koennen auf zwei Rechnern liegen (Benchmark
+    # hier, volle Referenz dort). Ein zweiter Lauf ergaenzt dann, statt den
+    # ersten zu ueberschreiben -- solange Fenster und Schwelle dieselben sind.
+    if out.exists():
+        alt = json.loads(out.read_text(encoding="utf-8"))
+        if (alt.get("fenster_s"), alt.get("schwelle_m")) == (raus["fenster_s"], raus["schwelle_m"]):
+            raus["encoder"] = alt.get("encoder", {})
 
     print(f"Zwilling = selbes Konto, hoechstens {args.fenster_s:g} s Abstand; R@1 bei {schwelle} m\n")
     print(f"{'Encoder':<13}{'Protokoll':<11}{'Zwilling 25 m':>14}{'Top-1 Zwilling':>16}"
           f"{'R@1':>8}{'ohne':>8}{'Diff':>8}{'loesbar':>10}{'ohne':>9}")
     print("-" * 97)
     for method in [m.strip() for m in args.methods.split(",") if m.strip()]:
-        raus["encoder"][method] = {}
+        raus["encoder"].setdefault(method, {})
         for protokoll, splits in PROTOKOLLE.items():
             try:
                 query, referenz, indices, _ = load_retrieval(ROOT, CFG, method,
@@ -149,7 +157,6 @@ def main():
             raus["encoder"][method][protokoll] = z
 
     RESULTS.mkdir(parents=True, exist_ok=True)
-    out = RESULTS / "zwillinge.json"
     out.write_text(json.dumps(raus, indent=2), encoding="utf-8")
     print(f"\n-> {out}")
 

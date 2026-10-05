@@ -25,6 +25,7 @@ Ergebnis: experiments/results/<stadt>/recall_by_difficulty_<name>.{json,png}
 
 import argparse
 import json
+import textwrap
 
 import numpy as np
 import pandas as pd
@@ -209,7 +210,8 @@ def main():
         ax.axhline(gesamt, color="#c62828", linewidth=0.9, linestyle="--")
         ax.set_xticks(range(len(labels)))
         ax.set_xticklabels(labels, fontsize=8)
-        ax.set_title(t["merkmal"], fontsize=9)
+        # Die schmalen Felder rechts: Titel umbrechen, sonst laufen sie ineinander.
+        ax.set_title(textwrap.fill(t["merkmal"], 24), fontsize=9)
         ax.set_ylim(0, 1)
         ax.grid(axis="y", alpha=0.3)
         ax.set_axisbelow(True)

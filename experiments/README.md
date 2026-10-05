@@ -221,7 +221,7 @@ eigenplaces  voll                28.2%           19.4%   0.701   0.593  -0.108  
 ```
 
 <sub>Wörtliche Ausgabe; gespeichert in `results/osnabrueck/zwillinge.json`. „Top-1 Zwilling" =
-Anteil der lösbaren Anfragen, deren erster Treffer eine Kopie ist. „loesbar ohne" = lösbar auch
+Anteil aller Anfragen, deren erster Treffer eine Kopie ist. „loesbar ohne" = lösbar auch
 ohne Kopie. Die Standardspalte trifft die Zahlen aus 07. Ohne Intervall.</sub>
 
 - **Benchmark:** −0.02 bei beiden Encodern. Die Vergleiche dort halten.
@@ -250,8 +250,8 @@ echte Wiederholungsfahrten:
 | Städtevergleich, Spalte „voll" | ja | wie oben, je Stadt 6,0 % bis 35,8 % |
 | Hard-Abschlag je Stadt | erklärt mit | Zwillinge sind ein Teil von d und von 1 − r |
 | Adapter-Auswahl auf val | ja, anders herum | val hat praktisch keine Zwillinge (0,2 % der lösbaren val-Anfragen, test 5,3 %) — ein Grund, warum val so viel schwerer ist als test |
-| Konfidenz (cos) | vermutlich | Zwillinge haben cos um 0.99 und heben die Präzision bei hohem cos; wie stark, ist nicht gemessen |
-| Geometrische Verifikation | vermutlich | Zwillinge haben die größte Bildüberlappung und rücken nach vorn; der Gewinn bei 5 und 10 m kann teils daher kommen |
+| Konfidenz (cos) | wenig | gemessen im Benchmark, dort ist bei 4,1 % der Anfragen der erste Treffer eine Kopie (cos um 0.99). Lägen alle über cos 0.30 und nähme man sie heraus, fiele „82 % richtig" im ungünstigsten Fall auf 78 % |
+| Geometrische Verifikation | wenig | gemessen im Benchmark (4,1 % Kopien auf Platz 1); Kopien haben die größte Bildüberlappung, ein Teil des Gewinns bei 5 und 10 m kann daher kommen |
 | Fahrt als Pfad | kaum | sortiert nur um, Zwillinge bleiben, wo sie sind |
 | „Selbes Konto, selber Tag" in der Schwierigkeit | ja | die Klasse enthält die Zwillinge |
 | Beispiele in der Demo | behoben | gezeigt werden nur Treffer von einem anderen Konto |
@@ -467,16 +467,17 @@ python experiments/database_density.py
   <img src="results/osnabrueck/database_density_eigenplaces.png" width="49%" alt="R@1 gegen Referenzdichte, EigenPlaces">
 </p>
 
-| train dazu | Referenzbilder | lösbar | MegaLoc, 512 gewhitent | EigenPlaces | EigenPlaces, 512 gewhitent |
+| train dazu | Referenzbilder | lösbar | MegaLoc | EigenPlaces | MegaLoc, 512 gewhitent |
 |---:|---:|---:|---:|---:|---:|
-| 0 % | 48.321 | 63,9 % | 0.541 | 0.484 | 0.507 |
-| 25 % | 107.449 | 78,4 % | 0.615 | 0.545 | 0.568 |
-| 50 % | 160.981 | 84,9 % | 0.670 | 0.595 | 0.615 |
-| 75 % | 222.300 | 88,4 % | 0.754 | 0.672 | 0.688 |
-| 100 % | 279.453 | 90,2 % | 0.778 | 0.701 | 0.715 |
+| 0 % | 48.321 | 63,9 % | 0.568 | 0.484 | 0.541 |
+| 25 % | 107.449 | 78,4 % | 0.636 | 0.545 | 0.615 |
+| 50 % | 160.981 | 84,9 % | 0.689 | 0.595 | 0.670 |
+| 75 % | 222.300 | 88,4 % | 0.774 | 0.672 | 0.754 |
+| 100 % | 279.453 | 90,2 % | 0.798 | 0.701 | 0.778 |
 
-<sub>Aus `results/osnabrueck/database_density_<encoder>.json`. Die letzte Stufe ist die volle Referenz.
-MegaLoc auf voller Breite steigt von 0.568 auf 0.798; die Zwischenstufen zeigt die linke Abbildung.</sub>
+<sub>R@1 bei 25 m unter den lösbaren Anfragen, aus `results/osnabrueck/database_density_<encoder>.json`.
+Die letzte Stufe ist die volle Referenz. Die gewhitete Spalte zeigt: Verkleinern verschiebt die Kurve, die Form bleibt.
+MegaLoc rechnet mit zwei Referenzbildern weniger (279.451); an den Zahlen ändert das nichts.</sub>
 
 - Die neu lösbaren Anfragen sind die schwereren — und der Recall steigt trotzdem.
 - Gewonnen werden nicht nur Nachbarn, sondern auch passende Blickrichtungen und Zeitpunkte.
@@ -588,7 +589,7 @@ python experiments/recall_by_district.py
 
 - **Faktor 12 beim selben Encoder.** Der Stadtwert 0.568 ist ein Mittel über sehr verschiedene Viertel.
 - **Dichte erklärt es nicht:** ρ = 0.27 (p = 0.27). Die Innenstadt hat die dichteste Referenz und nur 38 % lösbare Anfragen.
-- **Die Karte zeigt die Daten, nicht den Encoder:** EigenPlaces (512 gewhitent) ordnet die Stadtteile praktisch gleich (Spearman 0.96).
+- **Die Karte zeigt die Daten, nicht den Encoder:** EigenPlaces (zweite Karte) ordnet die Stadtteile praktisch gleich (Spearman 0.96).
 - **Gründe in den Aufnahmen:**
   - *Haste* (0.23): nur 29 % der lösbaren Anfragen haben einen Nachbarn in derselben Blickrichtung; Median drei Jahre Abstand.
   - *Hellern* (0.21): Median 338 Tage Abstand — eine andere Jahreszeit.
@@ -878,7 +879,8 @@ python experiments/rejection_curve.py
 Die Verkettung EigenPlaces + MegaLoc liegt gleichauf (0.695 bei 80 %, Fläche 0.790).</sub>
 
 - **Faustregel MegaLoc:** cos ≥ 0.30 → 82 % richtig (37 % der lösbaren Anfragen beantwortet); cos ≥ 0.20 → 75 % (69 %).
-- Die Marge ist das schlechteste Maß — anders als bei Klassifikatoren üblich.
+- Die Marge (Abstand zu Platz 2) bringt weniger als der rohe cos — anders als bei Klassifikatoren üblich.
+- **EigenPlaces** zeigt dieselbe Reihenfolge (zweite Abbildung): cos 0.568 bei 80 %, ohne Ablehnung 0.484.
 - `locate.py` und die Demo melden deshalb cos als Konfidenz.
 
 **Grenzen.** Im Betrieb kennt das System die Referenz nicht. Unlösbare Anfragen erkennt cos nur zum Teil

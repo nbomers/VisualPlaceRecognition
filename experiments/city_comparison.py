@@ -15,6 +15,7 @@ Gelesen wird ausschliesslich Versioniertes:
     experiments/results/<stadt>/recall_by_difficulty_<encoder>.json
                                                       Herkunft des Top-1-Treffers
     results/<stadt>/evaluation/<encoder>_gv<k>.json    geometrische Verifikation
+    experiments/results/<stadt>/zwillinge.json         R@1 ohne Zwillingsfahrten
     experiments/results/city_coverage.json             Abdeckung, Panorama, Jahre
 
 Embeddings und Trefferlisten braucht es nicht. Das Skript laeuft also in
@@ -141,6 +142,16 @@ def _stadt(slug, method, schwelle):
             d["median_tage"] = h["median_tage"]
             d["n_korrekt"] = h["n_korrekt"]
 
+    # Zwillingsfahrten, falls zwillinge.py gelaufen ist: R@1, als waeren Kopien
+    # derselben Fahrt nie hochgeladen worden, und wie viele Anfragen eine haben.
+    zw = bo / "zwillinge.json"
+    if zw.exists():
+        e = json.loads(zw.read_text(encoding="utf-8")).get("encoder", {}).get(method, {})
+        for protokoll, feld in (("benchmark", "alle"), ("voll", "voll")):
+            if protokoll in e:
+                d[f"{feld}_ohne_zw"] = e[protokoll]["recall_ohne"]["1"]
+                d[f"zwilling_{feld}"] = e[protokoll]["anteil_anfragen_mit_zwilling"]
+
     for datei, feld in (("bootstrap_ci.json", "halbbreite"),
                         ("bootstrap_ci_fullref.json", "halbbreite_voll")):
         p = bo / datei
@@ -187,6 +198,36 @@ def _tabelle(zeilen):
               + _zelle(hard, "{:>+8.3f}", 8)
               + _zelle(z.get("voll"), "{:>7.3f}", 7)
               + _zelle(z.get("halbbreite"), "{:>8.3f}", 8))
+
+
+def _zwillingstabelle(zeilen):
+    """Benchmark und volle Referenz, je mit und ohne Zwillingsfahrten.
+
+    Sprung = volle Referenz minus Benchmark. Ist er vor allem wiedergefundene
+    Kopien, schrumpft er ohne Zwillinge dort am staerksten, wo es viele gibt."""
+    mit = [z for z in zeilen if z.get("voll_ohne_zw") is not None or z.get("alle_ohne_zw") is not None]
+    if not mit:
+        print("\nZwillingsfahrten: keine Stadt mit experiments/results/<stadt>/zwillinge.json.")
+        return
+    print("\nZwillingsfahrten (selbes Konto, <= 60 s): R@1 mit und ohne")
+    print(f"{'Stadt':<16}{'Zw':>7}{'Alle':>7}{'ohne':>7}{'Zw voll':>9}{'voll':>7}{'ohne':>7}"
+          f"{'Sprung':>8}{'ohne':>7}")
+    print("-" * 75)
+    for z in zeilen:
+        if z.get("voll") is not None and z.get("alle") is not None:
+            z["sprung"] = z["voll"] - z["alle"]
+        if z.get("voll_ohne_zw") is not None and z.get("alle_ohne_zw") is not None:
+            z["sprung_ohne_zw"] = z["voll_ohne_zw"] - z["alle_ohne_zw"]
+        print(f"{z['stadt']:<16}"
+              + _zelle(z.get("zwilling_alle"), "{:>7.1%}", 7)
+              + _zelle(z.get("alle"), "{:>7.3f}", 7)
+              + _zelle(z.get("alle_ohne_zw"), "{:>7.3f}", 7)
+              + _zelle(z.get("zwilling_voll"), "{:>9.1%}", 9)
+              + _zelle(z.get("voll"), "{:>7.3f}", 7)
+              + _zelle(z.get("voll_ohne_zw"), "{:>7.3f}", 7)
+              + _zelle(z.get("sprung"), "{:>+8.3f}", 8)
+              + _zelle(z.get("sprung_ohne_zw"), "{:>+7.3f}", 7))
+    print("  Zw = Anteil der Anfragen mit einem Zwilling im Umkreis; Sprung = voll - Alle.")
 
 
 def zerlegung(zeile):
@@ -458,6 +499,16 @@ def main():
     befunde["jahre_hard"] = _zusammenhang(
         "Anteil seit 2022 gegen Hard-Abschlag", zeilen, "seit_2022", "hard_abschlag",
         "Wenige alte Kampagnen -> Anfrage und Treffer aus derselben Befahrung -> der Filter greift hart.")
+
+    _zwillingstabelle(zeilen)
+    befunde["zwillinge_sprung"] = _zusammenhang(
+        "Zwillingsanteil (volle Referenz) gegen Sprung zur vollen Referenz", zeilen,
+        "zwilling_voll", "sprung",
+        "Erklaeren wiedergefundene Kopien, warum manche Staedte mit voller Referenz so viel gewinnen?")
+    befunde["zwillinge_sprung_ohne"] = _zusammenhang(
+        "Zwillingsanteil (volle Referenz) gegen Sprung OHNE Zwillinge", zeilen,
+        "zwilling_voll", "sprung_ohne_zw",
+        "Bleibt ein Zusammenhang, auch wenn die Kopien herausgenommen sind?")
 
     verifikation = _gv_tabelle(zeilen, args.method, schwelle)
 

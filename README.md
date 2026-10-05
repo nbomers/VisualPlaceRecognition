@@ -80,20 +80,19 @@ MegaLoc; grün = höchstens 25 m vom echten Ort. Bilder von
 
 Fünf Encoder, dieselben 53.414 Anfragen aus Osnabrück, R@1 bei 25 m:
 
-| Encoder | für Orte trainiert | Dim | volle Referenz | volle Referenz, Hard | Benchmark |
-|---|:---:|---:|---:|---:|---:|
-| **MegaLoc** | ja | 8448 | **0.798** <sub>[0.739, 0.848]</sub> | **0.523** | **0.568** <sub>[0.475, 0.666]</sub> |
-| **EigenPlaces** | ja | 2048 | 0.701 <sub>[0.630, 0.765]</sub> | 0.427 | 0.484 <sub>[0.405, 0.574]</sub> |
-| MixVPR | ja | 4096 | 0.653 <sub>[0.575, 0.724]</sub> | 0.373 | 0.426 <sub>[0.354, 0.509]</sub> |
-| AnyLoc | nein | 4096 | 0.435 <sub>[0.343, 0.533]</sub> | 0.148 | 0.204 <sub>[0.153, 0.265]</sub> |
-| CLIP | nein | 512 | 0.232 <sub>[0.144, 0.349]</sub> | 0.024 | 0.073 <sub>[0.044, 0.108]</sub> |
-| *Raten* | | | *0.0005* | | *0.0006* |
+| Encoder | für Orte trainiert | Dim | volle Referenz | voll, ohne Zwillinge | voll, Hard | Benchmark |
+|---|:---:|---:|---:|---:|---:|---:|
+| **MegaLoc** | ja | 8448 | **0.798** <sub>[0.739, 0.848]</sub> | **0.690** | **0.523** | **0.568** <sub>[0.475, 0.666]</sub> |
+| **EigenPlaces** | ja | 2048 | 0.701 <sub>[0.630, 0.765]</sub> | 0.593 | 0.427 | 0.484 <sub>[0.405, 0.574]</sub> |
+| MixVPR | ja | 4096 | 0.653 <sub>[0.575, 0.724]</sub> | — | 0.373 | 0.426 <sub>[0.354, 0.509]</sub> |
+| AnyLoc | nein | 4096 | 0.435 <sub>[0.343, 0.533]</sub> | — | 0.148 | 0.204 <sub>[0.153, 0.265]</sub> |
+| CLIP | nein | 512 | 0.232 <sub>[0.144, 0.349]</sub> | — | 0.024 | 0.073 <sub>[0.044, 0.108]</sub> |
+| *Raten* | | | *0.0005* | | | *0.0006* |
 
-<sub>Klein dahinter das 95-%-Intervall. „Hard" zählt nur Treffer von einem
-anderen Konto oder mit mehr als 180 Tagen Abstand — warum diese Spalte
-wichtig ist, steht unter [Zwillingsfahrten](#zwillingsfahrten). Ohne doppelt
-hochgeladene Fahrten liegt die volle Referenz bei **0.690** (MegaLoc) und 0.593
-(EigenPlaces). Varianten mit
+<sub>Klein dahinter das 95-%-Intervall. Die drei „voll"-Spalten nutzen dieselbe Referenz und zählen
+verschieden streng: alle Treffer; ohne doppelt hochgeladene Fahrten (gemessen für die zwei stärksten
+Encoder); Hard = nur Treffer von einem anderen Konto oder mit mehr als 180 Tagen Abstand. Warum das
+nötig ist: [Zwillingsfahrten](#zwillingsfahrten). Varianten mit
 PCA, Whitening, Adapter und Nachbearbeitung: [Benchmark-Protokoll](#benchmark-protokoll).</sub>
 
 ![Recall@1 bei 25 m je Variante, mit 95-%-Intervall](results/osnabrueck/figures/evaluation/vergleich_r1_25m.png)
@@ -456,11 +455,11 @@ gibt alles maschinenlesbar aus. Dasselbe mit Bildern und Karte:
   <img src="results/osnabrueck/figures/demo/megaloc_karte_fehlschlag.png" width="49%" alt="Treffer auf dem Straßennetz: Fehlgriff">
 </p>
 
-<sub>Oben eine gescheiterte Anfrage (rot = mehr als 25 m daneben). Unten
-Treffer auf dem Straßennetz: links zerfallen sie in zwei Gruppen, rechts
-liegen sie geschlossen am falschen Ort — der Fall, den keine Mittelung rettet.
-Als Beispiele gelten nur Treffer von einem anderen Konto, und Autobahnbilder
-werden übersprungen.</sub>
+<sub>Oben eine gescheiterte Anfrage (rot = mehr als 25 m daneben), obwohl es
+Referenzbilder in der Nähe gibt. Unten die Treffer auf dem Straßennetz: links
+liegt der beste Treffer richtig, andere über 200 m weit weg — zwei Gruppen; rechts liegt
+kein Treffer näher als 200 m. Als Beispiele gelten nur Treffer von einem anderen
+Konto, und Anfragen an der Autobahn werden übersprungen.</sub>
 
 Dasselbe Anfragebild durch alle fünf Encoder:
 
@@ -757,16 +756,16 @@ Mapillary-Metadaten ausgewählt — bevor ein einziges Bild geladen war
 
 `train` stufenweise zur Referenz dazugenommen:
 
-| train dazu | Referenzbilder | lösbar | MegaLoc, 512 gewhitent | EigenPlaces |
+| train dazu | Referenzbilder | lösbar | MegaLoc | EigenPlaces |
 |---:|---:|---:|---:|---:|
-| 0 % | 48.321 | 63,9 % | 0.541 | 0.484 |
-| 25 % | 107.449 | 78,4 % | 0.615 | 0.545 |
-| 50 % | 160.981 | 84,9 % | 0.670 | 0.595 |
-| 75 % | 222.300 | 88,4 % | 0.754 | 0.672 |
-| 100 % | 279.453 | 90,2 % | 0.778 | 0.701 |
+| 0 % | 48.321 | 63,9 % | 0.568 | 0.484 |
+| 25 % | 107.449 | 78,4 % | 0.636 | 0.545 |
+| 50 % | 160.981 | 84,9 % | 0.689 | 0.595 |
+| 75 % | 222.300 | 88,4 % | 0.774 | 0.672 |
+| 100 % | 279.453 | 90,2 % | 0.798 | 0.701 |
 
-<sub>Auszug aus `experiments/results/osnabrueck/database_density_<encoder>.json`. MegaLoc auf voller Breite
-steigt von 0.568 auf 0.798; die Zwischenstufen zeigt die linke Abbildung.</sub>
+<sub>R@1 bei 25 m unter den lösbaren Anfragen. Auszug aus
+`experiments/results/osnabrueck/database_density_<encoder>.json`.</sub>
 
 - Mehr Anfragen werden lösbar, **und** der Recall unter ihnen steigt — obwohl die neu lösbaren die schwereren sind.
 - Ein Teil des Anstiegs sind [Zwillinge](#zwillingsfahrten) aus `train`: ohne sie steigt MegaLoc von 0.550 auf 0.690 statt von 0.568 auf 0.798.
@@ -811,7 +810,7 @@ Nachbar vom selben Konto am selben Tag
 - **Blickrichtung trennt am schärfsten:** ohne Nachbarn in derselben Richtung 7 %, mit einem 65 %.
 - **Zeit und Nachbarzahl wirken schwächer und nicht gleichmäßig:** 8–30 Tage Abstand ist die beste Klasse,
   0–7 Tage nur Mittelfeld; bei den Nachbarn hebt sich nur 51+ ab.
-- **Ein Nachbar vom selben Konto am selben Tag hilft** (0.690 gegen 0.556) — derselbe Effekt wie die Zwillinge.
+- **Ein Nachbar vom selben Konto am selben Tag hilft:** R@1 0.690 gegen 0.556 ohne einen solchen — derselbe Effekt wie die Zwillinge, die in dieser Klasse stecken.
 - Dieselbe Zerlegung für EigenPlaces zeigt die zweite Abbildung. Klassen ohne Intervall; Unterschiede unter etwa 0.1 nicht deuten.
   Details: [Schwierigkeit je Anfrage](experiments/README.md#schwierigkeit-je-anfrage--recall_by_difficultypy).
 
@@ -825,7 +824,7 @@ Nachbar vom selben Konto am selben Tag
 </p>
 
 - **Faktor 12 beim selben Encoder:** MegaLoc 0.07 in Sutthausen, 0.83 in Atter.
-- **Die Karte zeigt die Daten, nicht den Encoder:** EigenPlaces (512 gewhitent) ordnet die Stadtteile praktisch gleich (Spearman 0.96).
+- **Die Karte zeigt die Daten, nicht den Encoder:** EigenPlaces (zweite Karte) ordnet die Stadtteile praktisch gleich (Spearman 0.96).
 - **Bilder je km² erklären es nicht** (ρ = 0.27): die Innenstadt hat die dichteste Referenz und nur 38 % lösbare Anfragen.
 - **Gründe je Stadtteil:** Haste — kaum passende Blickrichtung; Hellern — fast ein Jahr Abstand zur Referenz; Sutthausen — eine einzige
   Fahrt, die 208 von 414 Anfragen ins 4 km entfernte Hellern legt.
