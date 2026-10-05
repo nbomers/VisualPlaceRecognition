@@ -1,319 +1,422 @@
 # Nebenuntersuchungen
 
-Einmalige Messungen, die **nicht** Teil der Pipeline sind. Sie beantworten je
-eine Frage und laufen nicht bei `run.py` mit. In die Stufen 01–08 greifen
-sie nicht ein; einige legen zusätzliche Zeilen unter
-`results/<stadt>/evaluation/` ab (volle Referenz, HMM, seq3, geometrische
-Verifikation), `pca_reduce.py` und `concat_embeddings.py` neue Embeddings
-unter `data/<stadt>/embeddings/`.
+[← zurück zum README](../README.md) ·
+[Übersicht](#übersicht) ·
+[Messen](#messen) ·
+[Encoder](#encoder-und-deskriptoren) ·
+[Woran es scheitert](#woran-es-scheitert) ·
+[Nachbearbeitung](#nachbearbeitung-der-top-k) ·
+[Konfidenz](#konfidenz) ·
+[Sechs Städte](#sechs-städte) ·
+[Kosten](#kosten)
 
-Ihre eigenen Ergebnisse liegen unter `experiments/results/<stadt>/` — der
-Stadt-Slug kommt wie überall aus `config.yaml → city` (`src/paths.py`). Die
-Pfadangaben unten kürzen das auf `results/…` ab.
+Jedes Skript hier stellt **eine Frage** und beantwortet sie auf vorhandenen
+Ergebnissen. Keines gehört zur Pipeline 01–08, und keines verändert sie.
+Das [README](../README.md) fasst die Antworten zusammen; hier steht, **wie**
+jede Zahl entstanden ist, was sie bedeutet und was sie nicht zeigt.
 
-Hier liegen sie, damit die Zahlen auffindbar bleiben, ohne die Pipeline zu
-belasten. Wer sie für eine Ausarbeitung oder Präsentation braucht, kopiert
-sich heraus, was er zeigen will.
+Jeder Abschnitt hat denselben Aufbau:
 
-**Auf welchem Rechner sie laufen.** Die reinen Nachbearbeitungsskripte
-(`sequence_retrieval.py`, `sequence_hmm.py`) rechnen nur auf der Trefferliste
-aus 06 — dafür reichen `<name>_retrieval.npz` samt Fingerabdruck und
-`<name>_metadata.parquet`, zusammen ein paar zehn MB. Die Embedding-Datei
-brauchen sie nicht mehr: die Deskriptorbreite für die Ergebnis-JSON kommt über
-`descriptor_dim` aus der versionierten `results/<stadt>/evaluation/<name>.json`,
-wenn die `.npy` fehlt. Sonst hinge an dieser einen Zahl der ganze Encodersatz —
-bei MegaLoc 11,2 GB in Osnabrück, 23,6 GB in Jena, die auf einem zweiten
-Rechner gar nicht liegen
-(`*.npy` und `embeddings/` sind gitignored). Alles andere hier —
-`full_reference.py`, `database_density.py`, `geometric_verification.py` —
-braucht die Embeddings bzw. die Bilder wirklich und gehört auf den Rechner,
-der sie gerechnet hat. Was wo vollständig ist, zeigt `python run.py --bestand`.
-
-Jedes Skript holt Konfiguration und Pfade aus `_common` (`CFG`, `PATHS`,
-`RESULTS`, `ROOT`) und nutzt
-die Bausteine aus `src/` — `src/retrieval.py` für Trefferlisten, lösbar
-und Treffer je Anfrage, `src/evaluation.py` für jede Recall-Zahl.
-
----
-
-## Semantisches Re-Ranking mit Mapillary-Detections
-
-**Frage:** Trägt Mapillarys Detection-Histogramm Information bei, die im
-gelernten Deskriptor noch nicht steckt?
-
-**Antwort: nein.** Gemessen am 2026-09-10, EigenPlaces, 2.000 Anfragen,
-Top-10, 23.484 auswertbare Paare, 11.866 abgerufene Bilder.
-
-| | alle Klassen | ohne Autos/Personen |
-|---|---|---|
-| AUC Detection-Histogramm | 0.5616 | 0.5586 |
-| AUC Deskriptor (Messlatte) | 0.7347 | 0.7347 |
-
-Umsortieren des Top-10, R@1 bei voller Abdeckung (1.286 Anfragen):
-
-| Gewicht | R@1 |
+| | |
 |---|---|
-| 0.00 | 0.7551 (Ausgangslage) |
-| 0.05 | 0.7558 (bestes Ergebnis) |
-| 0.50 | 0.7496 |
-| 1.00 | 0.6998 |
+| **Frage** | was das Skript klären soll |
+| **Kurz** | die Antwort in einem Satz |
+| **Methode** | was gerechnet wird, und der Befehl |
+| **Ergebnis** | Abbildung und Zahlen, mit Quelle |
+| **Grenzen** | was die Zahl nicht zeigt |
 
-Der beste Wert liegt 0,0007 über der Ausgangslage — bei 1.286 Anfragen ist
-das eine einzige. Die R@1-Spalte ist bei jedem Gewicht flach oder fallend.
-
-**Deutung:** Das Signal existiert (AUC 0,56 liegt messbar über 0,5), ist aber
-**redundant**. Der gelernte Deskriptor kodiert die Szenensemantik bereits;
-das Histogramm ist eine gröbere, handgemachte Projektion davon. Semantisches
-Re-Ranking ist damit widerlegt, nicht bloß ungeprüft.
-
-Nebenbefunde:
-
-- Detection-Abdeckung 84,7 % der Anfragen, 90,1 % der Kandidaten
-- Transiente Klassen auszublenden half **nicht** (0.5616 → 0.5586)
-- Fehlende Detections müssen neutral gewertet werden, nicht als Ähnlichkeit
-  0 — sonst bestraft die Messung fehlende Daten statt falscher Orte
-
-### `detection_rerank.py`
-
-Die Messung selbst.
-
-```bash
-python experiments/detection_rerank.py --n-queries 2000 --top-k 10
-python experiments/detection_rerank.py --no-fetch      # nur aus dem Cache
-```
-
-Ergebnis in `results/<stadt>/detection_rerank_{verfahren}.json` — AUC beider Signale,
-Klassenzahl, auswertbare Paare und R@1 je Mischgewicht. Ein Negativergebnis
-ist auch eins: ohne versionierte Datei stünde die Zahl nur hier und ließe sich
-nicht nachrechnen.
-
-Zieht Anfragen, bei denen im Top-k richtige **und** falsche Kandidaten
-stehen — nur dort gibt es etwas zu unterscheiden. Holt die Detections, baut
-IDF-gewichtete Histogramme und misst AUC sowie das tatsächliche Umsortieren.
-Rund 20.000 API-Aufrufe, etwa zwei Minuten.
-
-Die Detections landen in `cache/detections.jsonl` — als Ausnahme in der
-`.gitignore` versioniert, sie gehören zum Messergebnis. Ein zweiter
-Lauf holt nur nach, was fehlt.
-
-### `detection_probe.py`
-
-Vorstufe: wie gut sind die Bilder überhaupt mit Detections abgedeckt? War
-ursprünglich die letzte Zelle in `notebooks/03_image_download.ipynb` und ist
-von dort herausgelöst worden — eine einmalige Erhebung, die mit dem Download
-nichts zu tun hat.
-
-```bash
-python experiments/detection_probe.py          # gespeicherten Befund zeigen
-python experiments/detection_probe.py --neu    # neu messen
-```
-
-Ergebnis in `results/<stadt>/detections_probe.json`: 500 Datenbankbilder, 94 % mit
-Detections, Median 145 je Bild, 165 verschiedene Klassen. Die 94 % waren
-leicht optimistisch — die größere Stichprobe oben kam auf 85 bis 90 %.
+Begriffe wie R@1, lösbar oder Hard erklärt das README unter
+[Begriffe in einem Satz](../README.md#begriffe-in-einem-satz).
 
 ---
 
-## Gemeinsame Deskriptorbreite (PCA-512)
+## Übersicht
 
-**Frage:** Wieviel von MegaLocs Vorsprung ist Können, wieviel nur Breite?
-Und hängt der Adapterschaden an der Parameterzahl (d×d) oder am Encoder?
+| Frage | Skript | Antwort |
+|---|---|---|
+| Was leistet das System mit aller Referenz? | [`full_reference.py`](#volle-referenz--full_referencepy) | MegaLoc 0.798 statt 0.568; die Rangfolge bleibt |
+| Welche Unterschiede sind belegt? | [`bootstrap_ci.py`](#konfidenzintervalle--bootstrap_cipy) | Einzelzahlen ±0.10, Differenzen viel enger |
+| Wie viele Treffer sind doppelt hochgeladene Fahrten? | [`zwillinge.py`](#zwillingsfahrten--zwillingepy) | 3,4 % der Anfragen im Benchmark, 28,2 % mit voller Referenz; ohne sie MegaLoc voll 0.690 statt 0.798 |
+| Ist MegaLocs Vorsprung nur Breite? | [`pca_reduce.py`](#pca-und-whitening--pca_reducepy) | Nein: auf 512 Dimensionen bleibt die Rangfolge |
+| Helfen zwei Encoder zusammen? | [`concat_embeddings.py`](#verkettung--concat_embeddingspy) | Gleichauf mit MegaLoc, nicht besser |
+| Warum schadet der Adapter? | [`adapter_diagnose.py`](#adapter-diagnose--adapter_diagnosepy) | Die Auswahl konnte „nicht trainieren" nie wählen |
+| Liegt es an Marge oder Lernrate? | [`adapter_sweep.py`](#adapter-raster--adapter_sweeppy) | An der Lernrate |
+| Hilft mehr Referenz? | [`database_density.py`](#referenzdichte--database_densitypy) | Ja, stetig |
+| Was macht eine Anfrage schwer? | [`recall_by_difficulty.py`](#schwierigkeit-je-anfrage--recall_by_difficultypy) | Vor allem die Blickrichtung |
+| Wo in der Stadt scheitert es? | [`recall_by_district.py`](#stadtteile--recall_by_districtpy) | Stadtteile von 0.07 bis 0.83 |
+| Wohin zeigen die Fehler? | [`confusion_atlas.py`](#verwechslungsatlas--confusion_atlaspy) | Knapp daneben oder weit weg, kaum dazwischen |
+| Hilft Mitteln der Treffer? | [`localization_aggregation.py`](#aggregation--localization_aggregationpy) | Nein |
+| Helfen Nachbarbilder? | [`sequence_retrieval.py`](#nachbarframes--sequence_retrievalpy) | Nein |
+| Hilft die Fahrt als Pfad? | [`sequence_hmm.py`](#fahrt-als-pfad--sequence_hmmpy) | Ja, +0.030 |
+| Hilft geometrisches Nachprüfen? | [`geometric_verification.py`](#geometrische-verifikation--geometric_verificationpy) | Nicht bei 25 m |
+| Helfen erkannte Objekte? | [`detection_rerank.py`](#detections--detection_rerankpy) | Nein |
+| Taugt cos als Konfidenz? | [`rejection_curve.py`](#ablehnung--rejection_curvepy) | Ja, besser als jedes andere Maß |
+| Welche Stadt eignet sich? | [`city_coverage.py`](#stadtwahl--city_coveragepy) | Abdeckung zählt, nicht Dichte |
+| Was überträgt sich auf andere Städte? | [`city_comparison.py`](#städtevergleich--city_comparisonpy) | Der Abstand der Encoder, nicht ihr Niveau |
+| Was kostet welcher Encoder? | [`timing.py`](#laufzeit-und-speicher--timingpy) | Bester Kompromiss: MegaLoc auf 512 gewhitent |
 
-### `pca_reduce.py`
+**Gemeinsame Regeln.**
+- Jedes Skript holt Konfiguration und Pfade aus [`_common.py`](_common.py) und bewertet mit
+  [`src/evaluation.py`](../src/evaluation.py) — exakt wie 07.
+- Ergebnisse landen unter `experiments/results/<stadt>/`; neue Zeilen für
+  `compare.py` unter `results/<stadt>/evaluation/`. Unten kurz `results/…`.
+- **Standard ist MegaLoc**; die zweite Abbildung zeigt EigenPlaces. Anderer
+  Encoder: `--method`.
+- Die meisten Skripte brauchen nur die Trefferlisten aus 06 (ein paar zehn MB).
+  `full_reference.py`, `database_density.py` und `geometric_verification.py`
+  brauchen die Embeddings bzw. die Bilder und laufen dort, wo diese liegen.
+  Was wo vorliegt: `python run.py --bestand`.
 
-Schreibt `{method}_pca512` und `{method}_pcaw512` (mit Whitening) als
-eigene Encoder — Embeddings, Metadaten, Fingerabdruck — genau so, wie 04 es
-täte. Danach laufen 05 bis 08 unverändert darüber. PCA nur auf `train`
-angepasst, 50.000 Zeilen, randomisierte SVD.
+---
+
+## Messen
+
+### Volle Referenz — `full_reference.py`
+
+**Frage.** Was leistet das System, wenn es alles Referenzmaterial bekommt —
+`train` und `database` zusammen, 279.453 statt 48.321 Bilder?
+
+**Kurz.** Jeder Encoder gewinnt rund 0.2; die Rangfolge bleibt exakt.
+
+**Methode.** Sucht blockweise über alle Referenzbilder (65.536 je Index,
+Top-k zusammengeführt) und bewertet wie 07. Nur Encoder ohne Adapter — `train`
+war das Trainingsmaterial des Adapters.
 
 ```bash
-python experiments/pca_reduce.py                    # alle konfigurierten Varianten
-python run.py --method derived --adapter all        # dann die Pipeline
+python experiments/full_reference.py
 ```
 
-Stand 2026-09-12, alle 34 Zeilen. R@1 bei 25 m, Baselines ohne Adapter:
+```bash
+python experiments/bootstrap_ci.py --reference full
+```
 
-| Encoder | voll | pca512 | pcaw512 | pcaw volle Breite |
-|---|---|---|---|---|
-| clip (512) | 0.073 | 0.074 | **0.105** | — |
-| anyloc (4096) | 0.204 | 0.175 | 0.263 | **0.321** |
-| mixvpr (4096) | 0.426 | 0.408 | 0.424 | — |
+**Ergebnis.** R@1 bei 25 m, 48.177 lösbare von 53.414 Anfragen (90,2 %):
+
+| Encoder | Dim | volle Referenz | 95 % | Benchmark | Zuwachs |
+|---|---:|---:|---|---:|---:|
+| megaloc | 8448 | **0.798** | [0.739, 0.848] | 0.568 | +0.230 |
+| megaloc_pcaw512 | 512 | 0.778 | [0.716, 0.831] | 0.541 | +0.237 |
+| eigenplaces_megaloc_concat | 1024 | 0.778 | [0.714, 0.832] | 0.572 | +0.206 |
+| eigenplaces_pcaw512 | 512 | 0.715 | [0.646, 0.777] | 0.507 | +0.208 |
+| eigenplaces | 2048 | 0.701 | [0.630, 0.765] | 0.484 | +0.217 |
+| mixvpr | 4096 | 0.653 | [0.575, 0.724] | 0.426 | +0.227 |
+| anyloc_pcaw4096 | 4096 | 0.540 | [0.456, 0.624] | 0.321 | +0.219 |
+| anyloc | 4096 | 0.435 | [0.343, 0.533] | 0.204 | +0.231 |
+| clip_pcaw512 | 512 | 0.290 | [0.202, 0.402] | 0.105 | +0.185 |
+| clip | 512 | 0.232 | [0.144, 0.349] | 0.073 | +0.159 |
+
+<sub>Aus `results/osnabrueck/evaluation/*_fullref.json` und `results/bootstrap_ci_fullref.json`.
+Alle 18 Zeilen: `python compare.py --reference full --derived`.</sub>
+
+- **Gleicher Zuwachs für alle** (+0.16 bis +0.24): mehr Referenz hebt jeden Encoder, ändert aber nicht, wer besser ist.
+- **Rangfolge belegt:** jedes Nachbarpaar schließt 0 aus, etwa EigenPlaces → MegaLoc +0.096 [+0.070, +0.122].
+- **Verkleinern kostet hier messbar:** MegaLoc 8448 → 512 gewhitent −0.019 [−0.024, −0.015];
+  die Verkettung liegt sicher *unter* MegaLoc (−0.019 [−0.027, −0.011]).
+
+**Grenzen.** Ein Teil des Zuwachses sind [Zwillingsfahrten](#zwillingsfahrten--zwillingepy):
+ohne sie liegt MegaLoc bei 0.690, EigenPlaces bei 0.593.
+
+---
+
+### Konfidenzintervalle — `bootstrap_ci.py`
+
+**Frage.** Welche Unterschiede zwischen zwei Zeilen sind echt, welche Rauschen?
+
+**Kurz.** Einzelzahlen sind nur auf ±0.03 bis ±0.10 genau, gepaarte Differenzen viel genauer.
+
+**Methode.** Die 53.414 Anfragen stammen aus 198 Fahrten, und Bilder einer
+Fahrt scheitern gemeinsam. Deshalb wird 1.000-mal die Menge der **Fahrten**
+mit Zurücklegen neu gezogen — für alle 40 Zeilen dieselben Ziehungen, damit
+Differenzen gepaart sind. Jede Zeile wird gegen ihre 07-JSON geprüft.
+
+```bash
+python experiments/bootstrap_ci.py
+```
+
+**Ergebnis.** Seed 42, R@1 bei 25 m.
+
+- **Einzelzahlen:** ±0.03 (CLIP) bis ±0.10 (MegaLoc) statt binomial ±0.005 —
+  ein Faktor 100 bis 330 in der Varianz. Grund: die Fahrten sind extrem ungleich lang
+  (Median 176 Bilder, die längste 3.156; sieben Fahrten stellen 19 % der Anfragen).
+- **Differenzen:** ±0.005 bis ±0.09, weil schwere Fahrten für alle Encoder schwer sind.
+
+| Vergleich | Diff | 95 % | belegt |
+|---|---:|---|:---:|
+| clip → clip_linear | +0.050 | [+0.038, +0.064] | ja |
+| clip_pcaw512 → clip_pcaw512_linear | +0.009 | [−0.002, +0.021] | nein |
+| anyloc → anyloc_linear | +0.130 | [+0.081, +0.187] | ja |
+| anyloc → anyloc_pcaw4096 | +0.117 | [+0.078, +0.162] | ja |
+| anyloc_pcaw4096 → anyloc_pcaw4096_linear | −0.029 | [−0.074, +0.012] | nein |
+| anyloc_pcaw512 → anyloc_pcaw512_linear | +0.045 | [+0.009, +0.088] | ja |
+| mixvpr → mixvpr_linear | −0.063 | [−0.096, −0.032] | ja |
+| eigenplaces → eigenplaces_pca512 | −0.003 | [−0.008, +0.002] | nein |
+| eigenplaces → eigenplaces_pcaw512 | +0.022 | [+0.011, +0.039] | ja |
+| eigenplaces → eigenplaces_pcaw2048 | −0.025 | [−0.042, −0.010] | ja |
+| eigenplaces → eigenplaces_linear | −0.040 | [−0.064, −0.017] | ja |
+| eigenplaces_pcaw512 → seq3 | −0.009 | [−0.017, −0.001] | ja |
+| megaloc → megaloc_pca512 | −0.023 | [−0.031, −0.017] | ja |
+| megaloc → eigenplaces_megaloc_concat | +0.004 | [−0.005, +0.014] | nein |
+| megaloc → megaloc_hmm30-25 | +0.030 | [+0.020, +0.041] | ja |
+| megaloc → megaloc_gv20 | −0.029 | [−0.062, +0.000] | nein |
+| megaloc → megaloc_linear | −0.126 | [−0.179, −0.073] | ja |
+| megaloc_pca512 → megaloc_pca512_linear | −0.127 | [−0.160, −0.099] | ja |
+
+<sub>Auszug aus [`results/osnabrueck/bootstrap_ci.json`](results/osnabrueck/bootstrap_ci.json);
+dort alle 39 Paare, auch für R@5 bis R@20. `seq3` = `eigenplaces_pcaw512_seq3`.</sub>
+
+**Grenzen.**
+- Gezählt werden 39 Vergleiche bei 95 %. Ein bis zwei davon dürften allein durch Zufall „belegt" sein;
+  eine Korrektur für Mehrfachvergleiche ist nicht gerechnet. Knappe Fälle (etwa `seq3`) entsprechend lesen.
+- Referenzdichte, Schwierigkeitsklassen und Stadtteile haben keinen eigenen Bootstrap.
+
+---
+
+### Zwillingsfahrten — `zwillinge.py`
+
+**Frage.** Der Split trennt nach Sequenzen. Wie oft steht trotzdem dieselbe
+Fahrt auf beiden Seiten?
+
+**Kurz.** Mapillary führt manche Fahrt als zwei Sequenzen. Im Benchmark
+betrifft das wenige Anfragen (−0.02 R@1), mit voller Referenz mehr als ein
+Viertel (−0.108). Ehrlich gezählt findet MegaLoc mit voller Referenz 0.690.
+
+**Wie es aussieht.** Anfrage `117568923689680` und Referenzbild
+`489059405624874` stammen aus zwei Sequenzen, aber vom selben Konto,
+0,2 Sekunden auseinander, mit identischen Koordinaten und Kompassrichtung.
+Jeder Encoder findet das Referenzbild als ersten Treffer: 0 m daneben,
+cos um 0.99. Der Split sieht das nicht, weil er nur die Sequenz-ID kennt.
+
+**Methode.** Zwilling heißt: selbes Konto (`creator_id`) und höchstens 60 s
+Abstand. Ein Konto fotografiert nicht an zwei Orten zugleich — was zeitlich so
+nah liegt, ist dieselbe Fahrt. Das Skript zählt, wie viele Anfragen einen
+Zwilling im Umkreis von 25 m haben, und rechnet R@1 neu, **als wäre die
+Kopie nie hochgeladen worden**: Zwillinge fallen aus der Trefferliste, die
+nächsten Kandidaten rücken auf, und ein Zwilling macht keine Anfrage
+lösbar. Die Standardzeile muss die Zahl aus 07 treffen, sonst bricht es ab.
+
+```bash
+python experiments/zwillinge.py
+```
+
+**Ergebnis.** Anteil der Anfragen mit Zwilling im Umkreis von 25 m, aus den Metadaten:
+
+| Stadt | Benchmark | volle Referenz |
+|---|---:|---:|
+| Osnabrück | 3,4 % | **28,2 %** |
+| Fürth | 0,9 % | 6,0 % |
+| Karlsruhe | 4,7 % | 18,4 % |
+| Kaiserslautern | 2,6 % | 7,4 % |
+| Würzburg | 1,4 % | 7,0 % |
+| Jena | 6,4 % | **35,8 %** |
+
+Was das für R@1 heißt, Osnabrück, 25 m:
+
+```text
+Encoder      Protokoll   Zwilling 25 m  Top-1 Zwilling     R@1    ohne    Diff   loesbar     ohne
+-------------------------------------------------------------------------------------------------
+megaloc      benchmark            3.4%            4.1%   0.568   0.550  -0.018    34,112   33,146
+megaloc      voll                28.2%           18.3%   0.798   0.690  -0.108    48,177   47,800
+eigenplaces  benchmark            3.4%            4.9%   0.484   0.464  -0.020    34,112   33,146
+eigenplaces  voll                28.2%           19.4%   0.701   0.593  -0.108    48,177   47,800
+```
+
+<sub>Wörtliche Ausgabe; gespeichert in `results/osnabrueck/zwillinge.json`. „Top-1 Zwilling" =
+Anteil der lösbaren Anfragen, deren erster Treffer eine Kopie ist. „loesbar ohne" = lösbar auch
+ohne Kopie. Die Standardspalte trifft die Zahlen aus 07. Ohne Intervall.</sub>
+
+- **Benchmark:** −0.02 bei beiden Encodern. Die Vergleiche dort halten.
+- **Volle Referenz:** −0.108 bei beiden. Fast jeder fünfte erste Treffer war eine Kopie.
+- **Der Abstand bleibt:** MegaLoc − EigenPlaces voll +0.097, ohne Zwillinge +0.097.
+- **Mehr Referenz hilft weiter:** 0.550 → 0.690 statt 0.568 → 0.798.
+- Gerechnet für Osnabrück; für eine andere Stadt: `VPR_CITY="Jena, Germany" python experiments/zwillinge.py`.
+
+Zum Vergleich die Hard-Ground-Truth, die Treffer vom selben Konto innerhalb
+von 180 Tagen nicht zählt — sie entfernt die Zwillinge sicher, aber auch
+echte Wiederholungsfahrten:
+
+| R@1 | Benchmark | Benchmark, Hard | volle Referenz | volle Referenz, Hard |
+|---|---:|---:|---:|---:|
+| MegaLoc | 0.568 | 0.543 | 0.798 | 0.523 |
+| EigenPlaces | 0.484 | 0.456 | 0.701 | 0.427 |
+
+**Was es für die übrigen Ergebnisse heißt.**
+
+| Ergebnis | betroffen | warum |
+|---|---|---|
+| Encoder-Vergleich im Benchmark | kaum | −0.02 für MegaLoc und EigenPlaces; unter Hard bleibt die Rangfolge MegaLoc > EigenPlaces > MixVPR > AnyLoc > CLIP |
+| Volle Referenz, Schlagzeile 0.798 | **stark** | ohne Zwillinge 0.690 (−0.108); unter Hard 0.523 |
+| Encoder-Vergleich mit voller Referenz | kaum | MegaLoc und EigenPlaces verlieren beide 0.108, der Abstand bleibt +0.097 |
+| Referenzdichte | ja | mit jedem Stück `train` kommen auch Kopien dazu; der Anstieg 0 % → 100 % schrumpft von +0.23 auf +0.14 |
+| Städtevergleich, Spalte „voll" | ja | wie oben, je Stadt 6,0 % bis 35,8 % |
+| Hard-Abschlag je Stadt | erklärt mit | Zwillinge sind ein Teil von d und von 1 − r |
+| Adapter-Auswahl auf val | ja, anders herum | val hat praktisch keine Zwillinge (0,2 % der lösbaren val-Anfragen, test 5,3 %) — ein Grund, warum val so viel schwerer ist als test |
+| Konfidenz (cos) | vermutlich | Zwillinge haben cos um 0.99 und heben die Präzision bei hohem cos; wie stark, ist nicht gemessen |
+| Geometrische Verifikation | vermutlich | Zwillinge haben die größte Bildüberlappung und rücken nach vorn; der Gewinn bei 5 und 10 m kann teils daher kommen |
+| Fahrt als Pfad | kaum | sortiert nur um, Zwillinge bleiben, wo sie sind |
+| „Selbes Konto, selber Tag" in der Schwierigkeit | ja | die Klasse enthält die Zwillinge |
+| Beispiele in der Demo | behoben | gezeigt werden nur Treffer von einem anderen Konto |
+
+**Wie man es behebt.** Drei Stufen, nach Aufwand:
+
+| Stufe | Was | Folge | Stand |
+|---|---|---|---|
+| 1 | Offenlegen: die Zahl ohne Zwillinge neben jede Zahl mit voller Referenz | keine Neuberechnung | **umgesetzt** (dieses Skript) |
+| 2 | Eine vierte Ground Truth „ohne Zwillinge" in `src/evaluation.py`, neben Standard, Hard und Sequenz | Code-Kennung ändert sich → Auswertung (07) und Bootstrap für alle Encoder und Städte neu | offen |
+| 3 | Split nach Fahrten (Konto + Zeitfenster) statt nach Sequenzen | der Fingerabdruck der Embeddings hasht `image_id` + `split` → alles neu encodieren | offen; die saubere Lösung |
+
+<sub>Abkürzung für Stufe 3: Die Embeddings hängen inhaltlich nicht vom Split ab. Nimmt man den Split aus dem
+Fingerabdruck (`metadata_digest` in `src/run_guard.py`), müssen nur Adapter, Suche und Auswertung neu laufen.</sub>
+
+**Grenzen.**
+- Der Split ist dadurch nicht „falsch", aber undicht: dicht nach Sequenzen, nicht nach Fahrten.
+- 60 s ist eine Setzung. Wer sie ändert: `--fenster-s`.
+- Die Zahl ohne Zwillinge gibt es nur für MegaLoc und EigenPlaces und ohne Intervall; Hard für alle fünf Encoder steht in der [Haupt-README](../README.md#zwillingsfahrten).
+
+---
+
+## Encoder und Deskriptoren
+
+### PCA und Whitening — `pca_reduce.py`
+
+**Frage.** Wie viel von MegaLocs Vorsprung ist Können, wie viel nur Breite (8448 Dimensionen)?
+
+**Kurz.** Können: auf 512 Dimensionen bleibt die Rangfolge, und MegaLoc verliert nur 0.023.
+
+**Methode.** Schreibt `<encoder>_pca512` (PCA auf 512) und `<encoder>_pcaw512`
+(zusätzlich Whitening) als eigene Encoder, genau so, wie 04 es täte. PCA nur
+auf `train` angepasst, 50.000 Zeilen.
+
+```bash
+python experiments/pca_reduce.py
+```
+
+```bash
+python run.py --method derived --adapter all
+```
+
+![R@1 je Variante, ein Feld je Encoder](../results/osnabrueck/figures/evaluation/vergleich_r1_25m_derived.png)
+
+<sub>Alle 40 Benchmark-Zeilen, ein Feld je Encoder; Farbe und Form = Variante.
+Erzeugt von `python compare.py --plot --derived`.</sub>
+
+**Ergebnis.** R@1 bei 25 m, Benchmark:
+
+| Encoder | voll | pca512 | pcaw512 | gewhitent auf voller Breite |
+|---|---:|---:|---:|---:|
+| megaloc (8448) | **0.568** | 0.545 | 0.541 | — |
 | eigenplaces (2048) | 0.484 | 0.481 | **0.507** | 0.459 |
-| megaloc (8448) | 0.568 | 0.545 | 0.541 | — |
+| mixvpr (4096) | 0.426 | 0.408 | 0.424 | — |
+| anyloc (4096) | 0.204 | 0.175 | 0.263 | **0.321** |
+| clip (512) | 0.073 | 0.074 | **0.105** | — |
 
-Adapterschaden, also `linear` minus `none`:
+- **Die Rangfolge hängt nicht an der Breite:** auf 512 gewhitent MegaLoc 0.541 > EigenPlaces 0.507 > MixVPR 0.424 > AnyLoc 0.263 > CLIP 0.105.
+- **Whitening rettet AnyLoc** (+0.117 belegt): VLAD-Vektoren sind stark ungleich gewichtet, und das war hier nicht ausgeglichen.
+- **Bei den Ortsencodern** hilft Whitening auf 512 leicht (EigenPlaces +0.022) und schadet auf voller Breite (−0.025).
 
-| Encoder | voll | pca512 | pcaw512 | pcaw volle Breite |
-|---|---|---|---|---|
-| clip | +0.050 | +0.047 | +0.009 | — |
-| anyloc | +0.130 | +0.130 | +0.045 | **−0.029** |
-| mixvpr | −0.063 | −0.038 | −0.058 | — |
-| eigenplaces | −0.040 | −0.043 | −0.069 | −0.037 |
-| megaloc | **−0.126** | **−0.127** | **−0.125** | — |
+**Grenzen.** Warum Whitening auf voller Breite schadet, ist nicht gemessen. Naheliegend: es teilt durch die kleinsten
+Eigenwerte, und die sind bei 50.000 Stichproben Rauschen. Der Test wäre Shrinkage (`√(λ + ε·λ_max)` statt `√λ`).
 
-**Drei Befunde.**
+---
 
-1. **Die Rangfolge hängt nicht an der Breite.** Bei 512 gewhitent:
-   megaloc 0.541 > eigenplaces 0.507 > mixvpr 0.424 > anyloc 0.263 >
-   clip 0.105 — dieselbe Reihenfolge wie bei voller Breite. MegaLocs
-   Vorsprung ist Können, nicht Dimension; 8448 → 512 kostet 0.023.
+### Verkettung — `concat_embeddings.py`
 
-2. **Whitening rettet AnyLoc und hilft CLIP.** AnyLoc +57 % auf voller
-   Breite — VLAD-Deskriptoren sind stark anisotrop (Jégou & Chum 2012),
-   und die Pipeline hatte sie ohne Whitening verglichen. CLIP +44 %. Bei
-   den VPR-trainierten Encodern auf 512 neutral bis leicht positiv
-   (`eigenplaces_pcaw512` schlägt seine eigene 2048er-Baseline), auf voller
-   Breite negativ. Die naheliegende Erklärung — Whitening teilt durch die
-   kleinsten Eigenwerte, und die sind bei 50.000 Stichproben Rauschen — ist
-   **plausibel, aber nicht gemessen**. Der direkte Test wäre Shrinkage: statt
-   durch √λ durch √(λ + ε·λ_max) teilen und sehen, ob
-   `eigenplaces_pcaw2048` dadurch über seine 0.459 steigt. Bis das gerechnet
-   ist, bleibt es eine Vermutung, die zum Vorzeichen passt.
+**Frage.** Sehen zwei gute Encoder Verschiedenes, sodass beide zusammen besser sind?
 
-3. **Der Adapterschaden hängt nicht an der Parameterzahl — und der
-   Adaptergewinn war Whitening.** MegaLoc verliert bei 8448 und bei 512
-   dasselbe; die Vermutung „Schaden wächst mit der Dimension" war Zufall.
-   Und nach Whitening ist der Gewinn bei CLIP und AnyLoc fast weg: der
-   Adapter hatte per Gradientenabstieg gelernt, was die geschlossene Formel
-   besser kann. Kernsatz: **ein trainierter linearer Adapter fügt nichts
-   hinzu, was ein festes Whitening nicht schon liefert.**
+**Kurz.** Nein: EigenPlaces + MegaLoc liegen gleichauf mit MegaLoc allein — bei einem Achtel der Breite.
 
-Konsequenz: Whitening gehört für AnyLoc in `04` (VLAD ohne Whitening ist
-unüblich), nicht als allgemeiner Adapter — bei EigenPlaces auf voller Breite
-schadet es.
+**Methode.** Beide auf 512 gewhitent, aneinandergehängt, neu normiert, als eigener Encoder geschrieben.
+Ausgerichtet über die `image_id`, nicht über die Zeilennummer.
 
-### `adapter_diagnose.py` — warum der Adapter schadet
+```bash
+python experiments/concat_embeddings.py
+```
 
-**Frage:** Verschlechtert das Training die VPR-Encoder schon auf den
-val-Fahrten, oder erst auf database und query?
+| | Dim | R@1 | R@5 |
+|---|---:|---:|---:|
+| megaloc | 8448 | 0.568 | 0.676 |
+| megaloc_pcaw512 | 512 | 0.541 | 0.654 |
+| eigenplaces_pcaw512 | 512 | 0.507 | 0.641 |
+| **eigenplaces_megaloc_concat** | **1024** | **0.572** | **0.692** |
 
-05 wählt die beste Epoche nach val-Recall@1, aber nur unter **trainierten**
-Epochen: `train_adapter` startet mit `recall = -1` und misst zum ersten Mal
-nach Epoche 1. Der untrainierte Adapter — die Identität, also exakt die
-Baseline — stand nie zur Wahl. Das Skript misst ihn auf demselben val-Split
-nach und stellt ihn neben die beste Epoche (aus dem Fingerabdruck der
-Gewichte, den 05 schreibt, und zusätzlich nachgemessen) und neben die
-Test-Zahlen aus 07. Kein neues Training.
+- R@1: +0.004 [−0.005, +0.014] gegen MegaLoc — **nicht belegt**.
+- R@5: +0.016 [+0.005, +0.028] — knapp belegt. Der richtige Ort rutscht öfter in die Top-5, aber nicht auf Platz 1.
+
+**Grenzen.** Warum R@1 nicht steigt, ist nicht erklärt. Vermutung: beide scheitern an denselben schweren Fahrten.
+
+---
+
+### Adapter-Diagnose — `adapter_diagnose.py`
+
+**Frage.** Der Adapter schadet allen Ortsencodern. Ist das schon beim Training zu sehen?
+
+**Kurz.** Bei 7 von 12 schädlichen Adaptern ja — aber die Auswahl in 05 konnte „nicht trainieren" nie wählen.
+
+**Methode.** 05 wählt die beste Epoche nach val-R@1, aber nur unter **trainierten** Epochen: der untrainierte Adapter
+(die Identität, also exakt der Encoder) wird nie gemessen. Das Skript misst ihn auf demselben val-Split nach und
+stellt ihn neben die beste Epoche und die Test-Zahl aus 07.
 
 ```bash
 python experiments/adapter_diagnose.py
-python experiments/adapter_diagnose.py --method clip mixvpr eigenplaces
 ```
 
-| Lesart | heißt |
-|---|---|
-| adapter hilft im test | val und test steigen beide — der Adapter tut, wofür er gedacht ist |
-| schon auf val schlechter | das Training schadet auch dort; 05 konnte „nicht trainieren" nur nicht wählen |
-| val steigt, test fällt | was auf den train-Fahrten hilft, überträgt sich nicht auf database und query |
-
-Ergebnis in `results/<stadt>/adapter_diagnose_<method>.json`. Braucht die
-Basis-Embeddings, liest davon nur die val-Zeilen — also den Rechner, der den
-Encoder gerechnet hat. Fehlen die Adapter-Gewichte, rechnet es „val mit“ aus
-den adaptierten Embeddings aus 05 (`<method>_linear_embeddings.npy`): die sind
-genau die normierte Ausgabe des Adapters, die Zahl ist also dieselbe.
-
-Dass der val-Split derselbe ist wie in 05, prüft das Skript auf zwei Wegen:
-mit Gewichten über den nachgemessenen gegen den gespeicherten val-Wert,
-ohne Gewichte über die Metadaten der adaptierten Embeddings — 05 schreibt
-sie als Kopie derer, auf denen es den Split gezogen hat. Das Ergebnis steht
-in `val_split_wie_05`; bei `false` warnt das Skript, und die Zeile ist
-nicht zu deuten.
-
-**Ergebnis** (Osnabrück, alle 18 Adapter; Recall@1, test bei 25 m):
+**Ergebnis.** Osnabrück, alle 18 Adapter, R@1:
 
 | Encoder | val ohne | val mit | test ohne | test mit | Lesart |
 |---|---:|---:|---:|---:|---|
-| clip | 0.015 | 0.033 | 0.073 | 0.123 | hilft |
-| clip_pca512 | 0.015 | 0.034 | 0.074 | 0.121 | hilft |
-| clip_pcaw512 | 0.026 | 0.027 | 0.105 | 0.113 | hilft |
-| anyloc | 0.050 | 0.194 | 0.204 | 0.335 | hilft |
-| anyloc_pca512 | 0.048 | 0.184 | 0.175 | 0.305 | hilft |
-| anyloc_pcaw512 | 0.129 | 0.180 | 0.263 | 0.308 | hilft |
-| anyloc_pcaw4096 | 0.136 | 0.151 | 0.321 | 0.292 | val steigt, test fällt |
-| mixvpr | 0.120 | 0.112 | 0.426 | 0.363 | schon auf val schlechter |
-| mixvpr_pca512 | 0.103 | 0.112 | 0.408 | 0.371 | val steigt, test fällt |
-| mixvpr_pcaw512 | 0.119 | 0.110 | 0.424 | 0.366 | schon auf val schlechter |
-| eigenplaces | 0.118 | 0.142 | 0.484 | 0.444 | val steigt, test fällt |
-| eigenplaces_pca512 | 0.127 | 0.129 | 0.481 | 0.438 | val steigt, test fällt |
-| eigenplaces_pcaw512 | 0.164 | 0.128 | 0.507 | 0.437 | schon auf val schlechter |
-| eigenplaces_pcaw2048 | 0.097 | 0.129 | 0.459 | 0.422 | val steigt, test fällt |
 | megaloc | 0.198 | 0.132 | 0.568 | 0.442 | schon auf val schlechter |
 | megaloc_pca512 | 0.167 | 0.133 | 0.545 | 0.417 | schon auf val schlechter |
 | megaloc_pcaw512 | 0.155 | 0.127 | 0.541 | 0.416 | schon auf val schlechter |
 | eigenplaces_megaloc_concat | 0.220 | 0.165 | 0.572 | 0.479 | schon auf val schlechter |
+| eigenplaces | 0.118 | 0.142 | 0.484 | 0.444 | val steigt, test fällt |
+| eigenplaces_pca512 | 0.127 | 0.129 | 0.481 | 0.438 | val steigt, test fällt |
+| eigenplaces_pcaw512 | 0.164 | 0.128 | 0.507 | 0.437 | schon auf val schlechter |
+| eigenplaces_pcaw2048 | 0.097 | 0.129 | 0.459 | 0.422 | val steigt, test fällt |
+| mixvpr | 0.120 | 0.112 | 0.426 | 0.363 | schon auf val schlechter |
+| mixvpr_pca512 | 0.103 | 0.112 | 0.408 | 0.371 | val steigt, test fällt |
+| mixvpr_pcaw512 | 0.119 | 0.110 | 0.424 | 0.366 | schon auf val schlechter |
+| anyloc | 0.050 | 0.194 | 0.204 | 0.335 | hilft |
+| anyloc_pca512 | 0.048 | 0.184 | 0.175 | 0.305 | hilft |
+| anyloc_pcaw512 | 0.129 | 0.180 | 0.263 | 0.308 | hilft |
+| anyloc_pcaw4096 | 0.136 | 0.151 | 0.321 | 0.292 | val steigt, test fällt |
+| clip | 0.015 | 0.033 | 0.073 | 0.123 | hilft |
+| clip_pca512 | 0.015 | 0.034 | 0.074 | 0.121 | hilft |
+| clip_pcaw512 | 0.026 | 0.027 | 0.105 | 0.113 | hilft |
 
-Alle 18 Zeilen kommen aus den adaptierten Embeddings, die Gewichte lagen
-nicht mehr vor. Die beste Epoche steht in der JSON (`beste_epoche`); bei
-`clip` und `eigenplaces` fehlt sie, deren Fingerabdruck stammt aus einem
-älteren Lauf von 05.
+<sub>Aus `results/osnabrueck/adapter_diagnose_<encoder>.json`.</sub>
 
-Drei Gruppen, und sie folgen dem Encoder, nicht der Breite:
+| Gruppe | Anzahl | welche |
+|---|---:|---|
+| hilft im test | 6 | CLIP und AnyLoc, außer `anyloc_pcaw4096` |
+| schon auf val schlechter | 7 | alle MegaLoc-Varianten, die Verkettung, MixVPR, die gewhitenten 512er von MixVPR und EigenPlaces |
+| val steigt, test fällt | 5 | die übrigen EigenPlaces- und MixVPR-Varianten, `anyloc_pcaw4096` |
 
-- **Hilft (6):** CLIP und AnyLoc bis auf `anyloc_pcaw4096`. Die Encoder
-  sind nicht für Ortserkennung trainiert, der Adapter hat etwas zu lernen,
-  und val und test sind sich einig. Nach Whitening bleibt davon wenig
-  (`clip_pcaw512` val +0.001) — dasselbe Bild wie in `pca_reduce.py`.
-- **Schon auf val schlechter (7):** jede MegaLoc-Variante, die Verkettung,
-  MixVPR und die gewhitenten 512er von MixVPR und EigenPlaces. Keine
-  trainierte Epoche erreicht die Identität; der Schaden entsteht im
-  Training, nicht erst beim Übertragen. 05 hätte hier „nicht trainieren"
-  gewählt, wenn es die Wahl gehabt hätte — MegaLoc bliebe bei 0.568 statt
-  0.442.
-- **val steigt, test fällt (5):** die übrigen EigenPlaces- und
-  MixVPR-Varianten und `anyloc_pcaw4096`. Der val-Gewinn ist klein
-  (+0.002 bis +0.032), der test-Verlust größer (−0.029 bis −0.043). Hier
-  hätte auch die korrigierte Auswahl den Adapter genommen.
+- **Je besser ein Encoder schon für Orte trainiert ist, desto früher schadet der Adapter.**
+- Mit der Identität als Kandidat bliebe MegaLoc bei 0.568 statt 0.442.
+- Bei den fünf „val steigt, test fällt" hätte auch die korrigierte Auswahl den Adapter genommen.
 
-Zwei Vorbehalte. val misst eine andere, schwerere Aufgabe (MegaLoc 0.198
-gegen 0.568): Anfrage und Referenz sind je eine Hälfte der val-Fahrten. Die
-absoluten Werte sind mit test nicht vergleichbar, nur die Richtung zählt.
-Und val ist klein: 3.210 lösbare Anfragen, aber aus nur 46 Fahrten (test:
-198). Differenzen wie bei MixVPR (0.120 gegen 0.112) liegen im Rauschen,
-die Zeile ist nicht belastbar. Belastbar ist das Muster: je
-besser der Encoder schon für Ortserkennung trainiert ist, desto früher
-schadet der Adapter.
+**Grenzen.** val misst eine schwerere Aufgabe (MegaLoc 0.198 gegen 0.568) und ist klein: 3.210 lösbare Anfragen aus
+nur 46 Fahrten. Nur die Richtung zählt; Differenzen wie bei MixVPR (0.120 gegen 0.112) sind Rauschen.
+Die Auswahlregel ist in 05 nicht korrigiert, weil das jede Adapter-Zeile ändern würde.
 
-Kernsatz: **von den zwölf Adaptern, die im test schaden, hätte die
-Auswahlregel sieben verworfen, wenn die Identität zur Wahl gestanden hätte;
-bei den übrigen fünf zeigt val in die falsche Richtung.** Die Regel
-zu korrigieren (Identität als Epoche 0) ändert die Adapter-Zahlen in
-`results/` und damit jede davon abgeleitete Zeile; die Zahlen oben stehen
-deshalb neben den bestehenden, nicht an ihrer Stelle.
+---
 
-### `adapter_sweep.py` — liegt es an Marge und Lernrate?
+### Adapter-Raster — `adapter_sweep.py`
 
-**Frage:** Schadet der Adapter, weil die Trainingswerte zu grob sind? Die
-Marge von 0.2 auf dem Cosinus-Abstand entspricht 0.4 auf dem quadrierten
-L2-Abstand (‖a−b‖² = 2(1−cos)); NetVLAD nimmt dort 0.1. Mit Lernrate 1e-3
-auf einer d×d-Matrix kann das den gelernten Raum weit verschieben.
+**Frage.** Schadet der Adapter, weil die Trainingswerte zu grob sind? Die Marge 0.2 auf dem Cosinus-Abstand entspricht
+0.4 auf dem quadrierten Abstand (‖a−b‖² = 2(1−cos)); NetVLAD nimmt dort 0.1.
 
-Das Skript trainiert je Kombination einen Adapter wie 05 — dieselben
-Bausteine, derselbe fit/val-Split, derselbe Seed —, hält ihn aber nur im
-Speicher und schreibt nichts nach `results/` oder `data/`. Anders als 05
-steht die Identität als Epoche 0 zur Wahl. Gewählt wird nur nach val; test
-wird je Kombination berichtet, für die beste trainierte Epoche und für die
-Wahl. Die Identität läuft auf test mit und muss die Zahl aus 07 treffen.
+**Kurz.** Die Marge ist es nicht, die Lernrate schon. Mit 1e-4 schadet der Adapter EigenPlaces nicht mehr — er hilft aber auch nicht.
+
+**Methode.** Raster über Marge 0.2 / 0.1 / 0.05 und Lernrate 1e-3 / 1e-4, sonst wie 05. Anders als 05 steht die
+Identität als Epoche 0 zur Wahl. Gewählt wird nur nach val; test wird nur berichtet. Schreibt nichts nach `results/`.
 
 ```bash
 python experiments/adapter_sweep.py --method eigenplaces
-python experiments/adapter_sweep.py --method clip
-python experiments/adapter_sweep.py --method megaloc --margins 0.2 0.05 --lrs 1e-3 1e-4
 ```
 
-Standardraster: Marge 0.2 / 0.1 / 0.05, Lernrate 1e-3 / 1e-4; 0.2 und 1e-3
-sind die Werte aus `config.yaml` und damit die Kontrolle. Ergebnis in
-`results/<stadt>/adapter_sweep_<method>.json`.
+**Ergebnis.** Osnabrück, R@1 bei 25 m; fett die Wahl nach val:
 
-**Vorab festgelegt:** Trifft die Vermutung zu, rückt bei EigenPlaces und
-MegaLoc mit kleinerer Marge und Lernrate der test-Verlust gegen 0, und die
-Wahl fällt seltener auf einen schädlichen Adapter; ein Gewinn über die
-Identität hinaus wird nicht erwartet. Bei CLIP muss der Gewinn bleiben.
-
-**Ergebnis** (Osnabrück, 2026-10-02; R@1 bei 25 m, val und test; die
-Identität ist der Encoder ohne Adapter, fett die Wahl nach val; MegaLoc ist
-nicht gelaufen):
-
-| Encoder | Marge | Lernrate | Epoche | val R@1 | test R@1 | test R@5 | test R@20 |
+| Encoder | Marge | Lernrate | Epoche | val | test R@1 | test R@5 | test R@20 |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | eigenplaces | Identität | — | 0 | 0.118 | 0.484 | 0.608 | 0.695 |
 | | 0.2 | 1e-3 | 2 | 0.137 | 0.446 | 0.592 | 0.695 |
@@ -330,1050 +433,705 @@ nicht gelaufen):
 | | 0.05 | 1e-3 | 1 | 0.032 | 0.115 | 0.208 | 0.337 |
 | | 0.05 | 1e-4 | 1 | 0.034 | 0.136 | 0.234 | 0.365 |
 
-Aus [`results/osnabrueck/adapter_sweep_eigenplaces.json`](results/osnabrueck/adapter_sweep_eigenplaces.json)
-und [`adapter_sweep_clip.json`](results/osnabrueck/adapter_sweep_clip.json).
+<sub>Aus [`results/osnabrueck/adapter_sweep_eigenplaces.json`](results/osnabrueck/adapter_sweep_eigenplaces.json)
+und [`adapter_sweep_clip.json`](results/osnabrueck/adapter_sweep_clip.json).</sub>
 
-- **Die Kontrolle hält.** Die Identität trifft 07 auf drei Stellen (0.484,
-  0.073). Die Zeile 0.2 / 1e-3 ist die Einstellung aus 05, aber nicht
-  bitgleich mit ihr: 0.446 gegen 0.444 (EigenPlaces), 0.115 gegen 0.123
-  (CLIP). Beide 05-Zeilen stammen aus einem älteren Lauf (siehe
-  Diagnose oben), und Training auf der GPU ist ohnehin nicht bitgenau.
-  Unterschiede unter etwa 0.01 zwischen zwei Zeilen sind nicht zu deuten.
-- **Die Marge ist es nicht.** Bei gleicher Lernrate liegen die drei Margen
-  bei EigenPlaces innerhalb von 0.015, bei CLIP mit 1e-3 auf drei Stellen
-  gleich (0.115). Die Vermutung aus der Frage trägt nicht.
-- **Die Lernrate ist es.** In allen sechs Paaren (zwei Encoder, drei
-  Margen) ist 1e-4 besser als 1e-3, auf val wie auf test. Bei EigenPlaces
-  schrumpft der test-Verlust von −0.027 bis −0.038 auf −0.001 bis −0.016,
-  bei CLIP wächst der Gewinn von +0.042 auf +0.061 bis +0.064.
-- **Auch die beste Einstellung schlägt die Identität bei R@1 nicht.**
-  EigenPlaces 0.483 gegen 0.484. Was bleibt, liegt weiter hinten: R@5
-  +0.023 / +0.028, R@20 +0.033 / +0.038 (1e-4, Marge 0.1 / 0.05). Ein
-  Intervall dazu gibt es nicht — das Skript speichert keine Trefferlisten,
-  der Bootstrap kann es nicht nachrechnen.
-- **val ordnet richtig, steht aber falsch zur Identität.** Unter den sechs
-  Kombinationen folgt test der val-Reihenfolge (Spearman ρ = 0.94 bei
-  EigenPlaces, 0.89 bei CLIP); die val-Beste ist beide Male auch die
-  test-Beste. Trotzdem liegt bei EigenPlaces jede Kombination auf val über
-  der Identität (+0.019 bis +0.034) und auf test darunter oder gleichauf.
-  Die Wahl nach val nimmt deshalb überall den Adapter — bei CLIP zu Recht,
-  bei EigenPlaces ohne Gewinn. Dasselbe „val steigt, test fällt" wie in der
-  Diagnose, jetzt über ein ganzes Raster.
+- **Marge:** bei gleicher Lernrate höchstens 0.015 Unterschied — die Vermutung trägt nicht.
+- **Lernrate:** in allen sechs Paaren ist 1e-4 besser, auf val wie auf test. EigenPlaces: Verlust −0.027…−0.038 → −0.001…−0.016. CLIP: +0.042 → bis +0.064.
+- **Auch die beste Einstellung schlägt bei EigenPlaces die Identität nicht** (0.483 gegen 0.484); nur R@5 und R@20 steigen leicht, ohne Intervall.
+- **val sortiert richtig, steht aber falsch zur Identität:** die Reihenfolge der Kombinationen stimmt mit test überein (ρ = 0.94),
+  doch jede liegt auf val über der Identität und auf test darunter.
 
-Gegen die Vorab-Festlegung: der test-Verlust rückt bei EigenPlaces gegen
-0, aber über die Lernrate, nicht über die Marge; die Wahl fällt nicht
-seltener auf den Adapter, nur auf einen, der nicht mehr schadet; ein
-Gewinn über die Identität hinaus bleibt aus; bei CLIP bleibt der Gewinn
-und wächst. Die Pipeline steht weiter auf 1e-3 — 1e-4 in `config.yaml`
-änderte jede Adapter-Zeile in `results/` und jede davon abgeleitete Zahl.
+**Grenzen.** Die Zeile 0.2 / 1e-3 trifft 05 nicht bitgleich (0.446 gegen 0.444, CLIP 0.115 gegen 0.123):
+Unterschiede unter 0.01 nicht deuten. MegaLoc ist nicht gerechnet. Die Pipeline bleibt bei 1e-3.
 
 ---
 
-## Volle Referenz — das zweite Protokoll
+## Woran es scheitert
 
-**Frage:** Was leistet das System, wenn es alles Referenzmaterial bekommt,
-das es gibt — `train` und `database` zusammen, 279.453 Bilder statt 48.321?
+### Referenzdichte — `database_density.py`
 
-### `full_reference.py`
+**Frage.** Scheitert das System an Osnabrück oder an zu wenig Referenz? Im Benchmark haben 36 % der Anfragen kein
+Referenzbild im Umkreis von 25 m.
 
-Sucht blockweise über `src.retrieval.blockwise_search` (65.536 Referenz-
-zeilen je FAISS-Index, Top-k über die Blöcke zusammengeführt) und bewertet
-mit `standard_evaluations`, dieselben vier Auswertungen wie in 07. Nur Encoder ohne Adapter — `train` war das Trainingsmaterial des
-Adapters. Zeilen heißen `<name>_fullref`, `compare.py --reference full`
-zeigt sie, `bootstrap_ci.py --reference full` rechnet die Intervalle.
+**Kurz.** Mehr Referenz hilft stetig: mehr Anfragen werden lösbar, und unter ihnen steigt der Recall.
+
+**Methode.** Nimmt `train` stufenweise zur Referenz (0 / 25 / 50 / 75 / 100 % der train-Sequenzen). Nur Encoder ohne Adapter.
 
 ```bash
-python experiments/full_reference.py                 # alle 18, rund zwei Stunden (MegaLoc 8448 d ist der Posten)
-python compare.py --reference full --ci
-python experiments/bootstrap_ci.py --reference full
+python experiments/database_density.py
 ```
 
-Gemessen 2026-09-14, R@1 bei 25 m, 48.177 lösbare von 53.414 (90,2 %):
+<p align="center">
+  <img src="results/osnabrueck/database_density_megaloc.png" width="49%" alt="R@1 gegen Referenzdichte, MegaLoc">
+  <img src="results/osnabrueck/database_density_eigenplaces.png" width="49%" alt="R@1 gegen Referenzdichte, EigenPlaces">
+</p>
 
-| Encoder | Dim | R@1 volle Referenz | 95 % | R@1 Benchmark | Zuwachs |
-|---|---|---|---|---|---|
-| megaloc | 8448 | **0.798** | [0.739, 0.848] | 0.568 | +0.230 |
-| megaloc_pcaw512 | 512 | 0.778 | [0.716, 0.831] | 0.541 | +0.237 |
-| eigenplaces_megaloc_concat | 1024 | 0.778 | [0.714, 0.832] | 0.572 | +0.206 |
-| eigenplaces_pcaw512 | 512 | 0.715 | [0.646, 0.777] | 0.507 | +0.208 |
-| eigenplaces | 2048 | 0.701 | [0.630, 0.765] | 0.484 | +0.217 |
-| mixvpr | 4096 | 0.653 | [0.575, 0.724] | 0.426 | +0.227 |
-| anyloc_pcaw4096 | 4096 | 0.540 | [0.456, 0.624] | 0.321 | +0.219 |
-| anyloc | 4096 | 0.435 | [0.343, 0.533] | 0.204 | +0.231 |
-| clip_pcaw512 | 512 | 0.290 | [0.202, 0.402] | 0.105 | +0.185 |
-| clip | 512 | 0.232 | [0.144, 0.349] | 0.073 | +0.159 |
+| train dazu | Referenzbilder | lösbar | MegaLoc, 512 gewhitent | EigenPlaces | EigenPlaces, 512 gewhitent |
+|---:|---:|---:|---:|---:|---:|
+| 0 % | 48.321 | 63,9 % | 0.541 | 0.484 | 0.507 |
+| 25 % | 107.449 | 78,4 % | 0.615 | 0.545 | 0.568 |
+| 50 % | 160.981 | 84,9 % | 0.670 | 0.595 | 0.615 |
+| 75 % | 222.300 | 88,4 % | 0.754 | 0.672 | 0.688 |
+| 100 % | 279.453 | 90,2 % | 0.778 | 0.701 | 0.715 |
 
-Alle 18 Zeilen: `python compare.py --reference full --derived`.
+<sub>Aus `results/osnabrueck/database_density_<encoder>.json`. Die letzte Stufe ist die volle Referenz.
+MegaLoc auf voller Breite steigt von 0.568 auf 0.798; die Zwischenstufen zeigt die linke Abbildung.</sub>
 
-**Drei Befunde.**
+- Die neu lösbaren Anfragen sind die schwereren — und der Recall steigt trotzdem.
+- Gewonnen werden nicht nur Nachbarn, sondern auch passende Blickrichtungen und Zeitpunkte.
 
-1. **Jeder Encoder gewinnt rund 0.2** — der Zuwachs ist über die Rangfolge
-   fast konstant (+0.16 bis +0.24). Die Referenz hebt alle gleich; sie
-   ändert nicht, wer besser ist.
-2. **Die Rangfolge bleibt exakt**, alle Nachbarpaare schließen 0 aus:
-   clip → anyloc +0.202, anyloc → mixvpr +0.219, mixvpr → eigenplaces
-   +0.048 [+0.027, +0.074], eigenplaces → megaloc +0.096 [+0.070, +0.122].
-3. **Die Reduktion kostet hier messbar.** MegaLoc 8448 → 512 gewhitent
-   −0.019 [−0.024, −0.015], und die Verkettung liegt sicher *unter* MegaLoc
-   (−0.019 [−0.027, −0.011]) — im Benchmark-Protokoll war beides innerhalb
-   des Rauschens. Whitening hilft EigenPlaces auf 512 auch hier (+0.014
-   [+0.006, +0.022]) und schadet auf voller Breite (−0.017).
-
-Für die Ausarbeitung: die Kopfzeile ist 0.798 mit voller Referenz, und der
-Benchmark mit 0.568 ist das Protokoll, auf dem Adapter und Varianten
-verglichen werden. Beides steht im README.
+**Grenzen.** Kein Bootstrap. Ein Teil des Anstiegs sind [Zwillinge](#zwillingsfahrten--zwillingepy) aus `train`.
+Speicher: die letzte Stufe sucht blockweise und braucht so rund 6 GB (Osnabrück) statt 11,2 GB.
 
 ---
 
-## Konfidenzintervalle per Sequenz-Bootstrap
+### Schwierigkeit je Anfrage — `recall_by_difficulty.py`
 
-**Frage:** Welche der Unterschiede in `compare.py` sind belegt, welche
-Rauschen? Die 53.414 Anfragen stammen aus 198 Fahrten; aufeinanderfolgende
-Frames scheitern gemeinsam. Der binomiale Standardfehler (±0.005 bei R@1)
-zählt sie als unabhängig.
+**Frage.** Was macht eine einzelne Anfrage schwer?
 
-### `bootstrap_ci.py`
+**Kurz.** Vor allem, ob ein Referenzbild in dieselbe Richtung schaut. Zeit und Nachbarzahl wirken schwächer.
 
-Zieht 1.000-mal die 198 Query-Sequenzen mit Zurücklegen und rechnet Recall
-über die gezogenen Sequenzen — dieselben Ziehungen für alle 40 Zeilen, damit
-Differenzen gepaart ausgewertet werden. Distanzen einmal je Anfrage, der
-Bootstrap ist Arithmetik auf Sequenz-Summen; 40 Zeilen in rund einer Minute.
-Prüft jede Zeile gegen ihre 07-JSON und bricht bei Abweichung ab.
+**Methode.** Je Anfrage vier Eigenschaften aus den Metadaten, R@1 je Klasse über die lösbaren Anfragen. Jede Anfrage
+liegt in genau einer Klasse je Merkmal.
 
 ```bash
-python experiments/bootstrap_ci.py                   # -> results/bootstrap_ci.json
-python experiments/bootstrap_ci.py --reference full  # -> results/bootstrap_ci_fullref.json
-python compare.py --ci                               # Intervall neben R@1
+python experiments/recall_by_difficulty.py
 ```
 
-Gemessen 2026-09-14, die GV-Zeile 2026-10-03; R@1 bei 25 m, Seed 42.
+<p align="center">
+  <img src="results/osnabrueck/recall_by_difficulty_megaloc.png" width="100%" alt="R@1 nach Eigenschaften der Anfrage, MegaLoc">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/recall_by_difficulty_eigenplaces.png" width="100%" alt="R@1 nach Eigenschaften der Anfrage, EigenPlaces">
+</p>
 
-**Die absoluten Zahlen sind unsicherer als gedacht.** Die 95-%-Halbbreite
-liegt bei ±0.03 (CLIP) bis ±0.10 (MegaLoc) statt ±0.005 — ein Design-Effekt
-von 100 bis 330. Grund: die Sequenzen sind extrem ungleich lang (Median 176
-Frames, die größte 3.156; sieben Sequenzen stellen 19 % aller Anfragen),
-und ob eine lange Fahrt gut oder schlecht läuft, entscheidet den Recall.
-Eine einzelne Zahl wie „MegaLoc 0.568" ist deshalb nur auf eine
-Nachkommastelle belastbar: [0.475, 0.666].
+| Merkmal | Klasse | n | R@1 MegaLoc |
+|---|---|---:|---:|
+| Nachbar schaut in dieselbe Richtung | ja | 29.167 | 0.653 |
+| | nein | 4.945 | **0.071** |
+| Tage zum nächsten Nachbarn | 0–7 | 4.850 | 0.575 |
+| | 8–30 | 3.675 | **0.819** |
+| | 31–180 | 10.450 | 0.539 |
+| | 181–365 | 5.772 | 0.612 |
+| | über 365 | 9.365 | 0.472 |
+| Nachbarn im Umkreis von 25 m | 1–2 | 1.705 | 0.523 |
+| | 3–5 | 3.496 | 0.483 |
+| | 6–10 | 3.883 | 0.534 |
+| | 11–20 | 6.808 | 0.448 |
+| | 21–50 | 14.076 | 0.600 |
+| | 51+ | 4.144 | **0.780** |
+| Nachbar vom selben Konto, selber Tag | ja | 3.168 | 0.690 |
+| | nein | 30.944 | 0.556 |
 
-**Die Differenzen sind eng.** Dieselben Sequenzen sind für alle Encoder
-schwer; in der gepaarten Differenz fällt das heraus. Halbbreiten von
-±0.005 bis ±0.09 (CLIP → MegaLoc).
+<sub>Aus `results/osnabrueck/recall_by_difficulty_megaloc.json`; EigenPlaces in der zweiten Abbildung und
+`recall_by_difficulty_eigenplaces.json`.</sub>
 
-| Vergleich (b − a) | Diff | 95 % | schließt 0 ein |
-|---|---|---|---|
-| eigenplaces → eigenplaces_pca512 | −0.003 | [−0.008, +0.002] | ja |
-| eigenplaces → eigenplaces_pcaw512 | +0.022 | [+0.011, +0.039] | nein |
-| eigenplaces → eigenplaces_pcaw2048 | −0.025 | [−0.042, −0.010] | nein |
-| anyloc → anyloc_pcaw4096 | +0.117 | [+0.078, +0.162] | nein |
-| megaloc → megaloc_pca512 | −0.023 | [−0.031, −0.017] | nein |
-| megaloc → eigenplaces_megaloc_concat | +0.004 | [−0.005, +0.014] | **ja** |
-| eigenplaces_pcaw512 → seq3 | −0.009 | [−0.017, −0.001] | nein |
-| megaloc → megaloc_gv20 | −0.029 | [−0.062, +0.000] | **ja** |
-| clip → clip_linear | +0.050 | [+0.038, +0.064] | nein |
-| clip_pcaw512 → clip_pcaw512_linear | +0.009 | [−0.002, +0.021] | **ja** |
-| anyloc → anyloc_linear | +0.130 | [+0.081, +0.187] | nein |
-| anyloc_pcaw4096 → anyloc_pcaw4096_linear | −0.029 | [−0.074, +0.012] | **ja** |
-| anyloc_pcaw512 → anyloc_pcaw512_linear | +0.045 | [+0.009, +0.088] | nein |
-| eigenplaces → eigenplaces_linear | −0.040 | [−0.064, −0.017] | nein |
-| mixvpr → mixvpr_linear | −0.063 | [−0.096, −0.032] | nein |
-| megaloc → megaloc_linear | −0.126 | [−0.179, −0.073] | nein |
-| megaloc_pca512 → megaloc_pca512_linear | −0.127 | [−0.160, −0.099] | nein |
+1. **Blickrichtung.** 14,5 % der lösbaren Anfragen haben keinen Nachbarn, der in dieselbe Richtung schaut: R@1 0.071.
+   Ohne sie läge MegaLoc bei 0.653.
+2. **Zeit, nicht gleichmäßig.** 8–30 Tage ist die beste Klasse, über ein Jahr die schlechteste — aber 0–7 Tage liegen nur im Mittelfeld.
+3. **Dichte.** Erst ab 51 Nachbarn klar besser. Viele Nachbarn helfen; wenige schaden nicht messbar.
 
-`seq3` ist die Kurzform von `eigenplaces_pcaw512_seq3` — dieselbe
-Trefferliste, über ±3 Nachbarframes aufsummiert (siehe unten,
-„`sequence_retrieval.py`"). Alle Paare stehen in
-[`results/osnabrueck/bootstrap_ci.json`](results/osnabrueck/bootstrap_ci.json)
-(also `experiments/results/<stadt>/`), auch für R@5/10/20.
+**Herkunft des Top-1-Treffers.** Die JSON zählt auch, woher die gelungenen Treffer kommen (`herkunft_top1`):
+Anteil vom selben Konto, davon innerhalb von 180 Tagen (`anteil_dublette`), Zeitabstand, Blickwinkel.
+`anteil_dublette` ist genau die Menge, die der Hard-Filter verwirft — der [Städtevergleich](#städtevergleich--city_comparisonpy)
+rechnet damit den Hard-Recall exakt nach.
 
-**Was die Intervalle überlebt** — die Befunde einzeln geprüft. Die Zählung
-folgt einer früheren Fassung der Übersicht im README, die heute acht Punkte
-hat (README, „Ergebnisse auf einen Blick"):
-
-1. *Encoder-Wechsel ist der größte Hebel* — **belegt.** CLIP → MegaLoc
-   +0.496 [+0.405, +0.590]; jedes Nachbarpaar der Rangfolge
-   (clip < anyloc < mixvpr < eigenplaces < megaloc) schließt 0 aus, auf
-   voller Breite wie auf 512 gewhitent.
-2. *Referenzdichte* — **nicht geprüft**; das ist ein anderes Experiment
-   (`database_density.py`) mit anderer Datenbank. +0.22 liegt weit über
-   jeder Halbbreite hier, aber ein eigener Bootstrap fehlt.
-3. *Adapter fügt nichts hinzu, was Whitening nicht liefert* — **belegt,
-   mit einer Einschränkung.** Ohne Whitening ist der Gewinn bei CLIP und
-   AnyLoc klar; nach Whitening schließt er 0 ein (CLIP +0.009, AnyLoc auf
-   4096 −0.029). Der Schaden bei den VPR-trainierten Encodern schließt 0
-   in allen elf Paaren aus. Einschränkung: auf `anyloc_pcaw512` bleibt
-   +0.045 [+0.009, +0.088] — 512 gewhitente Komponenten holen aus VLAD
-   weniger heraus als 4096, dort hat der Adapter noch etwas zu tun.
-4. *Rangfolge und Adapterschaden hängen nicht an der Breite* — **die
-   Rangfolge ja** (Punkt 1). Der Adapterschaden bei MegaLoc ist auf 8448
-   und 512 gleich groß (−0.126 vs −0.127) und die Intervalle decken sich;
-   das ist verträglich mit „gleich", ein Beweis für Gleichheit ist ein
-   Bootstrap nicht.
-5. *AnyLoc war unfair behandelt* — **belegt.** Whitening auf 4096: +0.117
-   [+0.078, +0.162]. Bei EigenPlaces auf voller Breite schadet es: −0.025
-   [−0.042, −0.010]. Beide Vorzeichen sind sicher.
-6. *Nichts schlägt Top-1* — **belegt, soweit damals messbar**; das später
-   gebaute HMM schlägt Top-1 doch (+0.030, siehe Sequenz-HMM). seq3 liegt
-   sicher unter der Einzelbild-Zeile (−0.009 [−0.017, −0.001]). Die
-   Verfahren aus 08 sind Lokalisierung, nicht Recall — nicht Gegenstand.
-   **Aber: die Verkettung schlägt MegaLoc nicht.** +0.004 [−0.005, +0.014]
-   schließt 0 ein. Richtig ist: `eigenplaces_megaloc_concat` ist bei einem
-   Achtel der Breite *gleichauf* mit MegaLoc, nicht besser. README und
-   Tabelle oben sind entsprechend zu lesen. Die später gerechnete
-   geometrische Verifikation schlägt Top-1 ebenfalls nicht: −0.029
-   [−0.062, +0.000].
-7. *Blickrichtung 14,5 %* — eine Zählung, kein Vergleich; nicht Gegenstand.
-
-Ebenfalls bestätigt: 0.484 gegen 0.481 (eigenplaces vs pca512) ist
-Rauschen, wie vorher vermutet; +0.022 durch `pcaw512` ist es nicht.
+**Grenzen.** Kein Bootstrap; einzelne Klassen können an wenigen Fahrten hängen. Unterschiede unter etwa 0.1 nicht deuten.
+„Selbes Konto" heißt hochladendes Konto (`creator_id`) — eine Agentur sind viele Kameras unter einem Konto.
 
 ---
 
-## Laufzeit und Speicher je Encoder
+### Stadtteile — `recall_by_district.py`
 
-**Frage:** Trägt `eigenplaces_pcaw512` den Titel „effizientestes Modell"?
-Drei Kosten, die getrennt anfallen: Encodieren (einmal je Bild, hängt am
-Rückgrat), Suche (je Anfrage, hängt an der Breite), Index (Speicher).
+**Frage.** Wo in der Stadt scheitert das System — und liegt es an der Referenzdichte?
 
-### `timing.py`
+**Kurz.** Stadtteile reichen von 0.07 bis 0.83. Bilder je km² erklären das nicht; die Gründe stecken in den Aufnahmen.
+
+**Methode.** Jede Anfrage per Punkt-in-Polygon einem OSM-Stadtteil zugeordnet; je Stadtteil R@1 und Referenzbilder je km².
+Stadtteile mit weniger als 100 lösbaren Anfragen grau.
 
 ```bash
-python experiments/timing.py                            # Encodieren + Suche + Index
-python experiments/timing.py --skip-encode              # nur Suche und Index
-python experiments/timing.py --methods anyloc,megaloc   # auf dem GPU-Rechner
+python experiments/recall_by_district.py
 ```
 
-Encodieren: 200 feste Bilder aus dem Query-Split (Seed), inklusive Laden
-und Dekodieren wie in 04, Aufwärmlauf ausgeschlossen. Suche: FAISS-Flat
-über die 48.321 Datenbankzeilen, 1.000 Anfragen in Blöcken von 256, Median
-aus fünf Runden. Die JSON (`results/<stadt>/timing.json`) ist mergefähig — je
-Encoder ein Eintrag mit Hostname und Gerät, Einträge anderer Rechner
-bleiben stehen.
+<p align="center">
+  <img src="results/osnabrueck/recall_by_district_megaloc.png" width="100%" alt="R@1 je Stadtteil, MegaLoc">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/recall_by_district_eigenplaces.png" width="100%" alt="R@1 je Stadtteil, EigenPlaces">
+</p>
 
-Suche und Index auf dem M1 Pro (FAISS CPU, 8 Threads), Stand
-`timing.json`:
+| Stadtteil | Anfragen | Fahrten | lösbar | R@1 MegaLoc | Referenz/km² |
+|---|---:|---:|---:|---:|---:|
+| Atter | 2.630 | 14 | 91 % | **0.83** | 244 |
+| Schinkel | 311 | 4 | 48 % | 0.76 | 700 |
+| Nahne | 4.956 | 16 | 88 % | 0.69 | 1.116 |
+| Pye | 6.160 | 24 | 98 % | 0.67 | 287 |
+| Innenstadt | 7.001 | 39 | 38 % | 0.67 | 2.623 |
+| Darum-Gretesch-Lüstringen | 744 | 3 | 83 % | 0.63 | 95 |
+| Schölerberg | 829 | 16 | 94 % | 0.62 | 565 |
+| Fledder | 1.852 | 13 | 68 % | 0.61 | 599 |
+| Voxtrup | 2.967 | 18 | 92 % | 0.59 | 228 |
+| Wüste | 6.094 | 36 | 64 % | 0.57 | 1.915 |
+| Dodesheide | 2.307 | 14 | 52 % | 0.48 | 412 |
+| Kalkhügel | 2.853 | 14 | 63 % | 0.40 | 905 |
+| Weststadt | 2.961 | 18 | 55 % | 0.38 | 970 |
+| Westerberg | 744 | 14 | 26 % | 0.35 | 381 |
+| Hafen | 2.014 | 20 | 54 % | 0.29 | 609 |
+| Haste | 2.404 | 15 | 50 % | 0.23 | 206 |
+| Hellern | 2.184 | 13 | 70 % | 0.21 | 147 |
+| Sonnenhügel | 1.634 | 12 | 7 % | 0.18 | 403 |
+| Sutthausen | 414 | 3 | 100 % | **0.07** | 230 |
 
-| Encoder | Dim | ms/Anfrage | Index MB | .npy MB (alle 332k Zeilen) |
-|---|---|---|---|---|
-| alle `*_pca512` / `*_pcaw512`, CLIP | 512 | 0.175–0.187 | 94 | 650 |
-| eigenplaces_megaloc_concat | 1024 | 0.105 | 189 | 1.300 |
-| eigenplaces, eigenplaces_pcaw2048 | 2048 | 0.209 | 378 | 2.601 |
-| anyloc, anyloc_pcaw4096, mixvpr | 4096 | 0.437–0.454 | 755 | 5.201 |
-| megaloc | 8448 | 0.738 | 1.557 | 10.727 |
+<sub>Aus `results/osnabrueck/recall_by_district_megaloc.json`; 23 Stadtteile, vier davon unter 100 lösbaren Anfragen.</sub>
 
-Der Index wächst linear mit der Breite, die Suchzeit nicht: 8448 → 512 ist
-Faktor 16,5 beim Speicher, aber nur 4 bei der Suche; unter 2048 überwiegt
-der feste Aufwand je Block (1024 misst sogar schneller als 512). Bei 53.414
-Anfragen macht das 9–10 s gegen 39 s — auf dieser Datenbankgröße kein
-Argument. Bei einer Datenbank in Millionengröße wäre es eines: der
-MegaLoc-Index läge bei 32 GB je Million Bilder, der 512er bei 2 GB.
+- **Faktor 12 beim selben Encoder.** Der Stadtwert 0.568 ist ein Mittel über sehr verschiedene Viertel.
+- **Dichte erklärt es nicht:** ρ = 0.27 (p = 0.27). Die Innenstadt hat die dichteste Referenz und nur 38 % lösbare Anfragen.
+- **Die Karte zeigt die Daten, nicht den Encoder:** EigenPlaces (512 gewhitent) ordnet die Stadtteile praktisch gleich (Spearman 0.96).
+- **Gründe in den Aufnahmen:**
+  - *Haste* (0.23): nur 29 % der lösbaren Anfragen haben einen Nachbarn in derselben Blickrichtung; Median drei Jahre Abstand.
+  - *Hellern* (0.21): Median 338 Tage Abstand — eine andere Jahreszeit.
+  - *Sutthausen* (0.07): 35 Nachbarn, sechs Tage Abstand, passende Blickrichtung — und trotzdem landen 208 von 414
+    Anfragen im 4 km entfernten Hellern. Eine einzige Fahrt verwechselt ein Wohnviertel mit einem anderen.
 
-Encodieren, 200 Bilder, Batch 64 (AnyLoc: fp16, Batch 4):
-
-| Encoder | Gerät | Eingabe | Bilder/s | 332.868 Bilder |
-|---|---|---|---|---|
-| CLIP ViT-B/32 | M1 Pro, MPS | 224 px | 178,6 | 31 min |
-| MixVPR | M1 Pro, MPS | 320 px | 77,9 | 71 min |
-| EigenPlaces | M1 Pro, MPS | 512 px | 33,8 | 2,7 h |
-| MegaLoc | M1 Pro, MPS | 322 px | 26,0 | 3,6 h |
-| AnyLoc | RTX 3070, CUDA | 322 px | 14,6 | 6,3 h |
-
-Der Durchsatz hängt am Rückgrat und der Eingabegröße, nicht an der PCA:
-`eigenplaces_pcaw512` encodiert genau so schnell wie `eigenplaces`, die
-Projektion ist ein Matrixprodukt.
-
-**Antwort: nein.** Auf 512 Dimensionen kosten alle Varianten dieselbe
-Suchzeit und denselben Index — und dort liefert `megaloc_pcaw512` mehr
-Recall (0.541 gegen 0.507, volle Referenz 0.778 gegen 0.715). Beim
-Encodieren ist EigenPlaces (33,8 Bilder/s) schneller als MegaLoc (26,0),
-aber langsamer als MixVPR (77,9) und CLIP (178,6). Wer einmal encodiert und
-oft sucht, nimmt `megaloc_pcaw512`; EigenPlaces encodiert knapp ein
-Drittel schneller.
+**Grenzen.** Stadtteile mit drei Fahrten zeigen das Schicksal einer Fahrt, nicht eines Ortes.
 
 ---
 
-## Recall je Stadtteil
+### Verwechslungsatlas — `confusion_atlas.py`
 
-**Frage:** Wo in der Stadt scheitert das System — und liegt es an der
-Referenzdichte?
+**Frage.** Wohin schätzt das System, wenn es falsch liegt?
 
-### `recall_by_district.py`
+**Kurz.** Entweder knapp daneben oder in ein anderes Viertel, kaum dazwischen — und meist in Wohnstraßen.
 
-Ordnet jede Anfrage per Point-in-Polygon einem OSM-Stadtteil zu — dieselbe
-Gliederung wie die Abdeckungskarte in 01, die Abfrage steht in
-`src/districts.py`. Je Stadtteil Anfragen, Sequenzen, Anteil lösbar bei
-25 m, R@1 über die lösbaren, Datenbankbilder je km². Zwei Karten
-nebeneinander: R@1 und Referenzdichte; Stadtteile unter 100 lösbaren
-Anfragen grau.
+**Methode.** Für jede lösbare Anfrage mit Top-1 jenseits von 25 m ein Pfeil von der echten zur geschätzten Position,
+dazu Stadtteil-Paare und der Straßentyp aus OSM.
 
 ```bash
-python experiments/recall_by_district.py                          # megaloc
-python experiments/recall_by_district.py --method eigenplaces_pcaw512
+python experiments/confusion_atlas.py
 ```
 
-Gemessen 2026-09-14, 23 Stadtteile, alle 53.414 Anfragen zugeordnet.
-Ergebnis in `results/<stadt>/recall_by_district_<name>.json` und `.png`.
+![Fehlgriffe als Pfeile von der echten zur geschätzten Position](results/osnabrueck/confusion_atlas_megaloc.png)
 
-| Stadtteil | Anfragen | Seq. | lösbar | R@1 megaloc | R@1 eigenpl._pcaw512 | DB/km² |
-|---|---|---|---|---|---|---|
-| Atter | 2.630 | 14 | 91 % | **0.83** | 0.77 | 244 |
-| Schinkel | 311 | 4 | 48 % | 0.76 | 0.76 | 700 |
-| Nahne | 4.956 | 16 | 88 % | 0.69 | 0.65 | 1.116 |
-| Pye | 6.160 | 24 | 98 % | 0.67 | 0.60 | 287 |
-| Innenstadt | 7.001 | 39 | 38 % | 0.67 | 0.56 | 2.623 |
-| Darum-Gretesch-Lüstringen | 744 | 3 | 83 % | 0.63 | 0.59 | 95 |
-| Schölerberg | 829 | 16 | 94 % | 0.62 | 0.57 | 565 |
-| Fledder | 1.852 | 13 | 68 % | 0.61 | 0.61 | 599 |
-| Voxtrup | 2.967 | 18 | 92 % | 0.59 | 0.53 | 228 |
-| Wüste | 6.094 | 36 | 64 % | 0.57 | 0.49 | 1.915 |
-| Dodesheide | 2.307 | 14 | 52 % | 0.48 | 0.32 | 412 |
-| Kalkhügel | 2.853 | 14 | 63 % | 0.40 | 0.36 | 905 |
-| Weststadt | 2.961 | 18 | 55 % | 0.38 | 0.33 | 970 |
-| Westerberg | 744 | 14 | 26 % | 0.35 | 0.33 | 381 |
-| Hafen | 2.014 | 20 | 54 % | 0.29 | 0.24 | 609 |
-| Haste | 2.404 | 15 | 50 % | 0.23 | 0.21 | 206 |
-| Hellern | 2.184 | 13 | 70 % | 0.21 | 0.18 | 147 |
-| Sonnenhügel | 1.634 | 12 | 7 % | 0.18 | 0.14 | 403 |
-| Sutthausen | 414 | 3 | 100 % | **0.07** | 0.06 | 230 |
+**Ergebnis.** MegaLoc, 14.726 Fehlgriffe unter 34.112 lösbaren Anfragen:
 
-Grau (unter 100 lösbare): Eversburg 13, Widukindland 73, Gartlage 1,
-Schinkel-Ost 0 Anfragen.
+| Fehler | Anteil |
+|---|---:|
+| unter 100 m — dieselbe Straße | 45 % |
+| 100 m bis 1 km | 11 % |
+| über 1 km — ein anderes Viertel | 44 % |
 
-**Das Muster — drei Befunde.**
+Die häufigsten Stadtteil-Paare (echt → geschätzt):
 
-1. **Die Spanne ist enorm: 0.07 bis 0.83 bei ein und demselben Encoder.**
-   Der stadtweite Wert 0.568 ist ein Mittel über Stadtteile, die sich um
-   den Faktor 12 unterscheiden.
-2. **Die Dichte erklärt es nicht — nicht auf dieser Ebene.** Spearman R@1
-   gegen Datenbankbilder/km²: ρ = +0.27 (p = 0.27) bei MegaLoc, +0.24 bei
-   EigenPlaces. Die Innenstadt hat die dichteste Referenz (2.623/km²) und
-   trotzdem nur 38 % lösbare Anfragen; Atter hat ein Zehntel der Dichte
-   und den besten Recall. Bilder je km² messen die falsche Größe: was
-   zählt, ist die Referenz *an der Straße der Anfrage*, nicht im Stadtteil.
-   Der Dichte-Befund aus `database_density.py` (mehr Referenz → +0.22)
-   bleibt; er ist auf Stadtteil-Ebene nur nicht sichtbar. Der direkte Test
-   ist Recall gegen Nachbarzahl je Anfrage (`recall_by_difficulty.py`).
-3. **Die Karte zeigt die Daten, nicht den Encoder.** Die Rangfolge der
-   Stadtteile ist bei MegaLoc und EigenPlaces praktisch dieselbe
-   (Spearman 0.96). Was einen Stadtteil scheitern lässt, steckt in den
-   Aufnahmen:
-   - *Haste* (0.23): nur 29 % der lösbaren Anfragen haben überhaupt einen
-     Nachbarn, der in dieselbe Richtung schaut; Median drei Jahre Abstand
-     zum nächsten Referenzbild.
-   - *Hellern* (0.21): Median 338 Tage Abstand — andere Jahreszeit.
-   - *Sutthausen* (0.07): 35 Nachbarn im Median, sechs Tage Abstand,
-     Blickrichtung passt bei 86 % — und trotzdem landet Top-1 bei 208 von
-     414 Anfragen in Hellern, vier Kilometer entfernt. Eine einzige
-     Sequenz mit 284 Frames, die ein Wohnviertel mit einem anderen
-     verwechselt. Das ist die grobe Verwechslung aus Befund 6, auf der
-     Karte sichtbar.
+| Paar | n | Median |
+|---|---:|---:|
+| Voxtrup → Nahne | 240 | 540 m |
+| Sutthausen → Hellern | 208 | 4.239 m |
+| Hellern → Nahne | 147 | 6.894 m |
+| Wüste → Weststadt | 141 | 63 m |
+| Hellern → Kalkhügel | 139 | 3.590 m |
 
-   Stadtteile mit drei Sequenzen (Sutthausen, Darum-Gretesch-Lüstringen)
-   zeigen das Schicksal einer Fahrt, nicht des Ortes — dieselbe Lehre wie
-   der Sequenz-Bootstrap.
+- **Keine dominante Verwechslung:** kein Paar trägt mehr als 1,6 % der Fehler.
+- **Ziele am Stadtrand:** Nahne und Hellern — Wohn- und Gewerbegebiete, die einander ähneln.
+
+![Fehlgriffe nach Straßentyp](results/osnabrueck/confusion_atlas_megaloc_strassentyp.png)
+
+**Die Autobahn ist nicht das Problem — auch wenn die Karte das nahelegt.** Ein paar hundert lange Pfeile entlang
+der A30 überdecken optisch zehntausend kurze.
+
+| Straßentyp | R@1 | Anteil an lösbaren Anfragen | Anteil an Fehlern über 1 km |
+|---|---:|---:|---:|
+| Autobahn | 0.570 | 32 % | 23 % |
+| Hauptstraße | 0.576 | — | — |
+| Wohnstraße und übrige | 0.565 | 51 % | 56 % |
+
+<sub>Aus `results/osnabrueck/confusion_atlas_megaloc.json`.</sub>
+
+**Grenzen.** Nur lösbare Anfragen. Über alle Anfragen (08) liegt der Median eines falschen Top-1 bei 1,7 km.
 
 ---
 
-## Verwechslungsatlas
+## Nachbearbeitung der Top-k
 
-**Frage:** Wohin schätzt das System, wenn es falsch liegt — knapp daneben
-oder in einen anderen Stadtteil?
+Alle Verfahren hier bekommen dieselbe Trefferliste und sortieren sie um oder
+fassen sie zusammen. Gemeinsame Nachanalyse: **die Fehler sind kohärent** —
+bei einer groben Verwechslung liegen auch die übrigen Treffer am falschen
+Ort ([Verwechslungsatlas](#verwechslungsatlas--confusion_atlaspy)).
 
-### `confusion_atlas.py`
+### Aggregation — `localization_aggregation.py`
 
-Für jede lösbare Anfrage mit Top-1 jenseits von 25 m ein Pfeil von der
-echten zur geschätzten Position auf dem Straßennetz (osmnx, aus dem
-Cache), daneben dieselben Pfeile aggregiert nach Stadtteil-Paar. Dazu der
-Straßentyp der nächsten Kante je Anfrage. Nur lösbare Anfragen — dort
-hatte das System eine Referenz in Reichweite.
+**Frage.** Wird die Koordinate besser, wenn man die Top-10 mittelt oder clustert, statt nur den besten Treffer zu nehmen?
 
-```bash
-python experiments/confusion_atlas.py          # -> results/confusion_atlas_megaloc.{json,png}
-```
+**Kurz.** Nein — fünf Verfahren, alle schlechter als Top-1.
 
-Gemessen 2026-09-14, MegaLoc: **14.726 Fehlgriffe unter 34.112 lösbaren.**
-
-**Zwei Sorten Fehler, fast nichts dazwischen.** Quartile des Fehlers
-40 / 389 / 3.497 m: 45 % liegen unter 100 m (dieselbe Straße, knapp
-jenseits der Schwelle), 44 % über 1 km, nur 11 % dazwischen. 53 % der
-Fehlgriffe bleiben im eigenen Stadtteil. Die Verteilung ist bimodal; ein
-Median (389 m hier, 1,7 km in `08` über alle Anfragen)
-beschreibt sie schlecht — die Masse liegt an beiden Enden.
-
-Die häufigsten Paare zwischen Stadtteilen (echt → geschätzt):
-
-| | Paar | n | Median |
-|---|---|---|---|
-| 1 | Voxtrup → Nahne | 240 | 540 m |
-| 2 | Sutthausen → Hellern | 208 | 4.239 m |
-| 3 | Hellern → Nahne | 147 | 6.894 m |
-| 4 | Wüste → Weststadt | 141 | 63 m |
-| 5 | Hellern → Kalkhügel | 139 | 3.590 m |
-| 6 | Hafen → Fledder | 120 | 4.446 m |
-| 7 | Haste → Nahne | 117 | 7.085 m |
-| 8 | Pye → Atter | 113 | 4.748 m |
-| 9 | Wüste → Hellern | 110 | 3.071 m |
-| 10 | Kalkhügel → Hellern | 94 | 3.704 m |
-
-Kein Paar trägt mehr als 1,6 % der Fehlgriffe: es gibt *keine* dominante
-Verwechslung zweier Orte, sondern viele kleine. Nahne und Hellern tauchen
-als Ziel am häufigsten auf — Wohn- und Gewerbegebiete am Stadtrand, die
-sich gegenseitig ähneln.
-
-**Autobahn ist nicht das Problem.** Das dicke Bündel in der linken Karte
-folgt der A30, weil die Autobahn-Sequenzen lang sind — nicht, weil sie
-schlechter laufen: R@1 auf der Autobahn 0.570, auf Hauptstraßen 0.576,
-sonst 0.565. Autobahn-Fehlgriffe sind sogar *kurz* (Median 56 m gegen
-776 m in Wohnstraßen), und unter den groben Fehlern über 1 km stellt die
-Autobahn 23 % bei 32 % Anteil an den lösbaren Anfragen. Die groben
-Verwechslungen sitzen in den Wohnstraßen (56 % der Fehler über 1 km).
-
----
-
-## Aggregation in der Lokalisierung — fünf Wege, alle unterlegen
-
-**Frage:** Macht aus der Trefferliste eine bessere Koordinate, wer die
-Top-10 mittelt, clustert oder nur bei Einigkeit der Gruppe folgt?
-
-### `localization_aggregation.py`
-
-Schwerpunkt (roh und mit Softmax gespreizt), DBSCAN-Clustering, Snap
-(bester echter Treffer der stärksten Gruppe) und Gated (Gruppe nur bei
-≥ 70 % Einigkeit), gegen Top-1. Stand bis 2026-09-14 in 08; dort rechnet
-jetzt nur noch Top-1.
+**Methode.** Schwerpunkt (roh und gespreizt), Clustering, Snap (bester Treffer der stärksten Gruppe), Gated (Gruppe nur
+bei 70 % Einigkeit). Gemessen über alle 53.414 Anfragen: Anteil unter 25 m und Median des Fehlers.
 
 ```bash
-python experiments/localization_aggregation.py --method megaloc
+python experiments/localization_aggregation.py
 ```
 
-Gemessen (08, alle 53.414 Anfragen, Anteil unter 25 m / Median):
-MegaLoc Top-1 **0.363 / 94 m**, Clustering 0.318 / 444 m, Schwerpunkt
-gespreizt 0.267 / 575 m, Schwerpunkt roh 0.206 / 961 m; EigenPlaces Top-1
-0.309 / 364 m, Clustering 0.265 / 656 m. Gated liegt knapp unter Top-1,
-Snap knapp unter Clustering; keines liegt darüber. Grund: 44 % der Fehlgriffe sind grobe
-Verwechslungen, bei denen die Nachbarn geschlossen am falschen Ort liegen
-(Verwechslungsatlas) — Konsens bestätigt dann den Fehler.
-
----
-
-## Ablehnungskurve — was „weiß ich nicht" bringt
-
-**Frage:** Wie viel besser wird die Antwort, wenn das System bei niedriger
-Konfidenz schweigen darf — und welche Konfidenz taugt dafür?
-
-### `rejection_curve.py`
-
-Drei Konfidenzmaße aus der Trefferliste: Ähnlichkeit des besten Treffers,
-Marge zu Platz 2, Geschlossenheit der Top-10 (Anteil innerhalb 25 m um
-Platz 1). Schwelle absenken, Präzision (Top-1 innerhalb 25 m) gegen
-Abdeckung auftragen. Zwei Sichten: lösbare Anfragen und alle.
-
-```bash
-python experiments/rejection_curve.py --method megaloc
-python experiments/rejection_curve.py --method eigenplaces_megaloc_concat
-```
-
-Gemessen 2026-09-14, MegaLoc:
-
-| Sicht | Konfidenz | ohne Ablehnung | bei 80 % Abdeckung | bei 50 % | bei 20 % | AUC |
-|---|---|---|---|---|---|---|
-| lösbar | Ähnlichkeit | 0.568 | **0.689** | 0.793 | 0.887 | 0.791 |
-| lösbar | Marge | 0.568 | 0.618 | 0.724 | 0.860 | 0.741 |
-| lösbar | Geschlossenheit | 0.568 | 0.597 | 0.706 | 0.798 | 0.706 |
-| alle | Ähnlichkeit | 0.363 | **0.451** | 0.673 | 0.828 | 0.659 |
-| alle | Marge | 0.363 | 0.410 | 0.526 | 0.766 | 0.580 |
-
-Die Verkettung liegt gleichauf (lösbar, Ähnlichkeit: 0.695 bei 80 %, AUC 0.790).
-
-**Befund.** Die rohe Ähnlichkeit ist das beste Maß, die Marge das
-schlechteste — anders als in der Literatur zu Klassifikatoren üblich. Wer
-bei MegaLoc nur Anfragen mit cos ≥ 0.30 beantwortet, ist zu 82 % richtig
-und beantwortet 37 % der lösbaren Anfragen; bei cos ≥ 0.20 noch 75 % bei
-69 %. Im Betrieb (alle Anfragen, ohne Kenntnis der Referenz) sind es bei
-80 % Abdeckung 45 % statt 36 % — die Konfidenz erkennt die unlösbaren
-Anfragen nur zum Teil. `locate.py` meldet deshalb die Ähnlichkeit als
-Konfidenz.
-
----
-
-## Schwierigkeitsprofil — woran der Recall je Anfrage hängt
-
-**Frage:** Der Dichte-Befund direkt: fällt R@1 bei wenigen Nachbarn ein?
-Und was zählt sonst?
-
-### `recall_by_difficulty.py`
-
-Je Anfrage vier Eigenschaften aus den Metadaten — Nachbarn im Umkreis von
-25 m, Tage zum nächsten Referenzbild, ob ein Nachbar in dieselbe Richtung
-schaut, ob ein Nachbar vom selben Konto am selben Tag stammt — und
-R@1 je Klasse über die lösbaren Anfragen. Dazu die **Herkunft des
-Top-1-Treffers** (unten).
-
-```bash
-python experiments/recall_by_difficulty.py --method megaloc
-python experiments/recall_by_difficulty.py --method eigenplaces_pcaw512
-```
-
-Gemessen 2026-09-30, MegaLoc, R@1 gesamt 0.568:
-
-| Merkmal | Klasse | n | R@1 |
-|---|---|---|---|
-| Nachbarn | 1–2 | 1,705 | 0.523 |
-| | 3–5 | 3,496 | 0.483 |
-| | 6–10 | 3,883 | 0.534 |
-| | 11–20 | 6,808 | 0.448 |
-| | 21–50 | 14,076 | 0.600 |
-| | 51+ | 4,144 | **0.780** |
-| Tage zum nächsten | 0–7 | 4,850 | 0.575 |
-| | 8–30 | 3,675 | **0.819** |
-| | 31–180 | 10,450 | 0.539 |
-| | 181–365 | 5,772 | 0.612 |
-| | 366+ | 9,365 | 0.472 |
-| Blickrichtung passt | ja | 29,167 | 0.653 |
-| | nein | 4,945 | **0.071** |
-| Selber Fotograf, selber Tag | ja | 3,168 | 0.690 |
-| | nein | 30,944 | 0.556 |
-
-Jede lösbare Anfrage liegt in genau einer Klasse je Merkmal; die Zahl ohne
-passende Blickrichtung (4,945) ist dieselbe wie in 07. Die Läufe der
-übrigen fünf Städte stammen noch von vor dieser Korrektur (0,5 bis 2 % der
-lösbaren Anfragen fielen dort zwischen die Klassen). `city_comparison.py` liest aus
-ihnen nur die Herkunft des Top-1-Treffers, die davon unberührt ist.
-
-„Selber Fotograf" heißt hier wie überall: selbes hochladendes **Konto**
-(`creator_id`). Die Beschriftung steht so in den bereits gerechneten JSONs
-und ist deshalb nicht nachträglich geändert worden.
-
-EigenPlaces (pcaw512) zeigt dieselben Muster auf niedrigerem Niveau
-(`results/<stadt>/recall_by_difficulty_eigenplaces_pcaw512.json`).
-
-**Befund — drei Faktoren, in dieser Reihenfolge.**
-
-1. **Blickrichtung.** 4,945 lösbare Anfragen (14.5%) haben
-   keinen Nachbarn, der in dieselbe Richtung schaut: R@1 0.071. Ohne sie
-   läge MegaLoc bei 0.653. Das ist der Befund „Blickrichtung" aus 07,
-   je Anfrage.
-2. **Zeit — schwächer, und nicht monoton.** 8–30 Tage Abstand: 0.819;
-   über ein Jahr: 0.472. Aber 0–7 Tage liegen nur bei 0.575 und 181–365
-   Tage bei 0.612 — ein gleichmäßiger Verfall mit dem Alter ist das nicht.
-   Belastbar ist nur die Richtung an den Rändern; Intervalle je Klasse
-   gibt es nicht.
-3. **Dichte.** Ab 51 Nachbarn 0.780, darunter zwischen 0.45 und 0.60
-   ohne klaren Verlauf. Der Dichte-Befund hält — aber als „viele Nachbarn
-   helfen", nicht als „wenige schaden": bei 1–2 Nachbarn ist R@1 nicht
-   schlechter als bei 11–20. Die Dichtekurve (+0.22 mit `train`) gewinnt
-   nicht nur Nachbarn, sondern auch Blickrichtungen und Zeitpunkte.
-
-**Herkunft des Top-1-Treffers** (`herkunft_top1` in der JSON). Die vier
-Merkmale oben fragen, was eine Anfrage *schwer* macht. Diese Zählung fragt
-das Gegenstück: woher kommen die Treffer, die gelungen sind? Über alle
-korrekten Top-1-Treffer — lösbar und innerhalb der Schwelle:
-
-| Feld | Bedeutung |
-|---|---|
-| `anteil_selbes_konto` | Treffer vom selben Mapillary-Konto wie die Anfrage |
-| `anteil_dublette` | davon zusätzlich innerhalb `min_days_apart` (180 Tage) |
-| `median_tage`, `anteil_unter_1_tag`, `anteil_ueber_1_jahr` | Zeitabstand |
-| `median_blickwinkel_grad` | Winkel zwischen Anfrage und Treffer |
-
-`anteil_dublette` ist genau die Menge, die der Hard-Filter in 07 verwirft
-(anderer `creator_id` **oder** > 180 Tage). `city_comparison.py` rechnet
-daraus den Hard-Recall exakt nach — `R@1_hard = n_korrekt × (1 − d) /
-loesbar_hard`, siehe „Städtevergleich". Damit ist die Zahl hier nicht nur
-beschreibend: **stimmt sie nicht, geht die Identität dort nicht auf.** In
-allen sechs gerechneten Städten geht sie auf.
-
-Zwei Dinge, die das **nicht** ist. Erstens keine Selbstfindung: `src/split.py`
-würfelt **Sequenzen**, Query- und Datenbanksequenzen sind disjunkt, dasselbe
-Bild kann nie auf beiden Seiten stehen. Was bleibt, ist derselbe Fahrer, der
-dieselbe Straße in zwei Sequenzen kurz hintereinander befahren hat. Zweitens
-kein Fotografenbefund: `creator_id` ist das hochladende **Konto**. Fährt eine
-Stadt ihre Straßen von einer Agentur abfahren, sind das viele Kameras unter
-einem Konto — und zwei Kameras derselben Firma sind einander trotzdem
-ähnlicher als zwei fremde.
-
-Für eine Stadt muss das Skript einmal gelaufen sein, sonst bleibt die Spalte
-in `city_comparison.py` leer:
-
-```bash
-python experiments/recall_by_difficulty.py --method megaloc   # je Stadt (VPR_CITY)
-```
-
----
-
-## Stadtwahl — welche Stadt taugt als nächste?
-
-**Frage:** Bilder je km² sagt wenig; Erlangen hat 7.943/km² und erreicht
-trotzdem nur 63 % der Wohnstraßen. Was zählt, ist, ob *jede*
-Straße ein Bild hat — sonst sind Anfragen aus Wohnstraßen unlösbar, wie
-36 % in Osnabrück.
-
-### `city_coverage.py`
-
-Holt die Bildpunkte einer Stadt über dieselben Vector Tiles wie 01 und
-misst die **Straßenabdeckung**: Anteil des OSM-Fahrnetzes (nach Länge) mit
-einem Bild im Umkreis von 25 m, getrennt nach großen Straßen (bis
-secondary) und Wohnstraßen (tertiary, residential, living_street,
-unclassified). Dazu Sequenzen, Kontenkonzentration, Anteil seit 2022 und
-der **Panoramaanteil** — 360°-Aufnahmen sind der einzige Kacheleintrag, der
-später direkt im Recall auftaucht (07 rechnet „Nur Nicht-Panorama-Queries"
-getrennt aus).
-
-```bash
-python experiments/city_coverage.py "Mainz, Germany" "Würzburg, Germany"
-python experiments/city_coverage.py --tiles-only "Krefeld, Germany"   # ohne Overpass
-```
-
-`--tiles-only` ergänzt eine bekannte Stadt, ohne ihre Straßenwerte zu
-verlieren: Felder, die ohne Straßennetz nicht messbar sind, stehen als
-`null` in der JSON, und der Merge überschreibt einen vorhandenen Wert nur
-mit einem, der nicht `null` ist. Vorher standen dort Nullen, und ein
-`--tiles-only --force` hat die Straßenlängen von acht Städten damit
-überschrieben.
-
-Gemessen 2026-09-14 bis 16, alle 50 Städte in
-`experiments/results/city_coverage.json`, 45 davon mit Straßenabdeckung.
-Hier die Kandidaten und Osnabrück. Die Spalte „Straßen km" stammt aus dem
-ersten Lauf; in der JSON steht sie bei den meisten Städten als 0 — das ist
-der oben beschriebene, inzwischen behobene Merge-Fehler:
-
-| Stadt | Bilder | /km² | Straßen km | gedeckt | große | Wohn | Seq. | Fotografen | größter | seit 2022 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Jena | 699.325 | 6.115 | 725 | **99%** | 100% | **99%** | 4.519 | 62 | 51% | 45% |
-| Gütersloh | 600.347 | 5.363 | – | **99%** | 100% | **99%** | 10.636 | 40 | **80%** | 75% |
-| Würzburg | 428.847 | 4.895 | 915 | **98%** | 100% | **98%** | 2.004 | 92 | 51% | 28% |
-| Mainz | 644.167 | 6.596 | – | **95%** | 99% | **94%** | 6.962 | 65 | **74%** | 44% |
-| Halle (Saale) | 919.790 | 6.787 | 1.305 | **92%** | 100% | **91%** | 3.931 | 72 | 30% | 87% |
-| Heidelberg | 530.614 | 4.879 | 822 | **87%** | 98% | **83%** | 3.307 | 113 | 33% | 36% |
-| Erlangen | 611.724 | 7.943 | 808 | **70%** | 100% | **63%** | 3.925 | 86 | 36% | 49% |
-| Osnabrück | 336.168 | 2.808 | 1.327 | **44%** | 94% | **38%** | 1.334 | 57 | 47% | 84% |
-
-Weitere (Auswahl): Krefeld 1,02 Mio. (7.389/km², größter 46 %),
-Heilbronn 688k (6.890/km², 48 %), Koblenz 311k (2.933/km², 35 %),
-Kaiserslautern 390k (2.792/km²), Chemnitz 389k (1.762/km²); Siegen,
-Wolfsburg, Weimar und Gera sind Ein-Fotografen-Kampagnen (79–88 %).
-Unter ~3.000 Bildern/km² ist mit Osnabrück-artigen Lücken zu rechnen.
-
-**Befund.** Dichte und Abdeckung sind verschiedene Dinge: Erlangen hat die
-höchste Dichte und nur 63 % der Wohnstraßen, Würzburg und Jena haben
-praktisch jede Straße. Osnabrück mit 38 % Wohnstraßen erklärt seine 36 %
-unlösbaren Anfragen direkt.
-
-**Gütersloh** sieht perfekt aus (99 %, 10.636 Sequenzen, 75 % frisch),
-aber 80 % der Bilder und 94 % der Sequenzen (9.952 von 10.636) stammen
-von einem Mapper, der die Stadt seit 2014 an 259 Tagen abfährt — zeitlich
-vielfältig, aber eine Kamera, eine Montagehöhe. Query und Datenbank wären
-zu 94 % dasselbe Gerät; in Osnabrück zeigt das Schwierigkeitsprofil, was
-das wert ist (Nachbar vom selben Fotografen am selben Tag: R@1 0.690 statt
-0.556). Ein besseres Ergebnis als in Osnabrück wäre nicht von der Kamera
-zu trennen. Mainz (74 %) hat dasselbe Problem. Beide taugen für eine
-andere Frage — wie stark Recall an der Kamera hängt, Query-Sequenzen des
-Top-Fotografen gegen die übrigen — nicht für „funktioniert es in einer
-zweiten Stadt".
-
-**Gerechnet wurden** Würzburg (98 %, 92 Konten, aber 72 % der Bilder älter
-als 2022 — großer Zeitabstand), Kaiserslautern, Karlsruhe, Fürth und Jena;
-die Auswertung steht im nächsten Abschnitt. Offen bleibt Halle (91 %, kein
-Konto über 30 %, 87 % frisch). Gütersloh ist als Experiment zur Kamerafrage
-vorgemerkt — dort wäre ein besseres Ergebnis nicht von der Kamera zu
-trennen, und genau das macht es zur Messung.
-
-**Eine Erwartung ist eingetroffen.** Jena wurde unter anderem wegen seiner
-vielen Fahrten ausgewählt — „4.516 Sequenzen und damit engere Intervalle".
-Es hat mit 677 Query-Fahrten die meisten der sechs Städte und mit ±0.033 das
-engste Bootstrap-Intervall. Als Beleg für den Mechanismus taugt das nur
-bedingt: Jena hat zugleich die höchste Straßenabdeckung, und beide Größen
-liefern in dieser Stichprobe dasselbe ρ = −0,83.
-
-**Die Vorauswahl hat gehalten, die Vorhersage nicht.** Alle sechs Städte
-liefen ohne Eingriff durch dieselbe Pipeline; keine musste wegen fehlender
-Daten abgebrochen werden. Welche Zahl aus dieser Tabelle den Recall
-vorhersagt, ist eine andere Frage — und die Antwort ist bisher: keine. Auch
-die Straßenabdeckung nicht: Würzburg hat mit 98 % die zweithöchste und mit
-0.336 den niedrigsten Recall, Jena mit 99 % die höchste und 0.417.
-
----
-
-## Städtevergleich — was sich überträgt
-
-**Frage:** Ist ein Ergebnis aus Osnabrück ein Ergebnis über das Verfahren
-oder eines über Osnabrück?
-
-### `city_comparison.py`
-
-`compare.py` stellt Encoder **innerhalb** einer Stadt gegenüber, gepaart
-über dieselben Anfragen. Dieses Skript stellt **Städte** gegenüber, und das
-ist eine andere Rechnung: zwei Städte haben disjunkte Anfragemengen, es gibt
-nichts zu paaren. Übrig bleibt der Vergleich unabhängiger Schätzer, jeder
-mit seinem eigenen, breiten Sequenz-Bootstrap-Intervall.
-
-```bash
-python experiments/city_comparison.py                        # megaloc
-python experiments/city_comparison.py --method eigenplaces --plot
-```
-
-Gelesen wird **ausschließlich Versioniertes** — die vier Auswertungs-JSONs,
-die Bootstrap-Intervalle, das Schwierigkeitsprofil und `city_coverage.json`:
-
-```
-results/<stadt>/evaluation/<encoder>.json          R@1 je Auswertung
-results/<stadt>/evaluation/<encoder>_fullref.json  dasselbe, volle Referenz
-experiments/results/<stadt>/bootstrap_ci*.json     Intervalle
-experiments/results/<stadt>/recall_by_difficulty_<encoder>.json
-                                                   Herkunft des Top-1-Treffers
-experiments/results/city_coverage.json             Abdeckung, Panorama, Jahre
-results/<stadt>/evaluation/<encoder>_gv<k>.json    geometrische Verifikation, falls gelaufen
-```
-
-Embeddings und Trefferlisten braucht es nicht. Das Skript läuft damit in
-jedem frischen Klon und auf jedem Rechner — als einziges hier unter
-`experiments/`. Was fehlt, erscheint als `—`; eine Stadt fällt nur heraus,
-wenn ihre Haupt-JSON fehlt. Ergebnis: `experiments/results/city_comparison.json`.
-
-MegaLoc, R@1 bei 25 m, Stand 2026-09-18:
-
-| Stadt | Abd. | lösbar | Pano | Dubl. | Tage | Alle | Hard Δ | volle Ref. | ±boot |
-|---|---|---|---|---|---|---|---|---|---|
-| Osnabrück | 0,44 | 63,9 % | 0,0 % | 11,8 % | 317 | 0.568 | −0.025 | 0.798 | ±0.096 |
-| Fürth | 0,72 | 62,0 % | 3,0 % | 39,6 % | 291 | 0.549 | −0.141 | 0.699 | ±0.059 |
-| Karlsruhe | 0,75 | 70,8 % | 17,9 % | 15,4 % | 408 | 0.419 | −0.057 | 0.640 | ±0.058 |
-| Kaiserslautern | 0,80 | 85,6 % | 0,3 % | 35,8 % | 279 | **0.651** | **−0.204** | **0.810** | ±0.045 |
-| Würzburg | 0,98 | 45,5 % | 8,7 % | 17,9 % | 627 | 0.336 | −0.034 | 0.476 | ±0.059 |
-| Jena | 0,99 | 52,9 % | 0,3 % | 24,1 % | 2188 | 0.417 | **−0.010** | 0.622 | **±0.033** |
-
-`Hard Δ` ist die Differenz zu „Alle Queries", nicht der absolute Wert — so
-steht der Abschlag da, um den es geht. `Dubl.` und `Tage` kommen aus
-`herkunft_top1` und stehen auf `—`, solange `recall_by_difficulty.py` für
-die Stadt nicht gelaufen ist; `Abd.` und `Pano` aus `city_coverage.json`,
-die als einzige Datei stadtübergreifend ist.
-
-### Der Hard-Abschlag, zerlegt
-
-Der Block „Hard-Abschlag zerlegt" ist der methodische Kern des Skripts. Er
-prüft eine **Identität**, keinen Zusammenhang, und ist deshalb schon bei
-einer einzigen Stadt aussagekräftig.
-
-Der Hard-Filter ändert nicht die Trefferliste, sondern die Ground Truth: ein
-Datenbankbild zählt nur, wenn es von einem anderen Konto stammt **oder** mehr
-als `min_days_apart` entfernt ist (`src/evaluation.py`, `disjoint`). Daraus
-folgt beides:
-
-*Zähler* — ein korrekter Top-1-Treffer fällt genau dann weg, wenn er eine
-Dublette ist. Das ist die Negation von `disjoint` und damit exakt
-`anteil_dublette` aus `treffer_herkunft`.
-
-*Nenner* — wer einen korrekten, nicht-dublettigen Treffer hat, ist
-automatisch auch hard-lösbar: dieses Bild ist ja selbst eine gültige
-Referenz im Umkreis. Es fällt also nichts aus dem Zähler, was nicht schon
-gezählt wäre — aber der Nenner schrumpft eigenständig, um Anfragen, deren
-einzige Referenz eine Dublette war.
-
-```
-R@1_hard = n_korrekt × (1 − d) / loesbar_hard
-Abschlag / R@1 = −(d − (1−r)) / r        mit r = loesbar_hard / loesbar
-```
-
-Damit stehen zwei Größen nebeneinander, die beide „Dublette" heißen und
-Verschiedenes zählen:
-
-| | | |
+<p align="center">
+  <img src="results/osnabrueck/localization_aggregation_megaloc.png" width="49%" alt="Aggregationsverfahren gegen Top-1, MegaLoc">
+  <img src="results/osnabrueck/localization_aggregation_eigenplaces.png" width="49%" alt="Aggregationsverfahren gegen Top-1, EigenPlaces">
+</p>
+
+| Verfahren | MegaLoc | EigenPlaces |
 |---|---|---|
-| **d** | Anteil der korrekten **Treffer**, die Dubletten sind | `herkunft_top1.anteil_dublette` |
-| **1−r** | Anteil der lösbaren **Anfragen**, die nur durch Dubletten lösbar waren | aus den beiden `loesbar`-Zahlen in 07 |
+| **Top-1** | **0.363 / 94 m** | **0.309 / 364 m** |
+| Clustering | 0.318 / 444 m | 0.265 / 656 m |
+| Snap | 0.314 / 445 m | |
+| Gated | 0.362 | |
+| Schwerpunkt, gespreizt | 0.267 / 575 m | |
+| Schwerpunkt, roh | 0.206 / 961 m | |
 
-| Stadt | d | 1−r | Differenz | rel. Abschlag | Rest |
-|---|---|---|---|---|---|
-| Kaiserslautern | 35,8 % | 6,6 % | +0,292 | −0,313 | 0.000 |
-| Fürth | 39,6 % | 18,7 % | +0,209 | −0,257 | 0.000 |
-| Karlsruhe | 15,4 % | 2,0 % | +0,134 | −0,137 | 0.000 |
-| Würzburg | 17,9 % | 8,6 % | +0,093 | −0,102 | 0.000 |
-| Osnabrück | 11,8 % | 7,7 % | +0,041 | −0,044 | 0.000 |
-| Jena | 24,1 % | 22,3 % | +0,018 | −0,023 | 0.000 |
-
-Die Spalte `Rest` ist der eigentliche Test: **weicht sie von 0 ab, messen
-`recall_by_difficulty.py` und 07 nicht dasselbe** — verschiedene Schwelle,
-verschiedenes `min_days_apart` oder eine veraltete Trefferliste. Das Skript
-sagt das dann ausdrücklich. Über alle sechs Städte ist der größte Rest
-0.0000.
-
-Inhaltlich: der Abschlag misst nicht, wie sehr ein System auf Dubletten
-beruht, sondern **wie sehr es sie über das hinaus nutzt, was der Datensatz
-erzwingt**. Jena ist der Lehrfall — mittleres d, fast kein Abschlag, weil
-1−r fast genauso groß ist.
-
-Die Rangkorrelation „Übernutzung gegen relativen Abschlag" (ρ = −1,00,
-p = 0,0028) steht mit in der Ausgabe, ist aber **kein zweiter Befund**: sie
-folgt aus der Algebra. Sie taugt als Konsistenzprüfung, nicht als Evidenz.
-Die schwache Fassung — roher Dublettenanteil gegen Abschlag — bleibt
-daneben stehen und ist bei ρ = −0,54, p = 0,30 erwartungsgemäß flach.
-
-### Panorama-Anfragen
-
-07 wertet „Alle Queries" und „Nur Nicht-Panorama-Queries" getrennt aus, aber
-nie die Panoramen allein. Aus den beiden Auswertungen lässt sich ihr R@1
-exakt zurückrechnen:
-
-```
-R@1_pano = (R@1_alle × L − R@1_ohne × L_ohne) / (L − L_ohne)
-```
-
-| Stadt | n | R@1 Panorama | R@1 ohne | Strafe | ±SE (binomial) |
-|---|---|---|---|---|---|
-| Karlsruhe | 8.024 | 0.220 | 0.449 | 0.229 | ±0.005 |
-| Würzburg | 2.412 | 0.170 | 0.352 | 0.182 | ±0.008 |
-| Kaiserslautern | 253 | 0.055 | 0.654 | 0.599 | ±0.014 |
-| Fürth | 192 | 0.208 | 0.553 | 0.345 | ±0.029 |
-| Jena | 85 | 0.235 | 0.417 | 0.182 | ±0.046 |
-
-Der Standardfehler ist binomial gerechnet und damit **optimistisch** —
-Panorama-Anfragen derselben Fahrt scheitern gemeinsam, der wahre Fehler ist
-größer (der Sequenz-Bootstrap zeigt Design-Effekte von 100 bis 330). Er
-steht trotzdem in der Tabelle, weil er schon genügt, um zu sehen, wann n zu
-klein ist: bei Jena mit 85 Anfragen ist allein der binomiale Fehler ±0.046.
-
-**Diese Rechnung ersetzt eine frühere, die falsch war.** Bis 2026-09-18 war
-die Strafe als *Recall-Differenz geteilt durch Panoramaanteil* geschätzt,
-mit dem Anteil aus `city_coverage.json` — dem Anteil an allen Kachelbildern
-statt an den lösbaren Anfragen. In Karlsruhe sind das 17,9 % gegen
-tatsächlich 13,0 %, und der berichtete Wert war 0.168 statt 0.229. Die
-damals als Beleg geführte Übereinstimmung mit Würzburg (0.184) entstand
-nur, weil dort Kachel- und Anfragenanteil zufällig fast gleich sind. Details
-im README unter „Sechs Städte".
-
-**Warum das Skript die Permutationen zählt.** `scipy.stats.spearmanr`
-liefert bei perfekter Monotonie einen p-Wert von 0 — seine t-Näherung
-dividiert dort durch eine verschwindende Varianz. Der exakte Wert ist der
-Anteil der Permutationen mit mindestens so großem |rho|, und der ist bei
-vier Städten **0,083**, also nicht signifikant. Genau das war der Fehler,
-der die Abdeckungs-Vorhersage plausibel aussehen ließ. Das Skript rechnet
-ihn bis n = 8 aus (8! = 40.320 Permutationen, Sekundenbruchteile) und gibt
-darüber lieber gar keinen p-Wert aus.
-
-Die Schranke dazu steht mit in der Ausgabe: bei n < 5 ist selbst perfekte
-Monotonie nicht signifikant (p = 2/n! > 0,05). Wer mit vier Städten einen
-Zusammenhang „zeigen" will, kann das nicht — unabhängig von den Daten.
+- Selbst Gated, das nur bei großer Einigkeit von Top-1 abweicht, kommt nur von unten an Top-1 heran.
+- Grund: bei groben Verwechslungen liegt die stärkste Gruppe geschlossen am falschen Ort — Konsens bestätigt den Fehler.
 
 ---
 
-## Datenbankdichte
+### Nachbarframes — `sequence_retrieval.py`
 
-**Frage:** Scheitert das System an Osnabrück oder an zu wenig
-Referenzmaterial? Die Datenbank sind 15 % der Sequenzen; 36 % der Anfragen
-haben darin kein Bild im Umkreis von 25 m.
+**Frage.** Einzelbilder sind mehrdeutig, Fahrten nicht. Hilft es, die Trefferlisten benachbarter Bilder zu summieren?
 
-### `database_density.py`
+**Kurz.** Nein, es schadet leicht.
 
-Nimmt `train` stufenweise zur Datenbank dazu (0 / 25 / 50 / 75 / 100 % der
-train-Sequenzen) und trägt Recall gegen die Dichte auf. Nur für Baselines —
-der Adapter wurde auf `train` trainiert, dort wäre es Leakage.
+**Methode.** Trefferlisten der ±W Nachbarn einer Fahrt mit Dreiecksgewicht summiert. Standard ist
+`eigenplaces_pcaw512`; das ist die Zeile `seq3` im Benchmark.
 
 ```bash
-python experiments/database_density.py --method eigenplaces
+python experiments/sequence_retrieval.py
 ```
-
-Ergebnis in `results/<stadt>/database_density_{method}.json` und `.png`.
-
-Die letzte Stufe ist `database` plus ganz `train`: bei MegaLoc auf Jena
-584.388 Bilder oder 19,8 GB. Ein `IndexFlatIP` darüber hätte sie ein
-zweites Mal belegt — der
-Index behält jeden Vektor, den er bekommt, blockweises Befüllen allein
-bringt also nichts. Deshalb läuft die Suche hier über dieselbe
-`src.retrieval.blockwise_search` wie in `full_reference.py`: ein Index je
-Block, danach wieder frei. Spitze damit rund 8 GB statt 23,6.
-
-Whitening **und** Dichte zusammen (`--method eigenplaces_pcaw512` bzw.
-`megaloc_pcaw512`, volle train-Referenz): EigenPlaces **0.715** (R@5 0.794),
-MegaLoc **0.778** (R@5 0.845). Darüber liegt nur MegaLoc in voller Breite
-(0.798) — und das alles, ohne ein einziges Modell zu ändern.
-
----
-
-## Recall-Hebel: drei Wege, aus vorhandenen Trefferlisten mehr zu machen
-
-Alle drei bewerten mit `src/evaluation.py`, also exakt wie 07, und erscheinen
-in `compare.py` als eigene Zeilen. Gemessen 2026-09-12 auf `eigenplaces_pcaw512`
-bzw. der Verkettung.
-
-### `concat_embeddings.py` — Deskriptoren verketten
-
-Zwei Encoder aneinanderhängen, neu normalisieren, als abgeleiteter Encoder
-schreiben (`sources:` in der config). Richtet die Quellen über die `image_id`
-aus — auf zwei Rechnern gerechnete Encoder halten dieselben Bilder in
-verschiedener Reihenfolge.
-
-| | Dim | R@1 | R@5 |
-|---|---|---|---|
-| eigenplaces_pcaw512 | 512 | 0.507 | 0.641 |
-| megaloc_pcaw512 | 512 | 0.541 | 0.654 |
-| megaloc (voll) | 8448 | 0.568 | 0.676 |
-| **eigenplaces_megaloc_concat** | **1024** | **0.572** | **0.692** |
-
-Die Verkettung liegt bei einem Achtel der Dimensionen gleichauf mit MegaLoc
-auf voller Breite — +0.004, das Bootstrap-Intervall schließt 0 ein (siehe
-„Konfidenzintervalle"). **Das ist die Zeile „bestes System, Einzelbild"**,
-zusammen mit `megaloc`.
-
-### `sequence_retrieval.py` — Nachbarframes aufsummieren
-
-Trefferlisten der ±W Nachbarn einer Fahrt mit Dreiecksgewicht summieren.
-**Hilft nicht:**
 
 | Fenster | R@1 | R@5 | R@20 |
-|---|---|---|---|
+|---|---:|---:|---:|
 | einzeln | 0.507 | 0.641 | 0.727 |
 | ±1 | 0.507 | 0.644 | 0.731 |
 | ±3 | 0.498 | 0.645 | 0.736 |
 | ±5 | 0.488 | 0.641 | 0.739 |
 
-Benachbarte Frames sehen dieselbe Straße und machen denselben Fehler; ab ±5
-überspannt das Fenster 33 m, mehr als die 25-m-Schwelle. Sequenzlokalisierung
-setzt unabhängige Fehler voraus — die groben Verwechslungen hier sind
-kohärent. Derselbe Befund wie bei Clustering und Snap in 08.
+- ±3 gegen einzeln: −0.009 [−0.017, −0.001], belegt.
+- Zwei Gründe, die das Verfahren nicht trennt: benachbarte Bilder machen denselben Fehler, **und** es braucht dasselbe
+  Referenzbild in mehreren Listen — bei 15 % Referenz selten.
 
-### `sequence_hmm.py` — dieselbe Fahrt als Pfad
+---
 
-Das Aufsummieren scheitert aus zwei Gründen, die es nicht trennt: die Fehler
-benachbarter Frames sind kohärent, **und** der Mechanismus braucht dasselbe
-Datenbankbild in mehreren Trefferlisten. Ein HMM braucht das nicht — die
-Kandidaten dürfen je Frame andere sein, sie müssen nur geometrisch
-zusammenpassen:
+### Fahrt als Pfad — `sequence_hmm.py`
+
+**Frage.** Hilft die Fahrt, wenn man sie als Weg liest statt als Summe?
+
+**Kurz.** Ja — die einzige Nachbearbeitung, die Top-1 belegt schlägt.
+
+**Methode.** Ein Hidden-Markov-Modell. Die Kandidaten dürfen je Bild andere sein; sie müssen nur geometrisch zusammenpassen.
 
 | | |
 |---|---|
-| Zustände | die Top-k eines Frames |
-| Emission | `beta ×` Ähnlichkeit aus der Suche |
-| Übergang | `-abs(d(i,j) - v × dt) / sigma` — passt der Abstand zweier Kandidaten zur verstrichenen Zeit? |
-| Ergebnis | Posterior je Frame (Forward-Backward) für die Rangliste, Viterbi für den Pfad |
+| Zustände | die Top-k eines Bildes |
+| Emission | `β ×` cos aus der Suche |
+| Übergang | passt der Abstand zweier Kandidaten zur verstrichenen Zeit? `−|d − v·Δt| / σ` |
+| Ergebnis | Wahrscheinlichkeit je Kandidat (Forward-Backward) und bester Pfad (Viterbi) |
 
-Ein Kandidat sechs Kilometer abseits fällt damit, weil man in 0,17 s keine
-sechs Kilometer fährt — nicht, weil der Nachbarframe ihn nicht auch gefunden
-hätte. `v` kommt aus den **Datenbank**sequenzen; die Query-Positionen sind die
-Ground Truth und gehen nirgends ein (`tests/test_sequence_hmm.py` hält das
-fest).
+Ein Kandidat 6 km abseits fällt, weil man in 0,17 s keine 6 km fährt. Die Geschwindigkeit (12,5 m/s) kommt aus den
+**Referenz**fahrten; die Positionen der Anfragen gehen nirgends ein. β = 30 und σ = 25 m standen vor dem Lauf fest —
+berichtet wird diese eine Einstellung, nicht die beste aus einem Raster.
 
 ```bash
-python experiments/sequence_hmm.py --method eigenplaces_pcaw512
-python experiments/sequence_hmm.py --method megaloc --beta 3,30,300 --sigma 5,25,200
+python experiments/sequence_hmm.py --method megaloc
 ```
 
-**Gemessen, mit den voreingestellten Parametern.** `beta` und `sigma` sind
-Hyperparameter, und die Tabelle wird auf den Anfragen ausgewertet — die beste
-Zeile herauszugreifen wäre Tuning auf der Testmenge. Deshalb druckt das
-Skript den ganzen Durchlauf, und berichtet wird die Voreinstellung β = 30,
-σ = 25 m, die seit dem ersten Commit des Skripts unverändert dort steht.
-Geschwindigkeit 12,5 m/s, aus den Datenbanksequenzen geschätzt.
-
-| | R@1 | R@5 | R@10 | R@20 | Viterbi-Pfad |
-|---|---|---|---|---|---|
-| MegaLoc | 0.568 | 0.676 | 0.719 | 0.763 | — |
+| | R@1 | R@5 | R@10 | R@20 | Pfad R@1 |
+|---|---:|---:|---:|---:|---:|
+| MegaLoc | 0.568 | 0.676 | 0.719 | 0.763 | |
 | MegaLoc, HMM | **0.598** | **0.690** | **0.725** | **0.764** | 0.603 |
-| EigenPlaces | 0.484 | **0.608** | **0.650** | **0.695** | — |
+| EigenPlaces | 0.484 | **0.608** | **0.650** | **0.695** | |
 | EigenPlaces, HMM | **0.501** | 0.603 | 0.633 | 0.675 | 0.511 |
 
-Das ist die **einzige Nachbearbeitung im Projekt, die Top-1 schlägt** — und
-die einzige, deren Gewinn den Sequenz-Bootstrap überlebt:
+- **Belegt:** MegaLoc +0.030 [+0.020, +0.041], EigenPlaces +0.017 [+0.006, +0.030].
+- **Nicht umsonst:** bei EigenPlaces kostet das Umsortieren R@5 bis R@20.
+- **Klein, wie erwartet:** das HMM fängt nur einzelne Ausreißer. Eine ganze Fahrt auf der falschen Straße ist als Pfad genauso stimmig.
 
-| Vergleich | Differenz | 95 % | belegt |
-|---|---|---|---|
-| megaloc → megaloc_hmm30-25 | **+0.030** | [+0.020, +0.041] | ja |
-| eigenplaces → eigenplaces_hmm30-25 | **+0.017** | [+0.006, +0.030] | ja |
+**Grenzen.** Forward-Backward und Viterbi sind in [`tests/test_sequence_hmm.py`](../tests/test_sequence_hmm.py) gegen eine
+vollständige Aufzählung geprüft.
 
-`bootstrap_ci.py` rekonstruiert die hmm-Zeilen dafür aus der Basis-Trefferliste
-— β, σ und die Geschwindigkeit stehen in ihrer eigenen Ergebnis-JSON und
-werden nicht neu geschätzt, sonst schlüge die Kontrolle gegen 07 an.
+---
 
-Dass die Intervalle der Differenz (±0.01) so viel enger sind als die der
-Einzelzahl (±0.10), liegt an der Paarung über dieselben Fahrten: es ist
-dieselbe Trefferliste, nur anders sortiert.
+### Geometrische Verifikation — `geometric_verification.py`
 
-Eine Einschränkung bleibt. Ein Re-Ranking sortiert die Liste nur um: was nach oben rutscht,
-verdrängt anderes. Bei EigenPlaces kostet das R@5 bis R@20 (0.650 → 0.633 bei
-k = 10), bei MegaLoc nicht. Wer Top-1 braucht, gewinnt; wer eine
-Kandidatenliste braucht, verliert womöglich. Umsortiert werden alle 50
-gespeicherten Kandidaten; nur R@50 bleibt deshalb unverändert — es wird
-nichts hinzugefügt.
+**Frage.** Global ähnliche, lokal verschiedene Orte sind der typische grobe Fehler. Hilft es, die Top-20 mit lokalen
+Merkmalen nachzuprüfen?
 
-Die Erwartung war klein und ist eingetroffen: das HMM greift nur bei
-*unzusammenhängenden* Ausreißern, und 88 % der Fehlgriffe sind kohärente
-Verwechslungen — eine ganze Fahrt, die geschlossen auf die falsche Straße
-zeigt, ist als Pfad genauso konsistent wie die richtige.
+**Kurz.** Nicht bei 25 m. Sie schärft die Position auf wenige Meter, findet aber nicht öfter den richtigen Ort.
 
-Was der Code kann, ist zusätzlich geprüft: Forward-Backward und Viterbi gegen
-die Summe bzw. das Maximum über alle 27 Pfade eines 3×3-Falls einzeln
-nachgerechnet, und ein konstruierter Fall, in dem `aggregate_sequence` den
-Ausreißer stehen lässt und das HMM ihn zurückstuft
-(`tests/test_sequence_hmm.py`).
+**Methode.** SuperPoint findet Merkmalspunkte, LightGlue ordnet sie zu, RANSAC prüft sie gegen die Geometrie zweier
+Kameras. Die Kandidaten werden nach der Zahl übereinstimmender Punkte (Inlier) umsortiert; unter 15 bleibt die alte
+Reihenfolge. Alle fünf Parameter standen vor dem Lauf fest:
 
-### `geometric_verification.py` — Top-k lokal nachprüfen
-
-SuperPoint + LightGlue auf die Top-20, RANSAC gegen eine Fundamentalmatrix,
-nach Inliern umsortieren. Der einzige Hebel, der die Fehlerart direkt
-angreift: global ähnliche, lokal verschiedene Orte. Braucht die Bilder und
-eine GPU, auf CPU nicht sinnvoll. Standard ist `megaloc` — der Encoder, den
-es in allen sechs Städten gibt. Als Benchmark-Zeile gemessen auf
-Osnabrück, die übrigen fünf Städte nicht (Ergebnis unten). Dafür braucht es
-`--n-queries 0`, auf dem GPU-Rechner je Stadt:
+| Parameter | Wert | Herkunft |
+|---|---|---|
+| `--top-k` | 20 | Setzung des Projekts |
+| `--min-inliers` | 15 | Setzung des Projekts |
+| `--ransac-px` | 3,0 | Voreinstellung von OpenCV |
+| `--max-keypoints` | 1.024 | Empfehlung von LightGlue für Tempo |
+| `--max-side` | 640 | Setzung des Projekts |
 
 ```bash
 python experiments/geometric_verification.py --n-queries 0
 ```
 
-```bash
-python experiments/bootstrap_ci.py
-```
+Braucht die Bilder und eine GPU; speichert die Inlier alle zwei Minuten und setzt nach einem Abbruch fort.
+`bootstrap_ci.py` rechnet die Zeile aus den gespeicherten Inliern nach, ohne neu zu matchen.
 
-Verifiziert werden nur Anfragen, die bei der größten Schwelle (100 m) ein
-Datenbankbild haben — die übrigen zählen in keinem Recall mit, sie
-umzusortieren kostete je nach Stadt 8 bis 33 % der Laufzeit. Das Skript
-speichert je Anfrage und Kandidat die **Inlier-Zahl** neben der Trefferliste
-(`results/<stadt>/retrieval/<encoder>/<name>_gv20_inlier.npz`, gitignored)
-und sichert sie alle zwei Minuten; ein abgebrochener Lauf setzt mit
-denselben Parametern dort fort. Umsortiert wird in `src/verification.py`,
-und genau dort rechnet auch `bootstrap_ci.py` die gv-Zeile nach, ohne ein
-Bild erneut zu matchen — ohne gespeicherte Inlier hätte der Bootstrap die
-Zeile nicht reproduzieren können und wäre abgebrochen. `city_comparison.py`
-stellt die Städte danach gegenüber.
+**Ergebnis.** Osnabrück, MegaLoc, gepaart:
 
-Fünf Werte bestimmen das Ergebnis und stehen deshalb alle als Flag, nicht
-als Konstante im Code: `--top-k` (wieviele Kandidaten überhaupt umsortiert
-werden), `--min-inliers` (ab wann ein Paar als verifiziert gilt),
-`--ransac-px` (zulässiger Abstand zur Epipolarlinie), `--max-keypoints` und
-`--max-side`. Sie landen im Ergebnis-JSON. Wer sie verstellt, misst etwas
-anderes — und wer sie am Recall entlang verstellt, misst am Ende die
-Stichprobe. Woher die Vorgaben kommen: 1.024 Keypoints ist die Einstellung,
-die das LightGlue-README für mehr Tempo bei kleinem Genauigkeitsverlust
-nennt (die Demo nimmt 2.048); 3,0 px ist die Voreinstellung von OpenCVs
-`findFundamentalMat`; Top-20 und 15 Inlier sind Setzungen dieses Projekts,
-vor dem Lauf festgelegt. `--min-inliers` lässt sich nachträglich prüfen,
-ohne neu zu matchen — es wirkt erst beim Umsortieren der gespeicherten
-Inlier. Eine Variation der übrigen gehört auf eine Stadt, die nicht
-berichtet wird.
-
-**Ergebnis** (Osnabrück, MegaLoc, 2026-10-03; gepaart gegen MegaLoc, 25 m):
-
-| | MegaLoc | + GV | Diff | 95 % |
+| | MegaLoc | + Verifikation | Diff | 95 % |
 |---|---:|---:|---:|---|
 | R@1 | 0.568 | 0.539 | −0.029 | [−0.062, +0.000] |
 | R@5 | 0.676 | 0.678 | +0.002 | [−0.018, +0.024] |
 | R@10 | 0.719 | 0.726 | +0.007 | [−0.005, +0.019] |
 | R@20 | 0.763 | 0.763 | 0 | — |
 
-Aus [`results/osnabrueck/bootstrap_ci.json`](results/osnabrueck/bootstrap_ci.json).
-R@20 ändert sich zwingend nicht: umsortiert wird nur innerhalb der Top-20.
-Bei 5 und 10 m steigt R@1 dagegen (+0.013, +0.010), bei 50 und 100 m sinkt
-es wie bei 25 m (−0.034, −0.039). Naheliegende, einzeln nicht geprüfte
-Lesart: die Verifikation zieht den Kandidaten mit der größten
-Bildüberlappung nach vorn, und der ist öfter sehr nah, aber auch öfter ein
-falscher Ort. 87 % aller Kandidatenpaare kommen über
-15 Inlier, Median 40: die Schwelle trennt kaum. Einordnung im README unter
-„Geometrische Verifikation".
+| R@1 je Schwelle | 5 m | 10 m | 25 m | 50 m | 100 m |
+|---|---:|---:|---:|---:|---:|
+| Differenz | +0.013 | +0.010 | −0.029 | −0.034 | −0.039 |
 
-Laufzeit: 42.010 Anfragen, 840.200 Paare in 8,6 Stunden auf einer RTX 3070,
-rund 27 Paare je Sekunde. Die übrigen fünf Städte hätten danach rund 57
-Stunden gekostet und sind nicht gerechnet.
+<sub>Aus [`results/osnabrueck/bootstrap_ci.json`](results/osnabrueck/bootstrap_ci.json) und
+`results/osnabrueck/evaluation/megaloc{,_gv20}.json`.</sub>
 
-Lizenz: die SuperPoint-Gewichte stehen unter einer Lizenz **nur für
-nichtkommerzielle Forschung** (Magic Leap), siehe [NOTICE.md](../NOTICE.md).
+- R@20 bleibt zwingend gleich: umsortiert wird nur innerhalb der Top-20.
+- **Lesart, nicht einzeln geprüft:** Inlier messen Bildüberlappung, nicht Ortsgleichheit. Der Kandidat mit dem größten
+  gemeinsamen Ausschnitt rückt vor — oft sehr nah, manchmal aber ein falscher Ort mit wiederkehrender Geometrie.
+- **Die Schwelle trennt kaum:** 87 % aller Kandidatenpaare haben 15 Inlier oder mehr (Median 40).
+- **Laufzeit:** 840.200 Bildpaare in 8,6 Stunden, rund 27 je Sekunde. Die übrigen fünf Städte hätten rund 57 Stunden gekostet.
 
-Abhängigkeit: `pip install git+https://github.com/cvg/LightGlue.git`
-(steht in `environment.yml`).
+**Grenzen.** Eine Einstellung, eine Stadt, reines Umsortieren nach Inliern. Eine höhere Schwelle ließe sich aus den
+gespeicherten Inliern nachrechnen — auf Osnabrück wäre das aber Abstimmen an der berichteten Stichprobe.
+SuperPoint ist nur für nichtkommerzielle Forschung lizenziert ([NOTICE.md](../NOTICE.md)).
+
+---
+
+### Detections — `detection_rerank.py`
+
+**Frage.** Mapillary erkennt Objekte in jedem Bild (Schilder, Laternen, Autos). Trägt das Information bei, die im
+Deskriptor fehlt?
+
+**Kurz.** Nein. Das Signal existiert, ist aber schwächer als der Deskriptor und darin schon enthalten.
+
+**Methode.** 2.000 Anfragen, bei denen in den Top-10 richtige **und** falsche Kandidaten stehen; je Bild ein
+gewichtetes Histogramm der erkannten Klassen. Gemessen: wie gut es richtig von falsch trennt (AUC), und R@1 nach dem
+Umsortieren. EigenPlaces.
+
+```bash
+python experiments/detection_rerank.py
+```
+
+| | alle Klassen | ohne Autos und Personen |
+|---|---:|---:|
+| AUC Detections | 0.562 | 0.559 |
+| AUC Deskriptor | 0.735 | 0.735 |
+
+| Gewicht der Detections | 0 | 0.05 | 0.5 | 1.0 |
+|---|---:|---:|---:|---:|
+| R@1 (1.286 Anfragen) | 0.7551 | 0.7558 | 0.7496 | 0.6998 |
+
+- Der beste Wert liegt eine einzige Anfrage über dem Ausgangswert.
+- Fehlende Detections werden neutral gewertet, nicht als Ähnlichkeit 0 — sonst bestrafte die Messung fehlende Daten.
+
+**Grenzen.** Eigene Stichprobe, nicht mit der Haupttabelle vergleichbar. Die Detections sind versioniert
+(`cache/detections.jsonl`). Die Vorstudie zur Abdeckung (`detection_probe.py`): 85 bis 94 % der Bilder haben Detections.
+
+---
+
+## Konfidenz
+
+### Ablehnung — `rejection_curve.py`
+
+**Frage.** Wie viel besser wird die Antwort, wenn das System bei niedriger Konfidenz schweigen darf — und welches Maß taugt?
+
+**Kurz.** Der rohe cos des besten Treffers ist das beste Maß.
+
+**Methode.** Drei Maße: cos des besten Treffers, Abstand zu Platz 2 (Marge), Einigkeit der Top-10 (Anteil innerhalb
+25 m um Platz 1). Die Schwelle wird abgesenkt und die Präzision gegen den Anteil beantworteter Anfragen aufgetragen.
+
+```bash
+python experiments/rejection_curve.py
+```
+
+<p align="center">
+  <img src="results/osnabrueck/rejection_curve_megaloc.png" width="100%" alt="Präzision gegen Abdeckung, MegaLoc">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/rejection_curve_eigenplaces.png" width="100%" alt="Präzision gegen Abdeckung, EigenPlaces">
+</p>
+
+**Ergebnis.** MegaLoc, Präzision bei 100 / 80 / 50 / 20 % beantworteter Anfragen:
+
+| Sicht | Maß | 100 % | 80 % | 50 % | 20 % | Fläche |
+|---|---|---:|---:|---:|---:|---:|
+| lösbare Anfragen | cos | 0.568 | **0.689** | 0.793 | 0.887 | 0.791 |
+| | Marge | 0.568 | 0.618 | 0.724 | 0.860 | 0.741 |
+| | Einigkeit | 0.568 | 0.597 | 0.706 | 0.798 | 0.706 |
+| alle Anfragen | cos | 0.363 | **0.451** | 0.673 | 0.828 | 0.659 |
+| | Marge | 0.363 | 0.410 | 0.526 | 0.766 | 0.580 |
+
+<sub>Aus [`results/osnabrueck/rejection_curve_megaloc.json`](results/osnabrueck/rejection_curve_megaloc.json).
+Die Verkettung EigenPlaces + MegaLoc liegt gleichauf (0.695 bei 80 %, Fläche 0.790).</sub>
+
+- **Faustregel MegaLoc:** cos ≥ 0.30 → 82 % richtig (37 % der lösbaren Anfragen beantwortet); cos ≥ 0.20 → 75 % (69 %).
+- Die Marge ist das schlechteste Maß — anders als bei Klassifikatoren üblich.
+- `locate.py` und die Demo melden deshalb cos als Konfidenz.
+
+**Grenzen.** Im Betrieb kennt das System die Referenz nicht. Unlösbare Anfragen erkennt cos nur zum Teil
+(alle Anfragen, 80 %: 0.451 statt 0.363). Die Schwellen gelten nur für MegaLoc.
+
+---
+
+## Sechs Städte
+
+### Stadtwahl — `city_coverage.py`
+
+**Frage.** Welche Stadt eignet sich als zweite — bevor man Tage in Bilder und Embeddings steckt?
+
+**Kurz.** Entscheidend ist, ob **jede** Straße ein Bild hat, nicht wie viele Bilder es gibt — und dass nicht ein einzelnes Konto alles aufgenommen hat.
+
+**Methode.** Nur aus Metadaten, eine Minute je Stadt: Bildpunkte über dieselben Kacheln wie 01, Straßennetz aus OSM.
+**Straßenabdeckung** = Anteil der Straßenlänge mit einem Bild im Umkreis von 25 m, getrennt nach großen Straßen und
+Wohnstraßen. Dazu Fahrten, Konten, Bildalter, Panoramaanteil.
+
+```bash
+python experiments/city_coverage.py "Heidelberg, Germany"
+```
+
+**Ergebnis.** 50 Städte gemessen, 45 mit Straßenabdeckung. Die Kandidaten:
+
+| Stadt | Bilder/km² | Abdeckung | Wohnstraßen | größtes Konto | seit 2022 | gerechnet |
+|---|---:|---:|---:|---:|---:|:---:|
+| Jena | 6.115 | **99 %** | 99 % | 51 % | 45 % | ✓ |
+| Gütersloh | 5.363 | **99 %** | 99 % | **80 %** | 75 % | ✗ ein Konto |
+| Würzburg | 4.895 | **98 %** | 98 % | 51 % | 28 % | ✓ |
+| Mainz | 6.596 | 95 % | 94 % | **74 %** | 44 % | ✗ ein Konto |
+| Halle (Saale) | 6.787 | 92 % | 91 % | 30 % | 87 % | offen |
+| Heidelberg | 4.879 | 87 % | 83 % | 33 % | 36 % | |
+| Erlangen | **7.943** | 70 % | **63 %** | 36 % | 49 % | |
+| Kaiserslautern | 2.792 | 80 % | 76 % | 46 % | | ✓ |
+| Karlsruhe | 3.504 | 75 % | 68 % | 7 % | | ✓ |
+| Fürth | 3.030 | 72 % | 66 % | 30 % | | ✓ |
+| Osnabrück | 2.808 | 44 % | **38 %** | 47 % | 84 % | ✓ |
+
+<sub>Aus [`results/city_coverage.json`](results/city_coverage.json).</sub>
+
+- **Dichte ist nicht Abdeckung:** Erlangen hat die meisten Bilder je km² und deckt nur 63 % der Wohnstraßen.
+- **Osnabrück erklärt sich selbst:** 38 % der Wohnstraßen abgedeckt → 36 % der Anfragen ohne Referenz.
+- **Gütersloh fällt heraus,** obwohl es perfekt aussieht: ein Konto stellt 80 % der Bilder und 94 % der Fahrten.
+  Anfrage und Referenz wären fast immer dieselbe Kamera — ein gutes Ergebnis wäre nicht von der Kamera zu trennen.
+  Wie viel das ausmacht, zeigt Osnabrück: Nachbar vom selben Konto am selben Tag 0.690 statt 0.556.
+
+**Grenzen.** Keine Zahl aus dieser Tabelle sagt den Recall vorher: Würzburg hat die zweithöchste Abdeckung und den
+niedrigsten Recall. Auch die gerechneten Städte sind nicht frei von großen Konten (Jena, Würzburg: 51 %).
+
+---
+
+### Städtevergleich — `city_comparison.py`
+
+**Frage.** Ist ein Ergebnis aus Osnabrück eines über das Verfahren — oder eines über Osnabrück?
+
+**Kurz.** Das Niveau hängt an der Stadt, der Abstand der Encoder kaum.
+
+**Methode.** Liest nur Versioniertes (Auswertungen, Intervalle, Schwierigkeitsprofil, Stadtabdeckung) und läuft deshalb in
+jedem frischen Klon. Städte lassen sich **nicht gepaart** vergleichen — ihre Anfragen sind verschieden; es bleibt der
+Vergleich unabhängiger Schätzer mit breiten Intervallen.
+
+```bash
+python experiments/city_comparison.py
+```
+
+#### Was sich überträgt
+
+| Stadt | Anfragen | Fahrten | EigenPlaces | MegaLoc | Δ [95 %] | MegaLoc voll | Δ voll [95 %] |
+|---|---:|---:|---:|---:|---|---:|---|
+| Osnabrück | 53.414 | 198 | 0.484 | 0.568 | +0.084 [+0.055, +0.116] | 0.798 | +0.096 [+0.070, +0.122] |
+| Fürth | 24.994 | 239 | 0.473 | 0.549 | +0.076 [+0.057, +0.096] | 0.699 | +0.072 [+0.052, +0.092] |
+| Karlsruhe | 87.181 | 584 | 0.306 | 0.419 | +0.114 [+0.095, +0.134] | 0.640 | +0.132 [+0.111, +0.155] |
+| Kaiserslautern | 58.916 | 249 | **0.552** | **0.651** | +0.099 [+0.079, +0.122] | **0.810** | +0.077 [+0.058, +0.096] |
+| Würzburg | 60.203 | 300 | 0.263 | 0.336 | +0.073 [+0.045, +0.106] | 0.476 | +0.092 [+0.057, +0.130] |
+| Jena | 114.558 | 677 | 0.332 | 0.417 | +0.084 [+0.073, +0.096] | 0.622 | +0.102 [+0.091, +0.113] |
+
+<sub>R@1 bei 25 m, Benchmark; „voll" mit voller Referenz. Δ = MegaLoc − EigenPlaces, gepaart je Stadt.
+Aus `results/<stadt>/evaluation/` und `results/<stadt>/bootstrap_ci{,_fullref}.json`.</sub>
+
+- **Niveau:** MegaLoc 0.336 bis 0.651 — Spanne 0.315.
+- **Abstand:** +0.073 bis +0.114 — Spanne 0.041, rund achtmal enger. Mit voller Referenz 0.061.
+- **MegaLoc vorn in allen sechs Städten und beiden Protokollen;** alle zwölf Intervalle schließen 0 aus.
+- **Gleiche Reihenfolge der Städte** für beide Encoder, bis auf Karlsruhe und Jena (MegaLoc 0.419 gegen 0.417).
+- **Nicht konstant:** Fürth und Karlsruhe überlappen mit voller Referenz nicht.
+
+#### Was die Städte unterscheidet
+
+```text
+Encoder megaloc  |  R@1 bei 25 m  |  6 Staedte
+
+Stadt              Abd  loesbar   Pano   Dubl   Tage   Alle    Hard   voll   ±boot
+----------------------------------------------------------------------------------
+osnabrueck        0.44    63.9%   0.0%  11.8%    317  0.568  -0.025  0.798   0.096
+fuerth            0.72    62.0%   3.0%  39.6%    291  0.549  -0.141  0.699   0.059
+karlsruhe         0.75    70.8%  17.9%  15.4%    408  0.419  -0.057  0.640   0.058
+kaiserslautern    0.80    85.6%   0.3%  35.8%    279  0.651  -0.204  0.810   0.045
+wuerzburg         0.98    45.5%   8.7%  17.9%    627  0.336  -0.034  0.476   0.059
+jena              0.99    52.9%   0.3%  24.1%   2188  0.417  -0.010  0.622   0.033
+```
+
+<sub>Wörtliche Ausgabe von `python experiments/city_comparison.py`, erster Teil.
+Abd = Straßenabdeckung, Pano = Panoramaanteil, Dubl = Anteil der richtigen Top-1-Treffer vom selben Konto innerhalb
+180 Tagen, Tage = Median zwischen Anfrage und richtigem Treffer, Hard = Abschlag durch die Hard-Ground-Truth,
+voll = volle Referenz, ±boot = halbe Breite des 95-%-Intervalls.</sub>
+
+**Würzburg:** 98 % Abdeckung, aber nur 45,5 % lösbar und der niedrigste Recall. Die Abdeckung zählt den Gesamtbestand;
+die Referenz sind 15 % der Fahrten. Eine Straße mit einer einzigen Befahrung liegt meist in `train` — und zählt trotzdem
+als abgedeckt. Dazu sind die Bilder alt (Median 627 Tage zwischen Anfrage und Treffer).
+
+#### Der Hard-Abschlag, exakt zerlegt
+
+Die Hard-Ground-Truth kostet zwischen 0.010 (Jena) und 0.204 (Kaiserslautern). Der Anteil der Treffer vom selben Konto
+allein sagt das nicht vorher (ρ = −0.54). Der Grund: zwei verschiedene Größen heißen beide „Dublette".
+
+| | zählt | Quelle |
+|---|---|---|
+| **d** | Anteil der richtigen **Treffer**, die vom selben Konto innerhalb 180 Tagen stammen | `recall_by_difficulty.py` |
+| **1 − r** | Anteil der lösbaren **Anfragen**, die **nur** durch solche Bilder lösbar waren | die beiden „lösbar"-Zahlen aus 07 |
+
+Der Filter streicht beides zugleich — Zähler und Nenner. Daraus folgt eine Identität:
+
+```math
+\frac{\text{Abschlag}}{\mathrm{R@1}} = -\,\frac{d-(1-r)}{r}
+```
+
+| Stadt | d | 1 − r | d − (1−r) | rel. Abschlag | Rest |
+|---|---:|---:|---:|---:|---:|
+| Kaiserslautern | 35,8 % | 6,6 % | +0.292 | −0.313 | 0.000 |
+| Fürth | 39,6 % | 18,7 % | +0.209 | −0.257 | 0.000 |
+| Karlsruhe | 15,4 % | 2,0 % | +0.134 | −0.137 | 0.000 |
+| Würzburg | 17,9 % | 8,6 % | +0.093 | −0.102 | 0.000 |
+| Osnabrück | 11,8 % | 7,7 % | +0.041 | −0.044 | 0.000 |
+| Jena | 24,1 % | 22,3 % | +0.018 | −0.023 | 0.000 |
+
+- **Jena:** viele Treffer vom selben Konto, aber dort gibt es oft auch keine Alternative — kaum Abschlag.
+- **Kaiserslautern:** braucht solche Bilder nur bei 6,6 % der Anfragen, holt aber 36 % seiner Treffer von dort — Übernutzung, größter Abschlag.
+- **Der Hard-Abschlag misst also, wie sehr ein System Bilder desselben Kontos über das hinaus nutzt, was der Datensatz erzwingt.**
+- Die Spalte `Rest` prüft, dass `recall_by_difficulty.py` und 07 dasselbe messen: 0.000 in allen sechs Städten.
+- Vorab geprüft: Osnabrücks d wurde aus der Auswertungs-JSON vorhergesagt (11,8 %), bevor das Skript dort lief — gemessen 11,8 %.
+
+#### Panoramen
+
+360°-Anfragen sind schwer: R@1 0.06 bis 0.24 gegen 0.35 bis 0.65 auf den übrigen. Exakt zurückgerechnet aus den
+beiden Auswertungen von 07:
+
+| Stadt | Panorama-Anfragen | R@1 Panorama | R@1 übrige | Strafe |
+|---|---:|---:|---:|---:|
+| Karlsruhe | 8.024 | 0.220 | 0.449 | 0.229 |
+| Würzburg | 2.412 | 0.170 | 0.352 | 0.182 |
+| Kaiserslautern | 253 | 0.055 | 0.654 | 0.599 |
+| Fürth | 192 | 0.208 | 0.553 | 0.345 |
+| Jena | 85 | 0.235 | 0.417 | 0.182 |
+
+Belastbar nur in Karlsruhe und Würzburg (vierstellige Fallzahlen).
+
+> [!NOTE]
+> **Hier stand bis zum 18.09. ein falscher Befund.** Die Strafe war mit dem Panoramaanteil *aller Bilder*
+> statt der *lösbaren Anfragen* gerechnet. Karlsruhe lag dadurch bei 0.168 statt 0.229, und die scheinbare
+> Übereinstimmung mit Würzburg (0.184) war Zufall.
+
+#### Eine Vorhersage, die nicht hielt
+
+Vermutung: Straßenabdeckung sagt die Messunsicherheit vorher (lückenhafte Abdeckung → manche Fahrten laufen ins Leere
+→ breite Intervalle).
+
+![MegaLoc: halbe Breite des 95-%-Intervalls gegen Straßenabdeckung](results/city_comparison.png)
+
+| Städte | ρ | p (exakt) |
+|---:|---:|---:|
+| 4 | −1.00 | 0.083 |
+| 5 | −0.40 | 0.517 |
+| 6 | −0.83 | 0.058 |
+
+- Für die fünfte Stadt war vorab ±boot ≤ 0.045 vorhergesagt — gemessen 0.059.
+- **Bei so wenigen Städten schwankt eine Rangkorrelation wild.** Mit vier Städten ist selbst perfekte Ordnung nicht
+  signifikant (p = 2/4! = 0.083) — unabhängig von den Daten.
+- Nicht entscheidbar: die Zahl der Fahrten liefert dasselbe ρ = −0.83 und ist sogar der plausiblere Kandidat, weil der
+  Bootstrap über Fahrten zieht.
+
+**Grenzen.** n = 6. Fünf Städte nur mit MegaLoc und EigenPlaces. `scipy.stats.spearmanr` liefert bei perfekter
+Monotonie p = 0; das Skript zählt deshalb die Permutationen exakt (bis n = 8).
+
+---
+
+## Kosten
+
+### Laufzeit und Speicher — `timing.py`
+
+**Frage.** Was kostet welcher Encoder — beim Encodieren, bei der Suche, im Speicher?
+
+**Kurz.** **Bester Kompromiss: MegaLoc auf 512 gewhitent** — 0.028 weniger R@1 als MegaLoc, aber ein 16,5-mal
+kleinerer Index und eine viermal schnellere Suche.
+
+**Methode.** Encodieren: 200 feste Bilder, inklusive Laden, nach einem Aufwärmlauf. Suche: exakter FAISS-Index über die
+48.321 Referenzbilder, 1.000 Anfragen in Blöcken zu 256, Median aus fünf Runden.
+
+```bash
+python experiments/timing.py --skip-search
+```
+
+```bash
+python experiments/timing.py --skip-encode
+```
+
+![Encodier-Durchsatz und Suchzeit gegen Recall@1](results/osnabrueck/timing.png)
+
+| Dim | Encoder | Suche je Anfrage | Index |
+|---:|---|---:|---:|
+| 512 | alle 512er Varianten, CLIP | 0,17–0,19 ms | 94 MB |
+| 1024 | Verkettung EigenPlaces + MegaLoc | 0,11 ms | 189 MB |
+| 2048 | EigenPlaces | 0,21 ms | 378 MB |
+| 4096 | AnyLoc, MixVPR | 0,44–0,45 ms | 755 MB |
+| 8448 | MegaLoc | 0,74 ms | 1.557 MB |
+
+| Encoder | Bildgröße | Bilder/s | 332.868 Bilder |
+|---|---:|---:|---:|
+| CLIP | 224 px | 178,6 | 31 min |
+| MixVPR | 320 px | 77,9 | 71 min |
+| EigenPlaces | 512 px | 33,8 | 2,7 h |
+| MegaLoc | 322 px | 26,0 | 3,6 h |
+| AnyLoc (fp16, GPU) | 322 px | 14,6 | 6,3 h |
+
+<sub>Aus [`results/osnabrueck/timing.json`](results/osnabrueck/timing.json). Suche auf der CPU mit 8 Threads;
+Encodieren auf Apple M1 Pro (MPS), AnyLoc auf einer CUDA-GPU.</sub>
+
+- **Index linear, Suche nicht:** von 512 auf 8448 Dimensionen 16,5-mal mehr Speicher, aber nur 4-mal langsamer.
+- **Bei 48.321 Referenzbildern egal** (10 s gegen 39 s für alle Anfragen); bei einer Million wären es 32 GB gegen 2 GB Index.
+- **Encodieren hängt am Netz und an der Bildgröße,** nicht an der PCA: die Projektion ist ein Matrixprodukt.
+
+**Arbeitsspeicher.** Alles folgt aus `Bilder × Dimension × 4 Byte`. MegaLoc: Osnabrück 11,2 GB, Jena 23,6 GB.
+
+| Schritt (MegaLoc) | Osnabrück | Jena |
+|---|---:|---:|
+| 04, Embeddings schreiben | 22,5 → entfällt | 47,2 → entfällt |
+| 05, Adapter | 7,8 GB | 16,2 GB |
+| 06, Suche | 5,1 GB | 11,0 GB |
+| `database_density.py`, letzte Stufe | 11,2 → 6 GB | 23,6 → 8,3 GB |
+
+Die Pfeile sind zwei Korrekturen nach einem Absturz in Jena: 04 schreibt jetzt direkt auf die Platte (memmap) statt
+erst in den Speicher, und die Suche über große Referenzen läuft blockweise.
+
+---
+
+## Werkzeuge
+
+### Beispielbilder — `beispielbilder.py`
+
+Kontaktabzug je Szenentyp, dann die Auswahl für das README.
+
+```bash
+python experiments/beispielbilder.py --szenen
+```
+
+Jede gespeicherte Abbildung mit Mapillary-Bildern trägt die Urheber je Bild in
+`results/<stadt>/figures/demo/QUELLEN.md` ein ([`src/quellen.py`](../src/quellen.py)).
