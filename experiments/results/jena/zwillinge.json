@@ -1,0 +1,8 @@
+{
+  "fenster_s": 60.0,
+  "schwelle_m": 25.0,
+  "encoder": {
+    "megaloc": {},
+    "eigenplaces": {}
+  }
+}
