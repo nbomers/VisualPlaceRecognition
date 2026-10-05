@@ -8,18 +8,18 @@ Erzeugt von `src/quellen.py` beim Speichern der Abbildung — nicht von Hand än
 
 [1391533835065315](https://www.mapillary.com/app/?pKey=1391533835065315) · [1452480101753239](https://www.mapillary.com/app/?pKey=1452480101753239) · [3796249137169638](https://www.mapillary.com/app/?pKey=3796249137169638) · [1120224498685697](https://www.mapillary.com/app/?pKey=1120224498685697) · [500860001925774](https://www.mapillary.com/app/?pKey=500860001925774) · [775519696297537](https://www.mapillary.com/app/?pKey=775519696297537)
 
-## eigenplaces_erfolg.png
+## megaloc_erfolg.png
 
-[117568923689680](https://www.mapillary.com/app/?pKey=117568923689680) · [489059405624874](https://www.mapillary.com/app/?pKey=489059405624874) · [3023907017849105](https://www.mapillary.com/app/?pKey=3023907017849105) · [1352783075120316](https://www.mapillary.com/app/?pKey=1352783075120316) · [769378390636711](https://www.mapillary.com/app/?pKey=769378390636711) · [1412320422469417](https://www.mapillary.com/app/?pKey=1412320422469417)
+[818428397929445](https://www.mapillary.com/app/?pKey=818428397929445) · [1224292126099756](https://www.mapillary.com/app/?pKey=1224292126099756) · [765892132666297](https://www.mapillary.com/app/?pKey=765892132666297) · [543473665424376](https://www.mapillary.com/app/?pKey=543473665424376) · [1276101577443446](https://www.mapillary.com/app/?pKey=1276101577443446) · [1934863220679282](https://www.mapillary.com/app/?pKey=1934863220679282)
 
-## eigenplaces_fehlschlag.png
+## megaloc_fehlschlag.png
 
-[2297708647051670](https://www.mapillary.com/app/?pKey=2297708647051670) · [1248684639035441](https://www.mapillary.com/app/?pKey=1248684639035441) · [1271391383681728](https://www.mapillary.com/app/?pKey=1271391383681728) · [415111894109548](https://www.mapillary.com/app/?pKey=415111894109548) · [1152020439074420](https://www.mapillary.com/app/?pKey=1152020439074420) · [177777004804124](https://www.mapillary.com/app/?pKey=177777004804124)
+[175474135068588](https://www.mapillary.com/app/?pKey=175474135068588) · [194560133013234](https://www.mapillary.com/app/?pKey=194560133013234) · [1484651669039491](https://www.mapillary.com/app/?pKey=1484651669039491) · [9054996431242373](https://www.mapillary.com/app/?pKey=9054996431242373) · [209563175109463](https://www.mapillary.com/app/?pKey=209563175109463) · [548156383669583](https://www.mapillary.com/app/?pKey=548156383669583)
 
-## eigenplaces_zwei_gruppen.png
+## megaloc_zwei_gruppen.png
 
-[682800581526166](https://www.mapillary.com/app/?pKey=682800581526166) · [738320475453964](https://www.mapillary.com/app/?pKey=738320475453964) · [3566992086773645](https://www.mapillary.com/app/?pKey=3566992086773645) · [27687638237524823](https://www.mapillary.com/app/?pKey=27687638237524823) · [4141475506129634](https://www.mapillary.com/app/?pKey=4141475506129634) · [2250004962419214](https://www.mapillary.com/app/?pKey=2250004962419214)
+[301720214918447](https://www.mapillary.com/app/?pKey=301720214918447) · [476037800282180](https://www.mapillary.com/app/?pKey=476037800282180) · [494054531718363](https://www.mapillary.com/app/?pKey=494054531718363) · [933575271772947](https://www.mapillary.com/app/?pKey=933575271772947) · [1550533709936237](https://www.mapillary.com/app/?pKey=1550533709936237) · [1007369718617800](https://www.mapillary.com/app/?pKey=1007369718617800)
 
-## vergleich_query10013.png
+## vergleich_encoder.png
 
-[117568923689680](https://www.mapillary.com/app/?pKey=117568923689680) · [1412320422469417](https://www.mapillary.com/app/?pKey=1412320422469417) · [1352783075120316](https://www.mapillary.com/app/?pKey=1352783075120316) · [489059405624874](https://www.mapillary.com/app/?pKey=489059405624874) · [3023907017849105](https://www.mapillary.com/app/?pKey=3023907017849105) · [769378390636711](https://www.mapillary.com/app/?pKey=769378390636711) · [572293727069823](https://www.mapillary.com/app/?pKey=572293727069823)
+[818428397929445](https://www.mapillary.com/app/?pKey=818428397929445) · [822513733839226](https://www.mapillary.com/app/?pKey=822513733839226) · [1142586807391743](https://www.mapillary.com/app/?pKey=1142586807391743) · [1256211662982881](https://www.mapillary.com/app/?pKey=1256211662982881) · [1483362049547647](https://www.mapillary.com/app/?pKey=1483362049547647) · [1907911393400738](https://www.mapillary.com/app/?pKey=1907911393400738) · [2026975584734445](https://www.mapillary.com/app/?pKey=2026975584734445) · [1489345455691624](https://www.mapillary.com/app/?pKey=1489345455691624) · [764347446086061](https://www.mapillary.com/app/?pKey=764347446086061) · [1944457009461099](https://www.mapillary.com/app/?pKey=1944457009461099) · [610589525423358](https://www.mapillary.com/app/?pKey=610589525423358) · [1276101577443446](https://www.mapillary.com/app/?pKey=1276101577443446) · [1224292126099756](https://www.mapillary.com/app/?pKey=1224292126099756) · [765892132666297](https://www.mapillary.com/app/?pKey=765892132666297) · [1934863220679282](https://www.mapillary.com/app/?pKey=1934863220679282) · [543473665424376](https://www.mapillary.com/app/?pKey=543473665424376)
