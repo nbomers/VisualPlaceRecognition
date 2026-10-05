@@ -13,6 +13,10 @@
       "dublette": 0.11802331579490354,
       "median_tage": 317.1010070543981,
       "n_korrekt": 19386,
+      "alle_ohne_zw": 0.5503228142158934,
+      "zwilling_alle": 0.034148350619687726,
+      "voll_ohne_zw": 0.6897071129707113,
+      "zwilling_voll": 0.2815741191447935,
       "halbbreite": 0.0957945447654627,
       "n_sequenzen": 198,
       "halbbreite_voll": 0.05487033083873116,
@@ -21,7 +25,9 @@
       "seit_2022": 0.84,
       "hard_abschlag": -0.025114143097187402,
       "uebernutzung": 0.040777771704847296,
-      "rel_abschlag": -0.044191357130468206
+      "rel_abschlag": -0.044191357130468206,
+      "sprung": 0.2293168625554899,
+      "sprung_ohne_zw": 0.13938429875481795
     },
     {
       "stadt": "fuerth",
@@ -36,6 +42,10 @@
       "dublette": 0.3960756667841617,
       "median_tage": 291.2379513888889,
       "n_korrekt": 8511,
+      "alle_ohne_zw": 0.5481615743138271,
+      "zwilling_alle": 0.009042170120828998,
+      "voll_ohne_zw": 0.6918789808917197,
+      "zwilling_voll": 0.06021445146835241,
       "halbbreite": 0.05893034079459761,
       "n_sequenzen": 239,
       "halbbreite_voll": 0.06142219242918112,
@@ -44,7 +54,9 @@
       "seit_2022": 0.26,
       "hard_abschlag": -0.14132823121681753,
       "uebernutzung": 0.2092773702297676,
-      "rel_abschlag": -0.25734989159890004
+      "rel_abschlag": -0.25734989159890004,
+      "sprung": 0.14944979556501448,
+      "sprung_ohne_zw": 0.14371740657789267
     },
     {
       "stadt": "karlsruhe",
@@ -59,6 +71,10 @@
       "dublette": 0.15385209798315433,
       "median_tage": 407.74214699074076,
       "n_korrekt": 25882,
+      "alle_ohne_zw": 0.394045164537234,
+      "zwilling_alle": 0.04729241463162845,
+      "voll_ohne_zw": 0.5773067482437154,
+      "zwilling_voll": 0.18375563482868973,
       "halbbreite": 0.05761253130235866,
       "n_sequenzen": 584,
       "halbbreite_voll": 0.04967717597590954,
@@ -67,7 +83,9 @@
       "seit_2022": 0.72,
       "hard_abschlag": -0.057346750385576295,
       "uebernutzung": 0.13405428837911057,
-      "rel_abschlag": -0.1367618739200723
+      "rel_abschlag": -0.1367618739200723,
+      "sprung": 0.2201848231872935,
+      "sprung_ohne_zw": 0.18326158370648143
     },
     {
       "stadt": "kaiserslautern",
@@ -82,6 +100,10 @@
       "dublette": 0.3578998660007309,
       "median_tage": 278.8916447511574,
       "n_korrekt": 32836,
+      "alle_ohne_zw": 0.6474056135614753,
+      "zwilling_alle": 0.025561816823952747,
+      "voll_ohne_zw": 0.806706289363967,
+      "zwilling_voll": 0.07405458619050852,
       "halbbreite": 0.045406087416805296,
       "n_sequenzen": 249,
       "halbbreite_voll": 0.047613809049980305,
@@ -90,7 +112,9 @@
       "seit_2022": 0.29,
       "hard_abschlag": -0.2036492276142815,
       "uebernutzung": 0.2922945684076464,
-      "rel_abschlag": -0.31281702224415675
+      "rel_abschlag": -0.31281702224415675,
+      "sprung": 0.1590904859770289,
+      "sprung_ohne_zw": 0.15930067580249174
     },
     {
       "stadt": "wuerzburg",
@@ -105,6 +129,10 @@
       "dublette": 0.17891304347826087,
       "median_tage": 626.9545186689816,
       "n_korrekt": 9200,
+      "alle_ohne_zw": 0.32283320528299125,
+      "zwilling_alle": 0.014285002408517848,
+      "voll_ohne_zw": 0.42552566795401675,
+      "zwilling_voll": 0.07027888975632443,
       "halbbreite": 0.05857318768767242,
       "n_sequenzen": 300,
       "halbbreite_voll": 0.061408783350854534,
@@ -113,7 +141,9 @@
       "seit_2022": 0.28,
       "hard_abschlag": -0.03424477114089086,
       "uebernutzung": 0.09326861200840242,
-      "rel_abschlag": -0.1020047509070623
+      "rel_abschlag": -0.1020047509070623,
+      "sprung": 0.14064091607510354,
+      "sprung_ohne_zw": 0.1026924626710255
     },
     {
       "stadt": "jena",
@@ -128,6 +158,10 @@
       "dublette": 0.2414885193982581,
       "median_tage": 2187.7785254166665,
       "n_korrekt": 25260,
+      "alle_ohne_zw": 0.4252486477054615,
+      "zwilling_alle": 0.06368826271408369,
+      "voll_ohne_zw": 0.6377196085367292,
+      "zwilling_voll": 0.35826393617207003,
       "halbbreite": 0.03349182092012104,
       "n_sequenzen": 677,
       "halbbreite_voll": 0.035283271239601954,
@@ -136,7 +170,9 @@
       "seit_2022": 0.45,
       "hard_abschlag": -0.009723962412477694,
       "uebernutzung": 0.018124449655751107,
-      "rel_abschlag": -0.023337124834981602
+      "rel_abschlag": -0.023337124834981602,
+      "sprung": 0.20564441544761464,
+      "sprung_ohne_zw": 0.21247096083126765
     }
   ],
   "befunde": {
@@ -168,6 +204,18 @@
       "n": 6,
       "rho": 0.48571428571428577,
       "p": 0.35555555555555557,
+      "art": "exakt"
+    },
+    "zwillinge_sprung": {
+      "n": 6,
+      "rho": 0.7714285714285715,
+      "p": 0.10277777777777777,
+      "art": "exakt"
+    },
+    "zwillinge_sprung_ohne": {
+      "n": 6,
+      "rho": 0.5428571428571429,
+      "p": 0.2972222222222222,
       "art": "exakt"
     }
   },
