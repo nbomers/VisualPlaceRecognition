@@ -16,8 +16,8 @@ Die Treppe laeuft ueber Sequenzen, nicht ueber Einzelbilder, so wie der
 Split selbst. Ergebnis: eine Tabelle und eine Kurve unter
 experiments/results/<stadt>/ (database_density_<method>.json und .png).
 
-    python experiments/database_density.py                     # eigenplaces
-    python experiments/database_density.py --method megaloc
+    python experiments/database_density.py                     # megaloc
+    python experiments/database_density.py --method eigenplaces
     python experiments/database_density.py --fractions 0,0.5,1
 """
 
@@ -40,8 +40,8 @@ def _args():
         description="Recall gegen Datenbankdichte.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--method", default="eigenplaces",
-                    help="Baseline-Encoder (Standard: eigenplaces)")
+    ap.add_argument("--method", default="megaloc",
+                    help="Baseline-Encoder (Standard: megaloc)")
     ap.add_argument("--fractions", default="0,0.25,0.5,0.75,1.0",
                     help="Anteil der train-Sequenzen, der dazukommt")
     ap.add_argument("--radius", type=float,
