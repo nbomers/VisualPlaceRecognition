@@ -78,5 +78,19 @@
         }
       }
     }
+  },
+  "anteile": {
+    "benchmark": {
+      "n_anfragen": 87185,
+      "anteil_anfragen_mit_zwilling": 0.04729024488157366,
+      "anteil_anfragen_mit_kopie": 0.045512416126627285,
+      "anteil_kopie_unter_zwillingen": 0.9624060150375939
+    },
+    "voll": {
+      "n_anfragen": 87185,
+      "anteil_anfragen_mit_zwilling": 0.18374720422090957,
+      "anteil_anfragen_mit_kopie": 0.17923954808740036,
+      "anteil_kopie_unter_zwillingen": 0.9754681647940074
+    }
   }
 }

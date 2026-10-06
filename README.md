@@ -46,13 +46,23 @@ MegaLoc; grün = höchstens 25 m vom echten Ort. Bilder von
 
 ## Inhalt
 
-| Verstehen | Benutzen | Nachprüfen |
-|---|---|---|
-| [Begriffe in einem Satz](#begriffe-in-einem-satz) | [Schnellstart](#schnellstart) | [Ergebnisse im Detail](#ergebnisse) |
-| [Ergebnisse auf einen Blick](#ergebnisse-auf-einen-blick) | [Installation](#installation) | [Reproduzierbarkeit](#reproduzierbarkeit) |
-| [Das Projekt](#das-projekt) | [Nutzung](#nutzung) | [Grenzen](#grenzen-und-nächste-schritte) |
-| [So funktioniert es](#so-funktioniert-es) | [Projektstruktur](#projektstruktur) | [Nebenuntersuchungen](experiments/README.md) |
-| [Daten](#daten) | [Befehlsreferenz](#befehlsreferenz) | [Lizenz](#lizenz) · [KI-Nutzung](#ki-nutzung) |
+1. [Begriffe in einem Satz](#begriffe-in-einem-satz)
+2. [Ergebnisse auf einen Blick](#ergebnisse-auf-einen-blick)
+3. [Schnellstart](#schnellstart)
+4. [Das Projekt](#das-projekt)
+5. [So funktioniert es](#so-funktioniert-es)
+6. [Daten](#daten)
+7. [Installation](#installation)
+8. [Nutzung](#nutzung)
+9. [Projektstruktur](#projektstruktur)
+10. [Ergebnisse im Detail](#ergebnisse) — mit den [Zwillingsfahrten](#zwillingsfahrten), dem Problem im Datensatz
+11. [Reproduzierbarkeit](#reproduzierbarkeit)
+12. [Grenzen und mögliche Erweiterungen](#grenzen-und-mögliche-erweiterungen)
+13. [Befehlsreferenz](#befehlsreferenz)
+14. [Fehlerbehebung](#fehlerbehebung)
+15. [Team](#team) · [KI-Nutzung](#ki-nutzung) · [Credits](#credits) · [Lizenz](#lizenz)
+
+**Nebenuntersuchungen:** alle 20 Experimente mit Methode und Abbildungen in [`experiments/README.md`](experiments/README.md).
 
 ---
 
@@ -84,27 +94,38 @@ Fünf Encoder, dieselben 53.414 Anfragen aus Osnabrück, R@1 bei 25 m:
 |---|:---:|---:|---:|---:|---:|---:|
 | **MegaLoc** | ja | 8448 | **0.798** <sub>[0.739, 0.848]</sub> | **0.690** | **0.523** | **0.568** <sub>[0.475, 0.666]</sub> |
 | **EigenPlaces** | ja | 2048 | 0.701 <sub>[0.630, 0.765]</sub> | 0.593 | 0.427 | 0.484 <sub>[0.405, 0.574]</sub> |
-| MixVPR | ja | 4096 | 0.653 <sub>[0.575, 0.724]</sub> | — | 0.373 | 0.426 <sub>[0.354, 0.509]</sub> |
-| AnyLoc | nein | 4096 | 0.435 <sub>[0.343, 0.533]</sub> | — | 0.148 | 0.204 <sub>[0.153, 0.265]</sub> |
-| CLIP | nein | 512 | 0.232 <sub>[0.144, 0.349]</sub> | — | 0.024 | 0.073 <sub>[0.044, 0.108]</sub> |
+| MixVPR | ja | 4096 | 0.653 <sub>[0.575, 0.724]</sub> | 0.533 | 0.373 | 0.426 <sub>[0.354, 0.509]</sub> |
+| AnyLoc | nein | 4096 | 0.435 <sub>[0.343, 0.533]</sub> | 0.273 | 0.148 | 0.204 <sub>[0.153, 0.265]</sub> |
+| CLIP | nein | 512 | 0.232 <sub>[0.144, 0.349]</sub> | 0.071 | 0.024 | 0.073 <sub>[0.044, 0.108]</sub> |
 | *Raten* | | | *0.0005* | | | *0.0006* |
 
 <sub>Klein dahinter das 95-%-Intervall. Die drei „voll"-Spalten nutzen dieselbe Referenz und zählen
-verschieden streng: alle Treffer; ohne doppelt hochgeladene Fahrten (gemessen für die zwei stärksten
-Encoder); Hard = nur Treffer von einem anderen Konto oder mit mehr als 180 Tagen Abstand. Warum das
+verschieden streng: alle Treffer; ohne doppelt hochgeladene Fahrten; Hard = nur Treffer von einem anderen Konto oder mit mehr als 180 Tagen Abstand. Warum das
 nötig ist: [Zwillingsfahrten](#zwillingsfahrten). Varianten mit
 PCA, Whitening, Adapter und Nachbearbeitung: [Benchmark-Protokoll](#benchmark-protokoll).</sub>
+
+> [!IMPORTANT]
+> **Ein Problem im Datensatz, das wir selbst gefunden haben.** Mapillary führt manche Fahrt doppelt: als zwei
+> Sequenzen desselben Kontos, Sekundenbruchteile auseinander. Unser Split trennt nach Sequenzen und sah das nicht.
+> Mit voller Referenz hatten 28 % der Osnabrücker Anfragen eine fast identische Kopie; ohne sie findet MegaLoc
+> **0.690 statt 0.798**. In Jena sind die „Doppelten" dagegen meist keine Kopien, sondern eine zweite Kamera,
+> die in eine andere Richtung schaut. Messung, Erklärung und Folgen: [Zwillingsfahrten](#zwillingsfahrten).
 
 ![Recall@1 bei 25 m je Variante, mit 95-%-Intervall](results/osnabrueck/figures/evaluation/vergleich_r1_25m.png)
 
 > [!NOTE]
-> **So liest man das Balkendiagramm.**
-> - Jeder Balken ist der R@1 einer Variante im Benchmark-Protokoll; die Farbe ist der Encoder.
-> - `+linear` = mit Adapter, `+hmm30-25` = Fahrt als Pfad gelesen, `+gv20` = geometrisch nachgeprüft.
-> - Der **schwarze Strich** ist das 95-%-Intervall: dort liegt der wahre Wert mit 95 % Sicherheit.
->   Er ist breit (±0.10), weil die Stichprobe aus 198 Fahrten besteht, nicht aus 53.414 unabhängigen Bildern.
-> - Überlappende Striche heißen **nicht** „kein Unterschied" — das entscheidet die
->   [gepaarte Differenz](#unsicherheit).
+> **Lesehilfe zum Diagramm**
+> - **Ein Balken** ist der R@1 bei 25 m einer Variante im Benchmark-Protokoll, also gegen die 48.321
+>   Referenzbilder. Die Farbe kennzeichnet den Encoder, die Beschriftung die Variante.
+> - **Varianten:** ohne Zusatz der Encoder wie veröffentlicht; `+linear` mit nachtrainiertem Adapter;
+>   `+hmm30-25` die Trefferliste als Pfad der Fahrt umsortiert; `+gv20` die 20 besten Treffer geometrisch
+>   nachgeprüft.
+> - **Der Fehlerbalken** ist das 95-%-Intervall aus dem Sequenz-Bootstrap. Er ist mit rund ±0.10 breit,
+>   weil die 53.414 Anfragen aus nur 198 Fahrten stammen und Bilder einer Fahrt gemeinsam gelingen oder
+>   scheitern.
+> - **Zwei Balken vergleichen:** Überlappende Fehlerbalken bedeuten *nicht*, dass kein Unterschied besteht.
+>   Ob eine Variante besser ist, entscheidet die [gepaarte Differenz](#unsicherheit) auf denselben Anfragen;
+>   ihr Intervall ist meist um ein Vielfaches enger.
 
 **Acht Befunde.** Jeder ist gemessen; „belegt" heißt, das Intervall schließt 0 aus.
 
@@ -184,13 +205,13 @@ für sie ausgesucht hat? Die Forschung misst auf kuratierten Datensätzen
 
 **Was am Ende stehen sollte — und steht:**
 
-- [x] Ein Split ohne Leakage zwischen den Sequenzen, im Git und per Test nachgerechnet
-  (mit einer Lücke: [Zwillingsfahrten](#zwillingsfahrten))
-- [x] Jede Zeile unter denselben Bedingungen — Fingerabdrücke prüfen jedes Zwischenergebnis
-- [x] Drei Ground-Truth-Definitionen und eine Zufallsbasis
-- [x] Unterschiede statistisch geprüft — 39 gepaarte Vergleiche mit Intervall
-- [x] Ergebnisse erklärt, nicht nur berichtet — samt sechs Negativergebnissen
-- [x] Ein System zum Vorführen: [`locate.py`](locate.py) und [`demo/demo.ipynb`](demo/demo.ipynb)
+- Ein Split ohne Leakage zwischen den Sequenzen, im Git und per Test nachgerechnet —
+  mit einer Lücke, die wir selbst gefunden und vermessen haben: [Zwillingsfahrten](#zwillingsfahrten)
+- Jede Zeile unter denselben Bedingungen: Fingerabdrücke prüfen jedes Zwischenergebnis
+- Drei Ground-Truth-Definitionen und eine Zufallsbasis
+- Unterschiede statistisch geprüft: 39 gepaarte Vergleiche mit Intervall
+- Ergebnisse erklärt, nicht nur berichtet, samt sechs Negativergebnissen
+- Ein System zum Vorführen: [`locate.py`](locate.py) und [`demo/demo.ipynb`](demo/demo.ipynb)
 
 ---
 
@@ -298,11 +319,13 @@ Whitening reagiert.
 | **lösbar** | 63,9 % der Anfragen haben ein Referenzbild im Umkreis von 25 m |
 
 <p align="center">
-  <img src="results/osnabrueck/figures/dataset/coverage_map.png" width="49%" alt="Abdeckung des Stadtgebiets">
-  <img src="results/osnabrueck/figures/dataset/images_per_year.png" width="49%" alt="Bilder je Jahr">
+  <img src="results/osnabrueck/figures/dataset/coverage_map.png" width="80%" alt="Abdeckung des Stadtgebiets">
+</p>
+<p align="center">
+  <img src="results/osnabrueck/figures/dataset/images_per_year.png" width="80%" alt="Bilder je Jahr">
 </p>
 
-<sub>Aus `02_dataset_audit`: links die räumliche Abdeckung, rechts die
+<sub>Aus `02_dataset_audit`: oben die räumliche Abdeckung, unten die
 Aufnahmejahre. Weitere Kennzahlen in
 [`results/osnabrueck/dataset_audit.json`](results/osnabrueck/dataset_audit.json).</sub>
 
@@ -431,7 +454,16 @@ bei Standardeinstellung `~/Downloads/mapillary/test`:
 
 ```bash
 python locate.py ~/Downloads/mapillary/test
+python locate.py ~/Downloads/mapillary/test --referenz alle
 ```
+
+**Gegen welche Bilder gesucht wird.** Standard ist die Referenz der Auswertung
+(48.321 Bilder, 15 % der Fahrten). Eigene Fotos gehören zu keinem Split, also
+darf es mehr sein: `--referenz alle` sucht gegen alle 332.868 Bilder, `voll`
+gegen alles außer den Anfragen. Mehr Referenz heißt öfter ein Bild in der Nähe
+(MegaLoc im Benchmark: 0.568 → 0.690 ohne Kopien). Was nicht in den Speicher
+passt, wird blockweise von der Platte gelesen. Die cos-Schwelle unten ist gegen
+die Standard-Referenz gemessen.
 
 `--method` wählt einen anderen Encoder, `--k` die Zahl der Treffer, `--json`
 gibt alles maschinenlesbar aus. Dasselbe mit Bildern und Karte:
@@ -444,6 +476,7 @@ gibt alles maschinenlesbar aus. Dasselbe mit Bildern und Karte:
   Referenzbilder. Das eigene Foto braucht dafür kein GPS.
 - **Streuung** = der größte dieser Abstände. Sie misst, ob sich die Treffer einig sind — **nicht**, ob sie
   stimmen: fünf Bilder derselben Fahrt liegen immer nah beieinander, auch am falschen Ort.
+- **cos über 0.95** heißt fast dasselbe Bild. Liegt das Foto selbst im Datensatz, findet `--referenz alle` es wieder.
 
 ### Was die Demo zeigt
 
@@ -459,7 +492,7 @@ gibt alles maschinenlesbar aus. Dasselbe mit Bildern und Karte:
 Referenzbilder in der Nähe gibt. Unten die Treffer auf dem Straßennetz: links
 liegt der beste Treffer richtig, andere über 200 m weit weg — zwei Gruppen; rechts liegt
 kein Treffer näher als 200 m. Als Beispiele gelten nur Treffer von einem anderen
-Konto, und Anfragen an der Autobahn werden übersprungen.</sub>
+Konto, und nur langsame Fahrten abseits der Autobahn.</sub>
 
 Dasselbe Anfragebild durch alle fünf Encoder:
 
@@ -468,16 +501,6 @@ Dasselbe Anfragebild durch alle fünf Encoder:
 <sub>Eine Zeile je Encoder; grün = höchstens 25 m daneben. Bilder von
 [Mapillary](https://www.mapillary.com), CC BY-SA 4.0, Urheber je Bild in
 [QUELLEN.md](results/osnabrueck/figures/demo/QUELLEN.md).</sub>
-
-### Eine andere Stadt
-
-`VPR_CITY` setzt die Stadt für einen Aufruf, ohne `config.yaml` zu ändern:
-
-```bash
-VPR_CITY="Jena, Germany" python run.py --bestand
-```
-
-Der ganze Weg für eine neue Stadt: [Befehlsreferenz → Weitere Städte](#befehlsreferenz).
 
 ---
 
@@ -645,7 +668,9 @@ und [Verkettung](experiments/README.md#verkettung--concat_embeddingspy).</sub>
 **Wie oft?** Zwilling heißt hier: selbes Konto, höchstens 60 s Abstand, im
 Umkreis von 25 m. In Osnabrück haben ihn **3,4 %** der Anfragen im
 Benchmark und **28,2 %** mit voller Referenz — dort liegen in `train` viele
-Kopien.
+Kopien. 97 % dieser Zwillinge schauen in dieselbe Richtung wie die Anfrage.
+Das ist nicht überall so: In Jena sind es nur 12 %, dort laden Kameras mit
+mehreren Blickrichtungen zeitgleiche Sequenzen hoch ([Sechs Städte](#sechs-städte)).
 
 **Was es ausmacht.** `experiments/zwillinge.py` nimmt die Kopien aus der
 Trefferliste, als wären sie nie hochgeladen worden — die nächsten Kandidaten
@@ -655,36 +680,21 @@ rücken auf:
 |---|---:|---:|---:|---:|
 | MegaLoc | 0.568 | 0.550 | 0.798 | **0.690** |
 | EigenPlaces | 0.484 | 0.464 | 0.701 | **0.593** |
-| *Top-1 ist ein Zwilling* | | *4,1 %* | | *18,3 %* |
+| MixVPR | 0.426 | 0.409 | 0.653 | 0.533 |
+| AnyLoc | 0.204 | 0.167 | 0.435 | 0.273 |
+| CLIP | 0.073 | 0.031 | 0.232 | 0.071 |
 
 <sub>Aus `experiments/results/osnabrueck/zwillinge.json`. „Ohne Zwillinge" zählt
 nur Anfragen, die auch ohne Kopie lösbar sind (Benchmark 33.146 statt 34.112,
 voll 47.800 statt 48.177). Ohne Intervall.</sub>
 
-- **Im Benchmark fast nichts** (−0.02): die Encoder-Vergleiche und gepaarten Differenzen halten.
-- **Mit voller Referenz −0.108**, bei beiden Encodern gleich. Fast jeder fünfte erste Treffer war eine Kopie.
-- **Der Abstand der Encoder bleibt:** MegaLoc − EigenPlaces +0.097 mit, +0.097 ohne Zwillinge.
+- **Im Benchmark wenig** (MegaLoc −0.018): die Encoder-Vergleiche und gepaarten Differenzen halten.
+- **Mit voller Referenz viel:** MegaLoc −0.108; bei 18 % aller Anfragen war der erste Treffer ein Zwilling.
+- **Die Rangfolge bleibt**, und der Abstand MegaLoc − EigenPlaces ist mit und ohne Zwillinge +0.097.
+- **Schwache Encoder leben von Kopien:** CLIP fällt mit voller Referenz von 0.232 auf 0.071, AnyLoc von 0.435 auf 0.273.
 - **Mehr Referenz hilft trotzdem:** 0.550 → 0.690 statt 0.568 → 0.798.
-
-Die Hard-Ground-Truth ist noch strenger: Sie zählt Treffer vom selben Konto
-innerhalb von 180 Tagen gar nicht. Damit fallen auch echte Wiederholungsfahrten
-desselben Fotografen weg — sie ist die Untergrenze, und es gibt sie für alle
-fünf Encoder:
-
-| R@1 bei 25 m | Benchmark | Benchmark, Hard | volle Referenz | volle Referenz, Hard |
-|---|---:|---:|---:|---:|
-| MegaLoc | 0.568 | 0.543 | 0.798 | **0.523** |
-| EigenPlaces | 0.484 | 0.456 | 0.701 | **0.427** |
-| MixVPR | 0.426 | 0.394 | 0.653 | 0.373 |
-| AnyLoc | 0.204 | 0.148 | 0.435 | 0.148 |
-| CLIP | 0.073 | 0.024 | 0.232 | 0.024 |
-
-<sub>Auszug aus `results/osnabrueck/evaluation/<encoder>{,_fullref}.json`,
-Auswertungen „Alle Queries" und „Hard".</sub>
-
-- **Die Rangfolge bleibt auch unter Hard.**
-- **Schwache Encoder leben von Kopien:** CLIP fällt von 0.073 auf 0.024 — zwei Drittel seiner Treffer sind fast identische Bilder.
-- **Ehrlich zu berichten ist 0.690:** 0.798 ist mit Kopien gezählt, 0.523 streicht auch echte Treffer.
+- **Ehrlich zu berichten ist 0.690.** Die Hard-Spalte der [Kopftabelle](#ergebnisse-auf-einen-blick)
+  (MegaLoc 0.523) ist noch strenger: Sie streicht auch echte Wiederholungsfahrten desselben Fotografen.
 
 Die Messung je Stadt, die Methode, was es für jedes andere Ergebnis heißt und wie man es behebt: [Zwillingsfahrten](experiments/README.md#zwillingsfahrten--zwillingepy).
 
@@ -724,23 +734,55 @@ Dieselbe Pipeline in fünf weiteren Städten, vorab aus 50 Kandidaten nach
 Mapillary-Metadaten ausgewählt — bevor ein einziges Bild geladen war
 ([Stadtwahl](experiments/README.md#stadtwahl--city_coveragepy)).
 
-| Stadt | Anfragen | Fahrten | EigenPlaces | MegaLoc | Δ [95 %] | MegaLoc voll | Δ voll [95 %] |
-|---|---:|---:|---:|---:|---|---:|---|
-| Osnabrück | 53.414 | 198 | 0.484 | 0.568 | +0.084 [+0.055, +0.116] | 0.798 | +0.096 [+0.070, +0.122] |
-| Fürth | 24.994 | 239 | 0.473 | 0.549 | +0.076 [+0.057, +0.096] | 0.699 | +0.072 [+0.052, +0.092] |
-| Karlsruhe | 87.181 | 584 | 0.306 | 0.419 | +0.114 [+0.095, +0.134] | 0.640 | +0.132 [+0.111, +0.155] |
-| Kaiserslautern | 58.916 | 249 | **0.552** | **0.651** | +0.099 [+0.079, +0.122] | **0.810** | +0.077 [+0.058, +0.096] |
-| Würzburg | 60.203 | 300 | 0.263 | 0.336 | +0.073 [+0.045, +0.106] | 0.476 | +0.092 [+0.057, +0.130] |
-| Jena | 114.558 | 677 | 0.332 | 0.417 | +0.084 [+0.073, +0.096] | 0.622 | +0.102 [+0.091, +0.113] |
+```text
+Was sich uebertraegt   R@1 bei 25 m (MegaLoc voll = volle Referenz)
+Delta = MegaLoc - EigenPlaces, gepaart ueber dieselben Anfragen, 95-%-Intervall aus dem Bootstrap
 
-<sub>R@1 bei 25 m, Benchmark-Protokoll; „voll" mit voller Referenz.
-Δ = MegaLoc − EigenPlaces, gepaart über dieselben Anfragen. Aus
-`results/<stadt>/evaluation/` und `experiments/results/<stadt>/bootstrap_ci{,_fullref}.json`.</sub>
+Stadt            Anfragen Fahrten  EigenPl  MegaLoc   Delta [95 %]              voll   Delta voll [95 %]
+--------------------------------------------------------------------------------------------------------
+osnabrueck         53,414     198    0.484    0.568   +0.084 [+0.055, +0.116]  0.798   +0.096 [+0.070, +0.122]
+fuerth             24,994     239    0.473    0.549   +0.076 [+0.057, +0.096]  0.699   +0.072 [+0.052, +0.092]
+karlsruhe          87,181     584    0.306    0.419   +0.114 [+0.095, +0.134]  0.640   +0.132 [+0.111, +0.155]
+kaiserslautern     58,916     249    0.552    0.651   +0.099 [+0.079, +0.122]  0.810   +0.077 [+0.058, +0.096]
+wuerzburg          60,203     300    0.263    0.336   +0.073 [+0.045, +0.106]  0.476   +0.092 [+0.057, +0.130]
+jena              114,558     677    0.332    0.417   +0.084 [+0.073, +0.096]  0.622   +0.102 [+0.091, +0.113]
+  Niveau MegaLoc: 0.336 bis 0.651 (Spanne 0.315); Abstand: +0.073 bis +0.114 (Spanne 0.041)
+  MegaLoc vorn mit Intervall ueber 0: 12 von 12 (Staedte x Protokolle)
+```
+
+<sub>Wörtliche Ausgabe von `python experiments/city_comparison.py`, erster Teil.</sub>
 
 - **Das Niveau wandert:** MegaLoc von 0.336 (Würzburg) bis 0.651 (Kaiserslautern) — eine Spanne von 0.315.
 - **Der Abstand bleibt:** MegaLoc vor EigenPlaces in allen sechs Städten und beiden Protokollen, alle zwölf Intervalle schließen 0 aus. Spanne nur 0.041.
 - **Würzburg** hat 98 % Straßenabdeckung und trotzdem den niedrigsten Recall: nur 45,5 % der Anfragen sind lösbar, und die Bilder sind alt (Median 627 Tage zwischen Anfrage und Treffer).
 - **Der Hard-Filter kostet** zwischen 0.010 (Jena) und 0.204 (Kaiserslautern) — und das lässt sich exakt erklären ([Städtevergleich](experiments/README.md#städtevergleich--city_comparisonpy)).
+
+**Zwillinge je Stadt.** Die Spalte „voll" ist nicht überall gleich stark aufgebläht:
+
+```text
+Zwillingsfahrten (selbes Konto, <= 60 s): R@1 mit und ohne
+Stadt                Zw   Alle   ohne  Zw voll  Kopie   voll   ohne  Sprung   ohne
+----------------------------------------------------------------------------------
+osnabrueck         3.4%  0.568  0.550    28.2%  27.4%  0.798  0.690  +0.229 +0.139
+fuerth             0.9%  0.549  0.548     6.0%   5.0%  0.699  0.692  +0.149 +0.144
+karlsruhe          4.7%  0.419  0.394    18.4%  17.9%  0.640  0.577  +0.220 +0.183
+kaiserslautern     2.6%  0.651  0.647     7.4%   4.7%  0.810  0.807  +0.159 +0.159
+wuerzburg          1.4%  0.336  0.323     7.0%   6.6%  0.476  0.426  +0.141 +0.103
+jena               6.4%  0.417  0.425    35.8%   4.3%  0.622  0.638  +0.206 +0.212
+  Zw = Anteil der Anfragen mit einem Zwilling im Umkreis; Kopie = davon mit derselben
+  Blickrichtung (<= 30 Grad), als Anteil aller Anfragen; Sprung = voll - Alle.
+```
+
+<sub>Ausgabe von `python experiments/city_comparison.py`, Abschnitt Zwillingsfahrten (MegaLoc). Die Anteile
+stammen aus `zwillinge.py`; „Kopie" heißt dieselbe Blickrichtung wie die Anfrage.</sub>
+
+- **Kopien heben den Recall, zweite Kameras nicht.** Je mehr echte Kopien, desto größer der Verlust ohne sie:
+  Osnabrück −0.108, Karlsruhe −0.063, Würzburg −0.050, die übrigen kaum. In Osnabrück sind 97 % der Zwillinge Kopien.
+- **Jena** hat die meisten Zwillinge (35,8 %), aber nur 12 % davon sind Kopien; der Rest sind zeitgleiche Kameras, die woandershin schauen. Sie machen eine
+  Anfrage nach der Ground Truth „lösbar", ohne dass ein Encoder sie finden kann — ohne sie steigt R@1 sogar.
+- **Ohne Zwillinge ist Osnabrück Mittelfeld:** Kaiserslautern 0.807, Fürth 0.692, Osnabrück 0.690, Jena 0.638,
+  Karlsruhe 0.577, Würzburg 0.426.
+- **Der Abstand der Modelle bleibt:** MegaLoc − EigenPlaces ohne Zwillinge +0.076 bis +0.116 im Benchmark.
 
 ### Woran es scheitert
 
@@ -930,18 +972,41 @@ MegaLoc, lösbare Anfragen; Präzision = Anteil richtiger Antworten:
 
 ![Encodier-Durchsatz und Suchzeit gegen Recall@1](experiments/results/osnabrueck/timing.png)
 
-| Encoder | R@1 | Suche je Anfrage | Index (48.321 Bilder) | Encodieren, 332.868 Bilder |
-|---|---:|---:|---:|---:|
-| MegaLoc | **0.568** | 0,74 ms | 1.557 MB | 3,6 h |
-| **MegaLoc, 512 gewhitent** | 0.541 | **0,18 ms** | **94 MB** | 3,6 h |
-| EigenPlaces | 0.484 | 0,21 ms | 378 MB | 2,7 h |
-| MixVPR | 0.426 | 0,44 ms | 755 MB | 71 min |
-| AnyLoc | 0.204 | 0,45 ms | 755 MB | 6,3 h (GPU) |
-| CLIP | 0.073 | 0,19 ms | 94 MB | **31 min** |
+```text
+Encoder                        Dim     R@1  ms/Anfrage  Index MB  Bilder/s  alle Bilder
+---------------------------------------------------------------------------------------
+eigenplaces_megaloc_concat    1024   0.572        0.11       189         -            -
+megaloc                       8448   0.568        0.74      1557      26.0        3.6 h
+megaloc_pca512                 512   0.545        0.18        94         -            -
+megaloc_pcaw512                512   0.541        0.18        94         -            -
+eigenplaces_pcaw512            512   0.507        0.18        94         -            -
+eigenplaces                   2048   0.484        0.21       378      33.8        2.7 h
+eigenplaces_pca512             512   0.481        0.19        94         -            -
+eigenplaces_pcaw2048          2048   0.459        0.21       378         -            -
+mixvpr                        4096   0.426        0.44       755      77.9        1.2 h
+mixvpr_pcaw512                 512   0.424        0.18        94         -            -
+mixvpr_pca512                  512   0.408        0.17        94         -            -
+anyloc_pcaw4096               4096   0.321        0.44       755         -            -
+anyloc_pcaw512                 512   0.263        0.18        94         -            -
+anyloc                        4096   0.204        0.45       755      14.6        6.3 h
+anyloc_pca512                  512   0.175        0.18        94         -            -
+clip_pcaw512                   512   0.105        0.18        94         -            -
+clip_pca512                    512   0.074        0.18        94         -            -
+clip                           512   0.073        0.19        94     178.6        31 min
 
-<sub>Auszug aus [`experiments/results/osnabrueck/timing.json`](experiments/results/osnabrueck/timing.json).
-Suche auf der CPU; Encodieren auf einem Apple-M1-Pro (MPS), AnyLoc auf einer CUDA-GPU.</sub>
+  R@1 bei 25 m (Benchmark, 07). Suche: FAISS flach auf der CPU, Index ueber die Referenz.
+  'alle Bilder' = 332,868 Bilder encodieren. Abgeleitete Varianten (PCA, Verkettung)
+  encodieren mit dem Netz ihres Basis-Encoders.
+  anyloc: ohne PCA-Projektion gemessen
+```
 
+<sub>Ausgabe von `python experiments/timing.py --skip-encode --skip-search` (druckt die gespeicherten
+Messungen aus [`timing.json`](experiments/results/osnabrueck/timing.json), ohne neu zu messen). Encodiert auf
+einem Apple-M1-Pro, AnyLoc auf einer CUDA-GPU.</sub>
+
+- **Gewinner: `megaloc_pcaw512`.** 0.028 weniger R@1 als MegaLoc, aber 94 statt 1.557 MB Index und 0,18 statt 0,74 ms je Anfrage.
+- **Warum nicht die Verkettung oben in der Liste?** Sie braucht beim Encodieren zwei Netze (EigenPlaces und MegaLoc),
+  liegt im Benchmark nicht belegt vor MegaLoc (+0.004 [−0.005, +0.014]) und mit voller Referenz sicher dahinter (−0.019).
 - **Der Index wächst linear mit der Breite, die Suchzeit nicht:** 16,5-mal mehr Speicher, nur 4-mal langsamer.
 - Bei 48.321 Referenzbildern ist das egal (10 s gegen 39 s für alle Anfragen); bei einer Million wären es 32 GB gegen 2 GB Index.
 - Encodieren hängt am Netz und an der Bildgröße, nicht an der PCA: `megaloc_pcaw512` encodiert so schnell wie MegaLoc.
@@ -983,11 +1048,11 @@ Wer die exakten Zahlen will, nimmt die Embeddings, mit denen sie gerechnet wurde
 
 ---
 
-## Grenzen und nächste Schritte
+## Grenzen und mögliche Erweiterungen
 
-| Grenze | Folge | Was helfen würde |
+| Grenze | Folge | Mögliche Erweiterung |
 |---|---|---|
-| **Zwillingsfahrten** | Teile des Recalls, vor allem mit voller Referenz, sind wiedergefundene Kopien | Split nach Konto und Zeit statt nach Sequenz; bis dahin die Zahl ohne Zwillinge mitlesen (MegaLoc voll 0.690 statt 0.798) |
+| **Zwillingsfahrten** | Teile des Recalls, vor allem mit voller Referenz, sind wiedergefundene Kopien; in Jena sind die meisten Zwillinge zweite Kameras, keine Kopien | Split nach Konto und Zeit statt nach Sequenz; bis dahin die Zahl ohne Zwillinge mitlesen (MegaLoc voll 0.690 statt 0.798) |
 | **Ein Split-Seed** | wie viel am Zufall des Splits hängt, ist nicht gemessen | zweiter Seed |
 | **Fünf Städte nur mit zwei Encodern** | die volle Rangfolge ist nur in Osnabrück belegt | weitere Encoder dort rechnen |
 | **Geometrische Verifikation nur in Osnabrück** | eine Einstellung, eine Stadt | eine Bewertung, die übereinstimmende Punkte mit cos verrechnet — auf einer Stadt, die nicht berichtet wird |
@@ -1161,38 +1226,21 @@ Drei Stolpersteine:
 
 ## Fehlerbehebung
 
-### Kernel stirbt ohne Meldung (macOS)
+<details>
+<summary><b>Kernel stirbt ohne Meldung (macOS)</b></summary>
 
-**Symptom.** Der Prozess endet, sobald das Modell das erste Bild rechnet:
-Jupyter meldet *kernel died*, das Terminal `Segmentation fault`. In der Demo
-trifft es das erste eigene Foto.
-
-**Ursache.** Zwei OpenMP-Bibliotheken im selben Prozess: conda-forge-Pakete
-(scikit-learn, faiss) laden `$CONDA_PREFIX/lib/libomp.dylib`, das pip-Wheel
-von torch bringt eine eigene Kopie mit. macOS lädt beide, und die erste
-parallele Rechnung stürzt ab. Unter Linux passiert das nicht.
-
-**Prüfen.** Sind beide Einträge normale Dateien, ist die Umgebung betroffen:
-
-```bash
-ls -l $CONDA_PREFIX/lib/libomp.dylib $CONDA_PREFIX/lib/python3.*/site-packages/torch/lib/libomp.dylib
-```
-
-**Beheben.** torch auf die libomp von conda umlenken:
+Zwei OpenMP-Bibliotheken im selben Prozess: conda-forge (scikit-learn, faiss) und das pip-Wheel von torch.
+torch auf die conda-Version umlenken, nach jeder Neuinstallation von torch erneut:
 
 ```bash
 cd $CONDA_PREFIX/lib/python3.*/site-packages/torch/lib
-mv libomp.dylib libomp.dylib.orig
-ln -s $CONDA_PREFIX/lib/libomp.dylib libomp.dylib
+mv libomp.dylib libomp.dylib.orig && ln -s $CONDA_PREFIX/lib/libomp.dylib libomp.dylib
 cd -
 ```
 
-Rückgängig, im selben Ordner: `mv libomp.dylib.orig libomp.dylib`. Nach jeder
-Neuinstallation von torch wiederholen. `KMP_DUPLICATE_LIB_OK=TRUE` ist **kein**
-Ersatz — es schaltet nur die Warnung ab.
+`KMP_DUPLICATE_LIB_OK=TRUE` ist kein Ersatz. Allgemein zeigt `python -X faulthandler skript.py`, was Jupyter verschluckt.
 
-**Allgemein.** Stirbt ein Kernel ohne Meldung, denselben Code im Terminal
-ausführen: `python -X faulthandler skript.py` zeigt, was Jupyter verschluckt.
+</details>
 
 ---
 

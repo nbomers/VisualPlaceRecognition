@@ -261,24 +261,35 @@ def merge(neu_encode, neu_search):
     return alt
 
 
-def print_table(daten):
+def print_table(daten, recall=None, n_bilder=None):
+    """Eine Zeile je Encoder, nach R@1 sortiert: was er findet und was er kostet."""
+    recall = recall or {}
     enc, such = daten.get("encodieren", {}), daten.get("suche", {})
-    namen = sorted(set(enc) | set(such), key=lambda n: (such.get(n, {}).get("dim", 0), n))
+    namen = sorted(set(enc) | set(such),
+                   key=lambda n: (-(recall.get(n) or -1), such.get(n, {}).get("dim", 0), n))
     breite = max(len(n) for n in namen) + 2
-    kopf = (f"{'Encoder':<{breite}}{'Dim':>6}  {'Bilder/s':>9}  {'Geraet':<14}"
-            f"{'ms/Anfrage':>11}  {'Index MB':>9}  {'.npy MB':>8}")
+    kopf = (f"{'Encoder':<{breite}}{'Dim':>6}{'R@1':>8}{'ms/Anfrage':>12}{'Index MB':>10}"
+            f"{'Bilder/s':>10}{'alle Bilder':>13}")
     print()
     print(kopf)
     print("-" * len(kopf))
     for n in namen:
         e, s = enc.get(n), such.get(n)
         dim = (s or e or {}).get("dim", "")
-        bilder = f"{e['bilder_pro_s']:>9.1f}" if e else f"{'-':>9}"
-        geraet = f"{e['device']} ({e['host'][:8]})" if e else ""
-        ms = f"{s['ms_pro_anfrage']:>11.2f}" if s else f"{'-':>11}"
-        idx = f"{s['index_mb']:>9.0f}" if s else f"{'-':>9}"
-        npy = f"{s['npy_mb']:>8.0f}" if s else f"{'-':>8}"
-        print(f"{n:<{breite}}{dim:>6}  {bilder}  {geraet:<14}{ms}  {idx}  {npy}")
+        r1 = f"{recall[n]:>8.3f}" if recall.get(n) is not None else f"{'-':>8}"
+        ms = f"{s['ms_pro_anfrage']:>12.2f}" if s else f"{'-':>12}"
+        idx = f"{s['index_mb']:>10.0f}" if s else f"{'-':>10}"
+        bilder = f"{e['bilder_pro_s']:>10.1f}" if e else f"{'-':>10}"
+        if e and n_bilder:
+            stunden = n_bilder / e["bilder_pro_s"] / 3600
+            dauer = f"{stunden:>11.1f} h" if stunden >= 1 else f"{stunden * 60:>10.0f} min"
+        else:
+            dauer = f"{'-':>13}"
+        print(f"{n:<{breite}}{dim:>6}{r1}{ms}{idx}{bilder}{dauer}")
+    print("\n  R@1 bei 25 m (Benchmark, 07). Suche: FAISS flach auf der CPU, Index ueber die Referenz.")
+    if n_bilder:
+        print(f"  'alle Bilder' = {n_bilder:,} Bilder encodieren. Abgeleitete Varianten (PCA, Verkettung)")
+        print("  encodieren mit dem Netz ihres Basis-Encoders.")
     hinweise = {n: e["hinweis"] for n, e in enc.items() if "hinweis" in e}
     for n, h in hinweise.items():
         print(f"  {n}: {h}")
@@ -369,7 +380,9 @@ def main():
     neu_encode = {} if args.skip_encode else encode_all(args)
     neu_search = {} if args.skip_search else search_all(args)
     daten = merge(neu_encode, neu_search)
-    print_table(daten)
+    meta = PATHS.processed / "metadata.parquet"
+    n_bilder = len(pd.read_parquet(meta, columns=["image_id"])) if meta.exists() else None
+    print_table(daten, recall_je_encoder(), n_bilder)
     print(f"\ngeschrieben: {OUT.relative_to(ROOT)}")
     bild = plot_pareto(daten, recall_je_encoder(), OUT.with_suffix(".png"))
     if bild:

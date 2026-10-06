@@ -47,3 +47,55 @@ def test_k_groesser_als_die_datenbank():
         _normiert(rng.normal(size=(2, 8))), 10)
     assert idx.shape == (2, 4)
     assert sorted(idx[0]) == [0, 1, 2, 3]
+
+
+@pytest.mark.parametrize("teilmenge", [False, True])
+def test_blockweise_gleich_im_speicher(monkeypatch, teilmenge):
+    # Referenz zu gross fuer den Speicher: Block fuer Block aus der memmap,
+    # die besten k laufend gemischt -- muss exakt dasselbe liefern.
+    import src.locate as modul
+
+    rng = np.random.default_rng(2)
+    alle = _normiert(rng.normal(size=(2500, 32))).astype(np.float32)
+    zeilen = np.sort(rng.choice(2500, 1700, replace=False)) if teilmenge else np.arange(2500)
+    anfragen = _normiert(rng.normal(size=(5, 32)))
+
+    monkeypatch.setattr(modul, "BLOCK", 300)
+    loc = Locator.__new__(Locator)
+    loc._vektoren, loc._zeilen = alle, zeilen
+    idx, sims = loc.search(anfragen, 7)
+
+    idx_ref, sims_ref = _locator(alle[zeilen]).search(anfragen, 7)
+    assert np.array_equal(idx, idx_ref)
+    assert np.allclose(sims, sims_ref)
+
+
+def test_unbekannte_referenz():
+    with pytest.raises(ValueError):
+        Locator({"vpr": {}}, ".", referenz="irgendwas")
+
+
+def test_locate_many_eine_suche_und_kaputte_fotos():
+    import pandas as pd
+
+    rng = np.random.default_rng(3)
+    db = _normiert(rng.normal(size=(50, 16)))
+    loc = _locator(db)
+    loc.database = pd.DataFrame({"image_id": np.arange(50), "lat": 52.27 + np.arange(50) * 1e-4,
+                                 "lon": np.full(50, 8.0), "split": ["database"] * 50})
+
+    def embed(pfade):
+        if pfade[0] == "kaputt.jpg":
+            raise OSError("kein Bild")
+        return db[[int(pfade[0].split(".")[0])]]           # "7.jpg" ist Referenzbild 7
+
+    loc.embed = embed
+    suchen = []
+    original = loc.search
+    loc.search = lambda v, k: (suchen.append(len(v)), original(v, k))[1]
+    antworten, fehler = loc.locate_many(["7.jpg", "kaputt.jpg", "31.jpg"], k=3)
+    assert suchen == [2], "eine Suche fuer alle Fotos"
+    assert list(fehler) == ["kaputt.jpg"]
+    assert antworten["7.jpg"]["treffer"][0]["image_id"] == 7
+    assert antworten["31.jpg"]["treffer"][0]["image_id"] == 31
+    assert antworten["7.jpg"]["treffer"][0]["split"] == "database"

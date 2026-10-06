@@ -61,3 +61,15 @@ def test_ohne_zwillinge_rueckt_auf_und_nimmt_die_loesbarkeit():
     assert z["loesbar_ohne"] == 2
     assert z["recall_ohne"]["1"] == 1.0
     assert abs(z["anteil_top1_ist_zwilling"] - 2 / 3) < 1e-12
+
+
+def test_kopie_nur_bei_gleicher_blickrichtung():
+    # Zwei zeitgleiche Bilder desselben Kontos am selben Ort: eins schaut in
+    # dieselbe Richtung (Kopie), eins nach hinten (zweite Kamera eines Aufbaus).
+    query = pd.DataFrame([dict(_bild("a", T0, 0), compass_angle=10.0, is_pano=False),
+                          dict(_bild("b", T0, 5_000), compass_angle=10.0, is_pano=False)])
+    referenz = pd.DataFrame([dict(_bild("a", T0 + 100, 0), compass_angle=355.0, is_pano=False),
+                             dict(_bild("b", T0 + 100, 5_000), compass_angle=190.0, is_pano=False)])
+    hat, kopie = zwillinge.zwillinge_je_anfrage(query, referenz, 60_000, 25.0)
+    assert hat.tolist() == [True, True]
+    assert kopie.tolist() == [True, False]

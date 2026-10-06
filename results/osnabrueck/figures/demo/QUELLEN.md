@@ -18,7 +18,7 @@ Erzeugt von `src/quellen.py` beim Speichern der Abbildung — nicht von Hand än
 
 ## megaloc_zwei_gruppen.png
 
-[301720214918447](https://www.mapillary.com/app/?pKey=301720214918447) · [476037800282180](https://www.mapillary.com/app/?pKey=476037800282180) · [494054531718363](https://www.mapillary.com/app/?pKey=494054531718363) · [933575271772947](https://www.mapillary.com/app/?pKey=933575271772947) · [1550533709936237](https://www.mapillary.com/app/?pKey=1550533709936237) · [1007369718617800](https://www.mapillary.com/app/?pKey=1007369718617800)
+[713930473033649](https://www.mapillary.com/app/?pKey=713930473033649) · [308949904240528](https://www.mapillary.com/app/?pKey=308949904240528) · [132311545526134](https://www.mapillary.com/app/?pKey=132311545526134) · [2884805421761810](https://www.mapillary.com/app/?pKey=2884805421761810) · [312986713569232](https://www.mapillary.com/app/?pKey=312986713569232) · [298873198463202](https://www.mapillary.com/app/?pKey=298873198463202)
 
 ## vergleich_encoder.png
 

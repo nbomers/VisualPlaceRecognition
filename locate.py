@@ -6,6 +6,7 @@ Koordinate des aehnlichsten Datenbankbildes ausgeben.
     python locate.py foto.jpg --method eigenplaces_megaloc_concat --k 5
     python locate.py foto.jpg --json                # maschinenlesbar
     python locate.py ~/Downloads/mapillary/test     # alle Bilder in einem Ordner
+    python locate.py foto.jpg --referenz alle       # gegen alle 332.868 Bilder suchen
 
 Der Encoder kommt aus der Factory (auch PCA-, Whitening- und
 Verkettungsvarianten), die Datenbank aus data/<stadt>/embeddings/, die Suche
@@ -24,7 +25,7 @@ ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
 from src.config import load_config, paths  # noqa: E402
-from src.locate import Locator  # noqa: E402
+from src.locate import REFERENZEN, Locator  # noqa: E402
 
 
 def main():
@@ -34,6 +35,10 @@ def main():
     ap.add_argument("--method", help="Encoder aus vpr.models (Standard: config.yaml)")
     ap.add_argument("--adapter", help="none | linear (Standard: config.yaml)")
     ap.add_argument("--k", type=int, default=10)
+    ap.add_argument("--referenz", choices=sorted(REFERENZEN), default="database",
+                    help="wogegen gesucht wird: database (wie 07), voll (+ train) oder alle "
+                         "(+ query). Fuer eigene Fotos ist alles erlaubt; die cos-Eichung "
+                         "ist nur fuer database gemessen.")
     ap.add_argument("--json", action="store_true", help="Ergebnis als JSON ausgeben")
     args = ap.parse_args()
     if args.k < 2:
@@ -59,11 +64,12 @@ def main():
             )
     if not bilder:
         raise SystemExit(f"Keine Bilder in {args.bild} -- Standardordner: {paths(cfg, ROOT).own_images}")
-    locator = Locator(cfg, ROOT, args.method, args.adapter, verbose=not args.json)
-    antworten = {}
-    for bild in bilder:
-        a = locator.locate(bild, k=args.k)
-        antworten[bild] = a
+    locator = Locator(cfg, ROOT, args.method, args.adapter, verbose=not args.json,
+                      referenz=args.referenz)
+    antworten, fehler = locator.locate_many(bilder, k=args.k)
+    for bild, e in fehler.items():
+        print(f"{bild}: uebersprungen ({e})", file=sys.stderr)
+    for bild, a in antworten.items():
         if args.json:
             continue
         print(f"\n{bild}")
@@ -73,7 +79,9 @@ def main():
               f"Streuung der Top-{args.k} {a['streuung_m']:,.0f} m")
         for platz, t in enumerate(a["treffer"], start=1):
             print(f"  #{platz:<2} cos {t['aehnlichkeit']:.3f}  {t['lat']:.5f}, {t['lon']:.5f}  "
-                  f"({t['abstand_zu_top1_m']:,.0f} m zu #1)  image_id {t['image_id']}")
+                  f"({t['abstand_zu_top1_m']:,.0f} m zu #1)  image_id {t['image_id']} ({t['split']})")
+        if a["konfidenz"] > 0.95:
+            print("  Hinweis: fast identisch mit einem Referenzbild -- liegt das Foto selbst im Datensatz?")
     if args.json:
         print(json.dumps(antworten, indent=2))
     locator.close()

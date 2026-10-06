@@ -21,8 +21,16 @@ nah liegt, stammt aus derselben Fahrt. Anders als die Hard-Ground-Truth
 (selbes Konto bis 180 Tage) trifft das nur die Kopie, nicht jede andere Fahrt
 desselben Fotografen.
 
+Nicht jeder Zwilling ist eine Kopie. Eine Kamera-Anordnung mit mehreren
+Blickrichtungen (vorn, hinten, seitlich) laedt ebenfalls zeitgleiche Sequenzen
+desselben Kontos hoch -- nur zeigen sie in eine andere Richtung. Solche
+Zwillinge machen eine Anfrage nach der Ground Truth "loesbar", ohne dass ein
+Encoder sie finden koennte. Das Skript trennt deshalb: Kopie heisst, die
+Blickrichtung weicht hoechstens KOPIE_GRAD ab (oder beide Bilder sind Panoramen).
+
     python experiments/zwillinge.py
     python experiments/zwillinge.py --methods megaloc,eigenplaces --fenster-s 60
+    python experiments/zwillinge.py --nur-anteile     # nur Metadaten, ohne Trefferlisten
 
 Ergebnis: experiments/results/<stadt>/zwillinge.json
 """
@@ -31,6 +39,7 @@ import argparse
 import json
 
 import numpy as np
+import pandas as pd
 
 from _common import CFG, PATHS, RESULTS, ROOT
 from src.evaluation import evaluate_retrieval
@@ -38,6 +47,7 @@ from src.geo import haversine_distance
 from src.retrieval import load_retrieval
 
 PROTOKOLLE = {"benchmark": None, "voll": ["database", "train"]}
+KOPIE_GRAD = 30.0
 
 
 def _args():
@@ -49,6 +59,8 @@ def _args():
     ap.add_argument("--methods", default="megaloc,eigenplaces", help="Kommaliste")
     ap.add_argument("--fenster-s", type=float, default=60.0,
                     help="hoechster Zeitabstand desselben Kontos, der als Zwilling gilt")
+    ap.add_argument("--nur-anteile", action="store_true",
+                    help="nur die Anteile aus den Metadaten, ohne Trefferlisten und R@1")
     return ap.parse_args()
 
 
@@ -64,28 +76,65 @@ def zwilling_fn(query, referenz, fenster_ms):
     return f
 
 
-def anteil_mit_zwilling(query, referenz, fenster_ms, radius_m):
-    """Je Anfrage: liegt ein Zwilling im Umkreis von radius_m? Das sind die
-    Anfragen, die er allein loesbar machen kann."""
+def zwillinge_je_anfrage(query, referenz, fenster_ms, radius_m):
+    """Je Anfrage zwei Masken: liegt ein Zwilling im Umkreis von radius_m, und
+    liegt darunter eine Kopie (dieselbe Blickrichtung)? Die erste Maske sind
+    die Anfragen, die ein Zwilling allein loesbar machen kann."""
     hat = np.zeros(len(query), dtype=bool)
+    kopie = np.zeros(len(query), dtype=bool)
     q_zeit = query["captured_at"].to_numpy().astype("int64")
     q_lat, q_lon = query["lat"].to_numpy(), query["lon"].to_numpy()
+    q_blick = _spalte(query, "compass_angle", np.nan).astype(float)
+    q_pano = _spalte(query, "is_pano", False).astype(bool)
+    r_zeit_alle = referenz["captured_at"].to_numpy().astype("int64")
+    r_blick_alle = _spalte(referenz, "compass_angle", np.nan).astype(float)
+    r_pano_alle = _spalte(referenz, "is_pano", False).astype(bool)
     gruppen = {}
     for konto, zeilen in referenz.groupby("creator_id").indices.items():
-        ordnung = zeilen[np.argsort(referenz["captured_at"].to_numpy()[zeilen], kind="stable")]
-        gruppen[konto] = (referenz["captured_at"].to_numpy().astype("int64")[ordnung],
-                          referenz["lat"].to_numpy()[ordnung], referenz["lon"].to_numpy()[ordnung])
+        o = zeilen[np.argsort(r_zeit_alle[zeilen], kind="stable")]
+        gruppen[konto] = (r_zeit_alle[o], referenz["lat"].to_numpy()[o],
+                          referenz["lon"].to_numpy()[o], r_blick_alle[o], r_pano_alle[o])
     for konto, zeilen in query.groupby("creator_id").indices.items():
         if konto not in gruppen:
             continue
-        t, lat, lon = gruppen[konto]
+        t, lat, lon, blick, pano = gruppen[konto]
         a = np.searchsorted(t, q_zeit[zeilen] - fenster_ms, side="left")
         b = np.searchsorted(t, q_zeit[zeilen] + fenster_ms, side="right")
         for z, von, bis in zip(zeilen, a, b):
-            if bis > von:
-                d = haversine_distance(q_lat[z], q_lon[z], lat[von:bis], lon[von:bis])
-                hat[z] = bool((d <= radius_m).any())
-    return hat
+            if bis <= von:
+                continue
+            nah = haversine_distance(q_lat[z], q_lon[z], lat[von:bis], lon[von:bis]) <= radius_m
+            if not nah.any():
+                continue
+            hat[z] = True
+            dw = np.abs((blick[von:bis] - q_blick[z] + 180.0) % 360.0 - 180.0)
+            gleich = (dw <= KOPIE_GRAD) | (pano[von:bis] & q_pano[z])
+            kopie[z] = bool((nah & gleich).any())
+    return hat, kopie
+
+
+def _spalte(df, name, ersatz):
+    return df[name].to_numpy() if name in df.columns else np.full(len(df), ersatz)
+
+
+def anteil_mit_zwilling(query, referenz, fenster_ms, radius_m):
+    """Je Anfrage: liegt ein Zwilling im Umkreis von radius_m?"""
+    return zwillinge_je_anfrage(query, referenz, fenster_ms, radius_m)[0]
+
+
+def anteile(fenster_ms, radius_m):
+    """Anteile je Protokoll, nur aus den Metadaten -- braucht keine Trefferliste."""
+    meta = pd.read_parquet(PATHS.processed / "metadata.parquet")
+    query = meta[meta["split"] == "query"].reset_index(drop=True)
+    aus = {}
+    for protokoll, splits in PROTOKOLLE.items():
+        referenz = meta[meta["split"].isin(splits or ["database"])].reset_index(drop=True)
+        hat, kopie = zwillinge_je_anfrage(query, referenz, fenster_ms, radius_m)
+        aus[protokoll] = {"n_anfragen": int(len(query)),
+                          "anteil_anfragen_mit_zwilling": float(hat.mean()),
+                          "anteil_anfragen_mit_kopie": float(kopie.mean()),
+                          "anteil_kopie_unter_zwillingen": float(kopie.sum() / max(hat.sum(), 1))}
+    return aus
 
 
 def ohne_zwillinge(indices, zwilling):
@@ -128,6 +177,13 @@ def main():
             raus["encoder"] = alt.get("encoder", {})
 
     print(f"Zwilling = selbes Konto, hoechstens {args.fenster_s:g} s Abstand; R@1 bei {schwelle} m\n")
+    raus["anteile"] = anteile(fenster_ms, float(schwelle))
+    for protokoll, a in raus["anteile"].items():
+        print(f"{protokoll:<11}Anfragen mit Zwilling {a['anteil_anfragen_mit_zwilling']:>6.1%}"
+              f"   davon Kopie (Blick <= {KOPIE_GRAD:g} Grad) {a['anteil_kopie_unter_zwillingen']:>6.1%}")
+    print()
+    if args.nur_anteile:
+        args.methods = ""
     print(f"{'Encoder':<13}{'Protokoll':<11}{'Zwilling 25 m':>14}{'Top-1 Zwilling':>16}"
           f"{'R@1':>8}{'ohne':>8}{'Diff':>8}{'loesbar':>10}{'ohne':>9}")
     print("-" * 97)

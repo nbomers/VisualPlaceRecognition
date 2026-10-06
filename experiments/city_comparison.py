@@ -146,11 +146,18 @@ def _stadt(slug, method, schwelle):
     # derselben Fahrt nie hochgeladen worden, und wie viele Anfragen eine haben.
     zw = bo / "zwillinge.json"
     if zw.exists():
-        e = json.loads(zw.read_text(encoding="utf-8")).get("encoder", {}).get(method, {})
+        roh = json.loads(zw.read_text(encoding="utf-8"))
+        e = roh.get("encoder", {}).get(method, {})
         for protokoll, feld in (("benchmark", "alle"), ("voll", "voll")):
             if protokoll in e:
                 d[f"{feld}_ohne_zw"] = e[protokoll]["recall_ohne"]["1"]
                 d[f"zwilling_{feld}"] = e[protokoll]["anteil_anfragen_mit_zwilling"]
+        # Kopie = Zwilling mit derselben Blickrichtung; der Rest sind meist
+        # zeitgleiche Kameras eines Aufbaus, die woandershin schauen.
+        voll_anteile = roh.get("anteile", {}).get("voll")
+        if voll_anteile:
+            d["zwilling_voll"] = voll_anteile["anteil_anfragen_mit_zwilling"]
+            d["kopie_voll"] = voll_anteile["anteil_anfragen_mit_kopie"]
 
     for datei, feld in (("bootstrap_ci.json", "halbbreite"),
                         ("bootstrap_ci_fullref.json", "halbbreite_voll")):
@@ -164,6 +171,55 @@ def _stadt(slug, method, schwelle):
             d[feld] = eintrag["recall"]["1"]["halbbreite"]
             d["n_sequenzen"] = roh["n_sequences"]
     return d
+
+
+def _paar(slug, datei, a, b):
+    """Gepaarte Differenz b - a bei R@1 aus bootstrap_ci*.json, oder None."""
+    p = ROOT / "experiments" / "results" / slug / datei
+    if not p.exists():
+        return None
+    roh = json.loads(p.read_text(encoding="utf-8"))
+    for x in roh.get("paare", []):
+        if x["a"] == a and x["b"] == b and x["k"] == 1:
+            return {**x, "n_queries": roh.get("n_queries"), "n_sequences": roh.get("n_sequences")}
+    return None
+
+
+def _uebertragung(slugs):
+    """Was sich uebertraegt: MegaLoc gegen EigenPlaces je Stadt, gepaart, beide Protokolle."""
+    print("Was sich uebertraegt   R@1 bei 25 m (MegaLoc voll = volle Referenz)")
+    print("Delta = MegaLoc - EigenPlaces, gepaart ueber dieselben Anfragen, 95-%-Intervall aus dem Bootstrap\n")
+    kopf = (f"{'Stadt':<16}{'Anfragen':>9}{'Fahrten':>8}{'EigenPl':>9}{'MegaLoc':>9}"
+            f"   {'Delta [95 %]':<24}{'voll':>6}   {'Delta voll [95 %]':<24}")
+    print(kopf.rstrip())
+    print("-" * len(kopf.rstrip()))
+    raus, deltas, voll_deltas, megaloc = {}, [], [], []
+    for slug in slugs:
+        b = _paar(slug, "bootstrap_ci.json", "eigenplaces", "megaloc")
+        v = _paar(slug, "bootstrap_ci_fullref.json", "eigenplaces_fullref", "megaloc_fullref")
+        if b is None:
+            continue
+        raus[slug] = {"benchmark": b, "voll": v}
+        deltas.append(b)
+        megaloc.append(b["recall_b"])
+        zelle = f"{b['differenz']:+.3f} [{b['ci'][0]:+.3f}, {b['ci'][1]:+.3f}]"
+        if v:
+            voll_deltas.append(v)
+            vzelle = f"{v['differenz']:+.3f} [{v['ci'][0]:+.3f}, {v['ci'][1]:+.3f}]"
+            vz = f"{v['recall_b']:>6.3f}   {vzelle:<24}"
+        else:
+            vz = f"{'—':>6}   {'—':<24}"
+        print(f"{slug:<16}{b['n_queries']:>9,}{b['n_sequences']:>8}{b['recall_a']:>9.3f}"
+              f"{b['recall_b']:>9.3f}   {zelle:<24}{vz}".rstrip())
+    if deltas:
+        d = [x["differenz"] for x in deltas]
+        alle = deltas + voll_deltas
+        vorn = sum(x["ci"][0] > 0 for x in alle)
+        print(f"  Niveau MegaLoc: {min(megaloc):.3f} bis {max(megaloc):.3f} (Spanne {max(megaloc) - min(megaloc):.3f}); "
+              f"Abstand: {min(d):+.3f} bis {max(d):+.3f} (Spanne {max(d) - min(d):.3f})")
+        print(f"  MegaLoc vorn mit Intervall ueber 0: {vorn} von {len(alle)} (Staedte x Protokolle)")
+    print()
+    return raus
 
 
 def _eigenschaften():
@@ -210,24 +266,28 @@ def _zwillingstabelle(zeilen):
         print("\nZwillingsfahrten: keine Stadt mit experiments/results/<stadt>/zwillinge.json.")
         return
     print("\nZwillingsfahrten (selbes Konto, <= 60 s): R@1 mit und ohne")
-    print(f"{'Stadt':<16}{'Zw':>7}{'Alle':>7}{'ohne':>7}{'Zw voll':>9}{'voll':>7}{'ohne':>7}"
+    print(f"{'Stadt':<16}{'Zw':>7}{'Alle':>7}{'ohne':>7}{'Zw voll':>9}{'Kopie':>7}{'voll':>7}{'ohne':>7}"
           f"{'Sprung':>8}{'ohne':>7}")
-    print("-" * 75)
+    print("-" * 82)
     for z in zeilen:
         if z.get("voll") is not None and z.get("alle") is not None:
             z["sprung"] = z["voll"] - z["alle"]
         if z.get("voll_ohne_zw") is not None and z.get("alle_ohne_zw") is not None:
             z["sprung_ohne_zw"] = z["voll_ohne_zw"] - z["alle_ohne_zw"]
+        if z.get("voll_ohne_zw") is not None and z.get("voll") is not None:
+            z["verlust_voll"] = z["voll_ohne_zw"] - z["voll"]
         print(f"{z['stadt']:<16}"
               + _zelle(z.get("zwilling_alle"), "{:>7.1%}", 7)
               + _zelle(z.get("alle"), "{:>7.3f}", 7)
               + _zelle(z.get("alle_ohne_zw"), "{:>7.3f}", 7)
               + _zelle(z.get("zwilling_voll"), "{:>9.1%}", 9)
+              + _zelle(z.get("kopie_voll"), "{:>7.1%}", 7)
               + _zelle(z.get("voll"), "{:>7.3f}", 7)
               + _zelle(z.get("voll_ohne_zw"), "{:>7.3f}", 7)
               + _zelle(z.get("sprung"), "{:>+8.3f}", 8)
               + _zelle(z.get("sprung_ohne_zw"), "{:>+7.3f}", 7))
-    print("  Zw = Anteil der Anfragen mit einem Zwilling im Umkreis; Sprung = voll - Alle.")
+    print("  Zw = Anteil der Anfragen mit einem Zwilling im Umkreis; Kopie = davon mit derselben")
+    print("  Blickrichtung (<= 30 Grad), als Anteil aller Anfragen; Sprung = voll - Alle.")
 
 
 def zerlegung(zeile):
@@ -462,6 +522,7 @@ def main():
         raise SystemExit(f"Keine Stadt mit results/<stadt>/evaluation/{args.method}.json gefunden.")
 
     zeilen.sort(key=lambda z: z.get("abdeckung") if z.get("abdeckung") is not None else 9)
+    uebertragung = _uebertragung([z["stadt"] for z in zeilen])
     print(f"Encoder {args.method}  |  R@1 bei {schwelle} m  |  {len(zeilen)} Staedte\n")
     _tabelle(zeilen)
 
@@ -505,10 +566,11 @@ def main():
         "Zwillingsanteil (volle Referenz) gegen Sprung zur vollen Referenz", zeilen,
         "zwilling_voll", "sprung",
         "Erklaeren wiedergefundene Kopien, warum manche Staedte mit voller Referenz so viel gewinnen?")
-    befunde["zwillinge_sprung_ohne"] = _zusammenhang(
-        "Zwillingsanteil (volle Referenz) gegen Sprung OHNE Zwillinge", zeilen,
-        "zwilling_voll", "sprung_ohne_zw",
-        "Bleibt ein Zusammenhang, auch wenn die Kopien herausgenommen sind?")
+    befunde["kopien_verlust"] = _zusammenhang(
+        "Kopienanteil (volle Referenz) gegen Aenderung von R@1 ohne Zwillinge", zeilen,
+        "kopie_voll", "verlust_voll",
+        "Nachtraeglich gefunden, nicht vorab vorhergesagt: erst Jena (viele Zwillinge, kein "
+        "Verlust) fuehrte auf die Blickrichtung. Kopien heben R@1, Kameras eines Aufbaus nicht.")
 
     verifikation = _gv_tabelle(zeilen, args.method, schwelle)
 
@@ -519,6 +581,7 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({"method": args.method, "schwelle_m": float(schwelle),
                                "staedte": zeilen, "befunde": befunde,
+                               "uebertragung": uebertragung,
                                "zerlegung": zerlegt,
                                "panorama": panoramen,
                                "geometrische_verifikation": verifikation},

@@ -17,6 +17,7 @@
       "zwilling_alle": 0.034148350619687726,
       "voll_ohne_zw": 0.6897071129707113,
       "zwilling_voll": 0.2815741191447935,
+      "kopie_voll": 0.2739731156625604,
       "halbbreite": 0.0957945447654627,
       "n_sequenzen": 198,
       "halbbreite_voll": 0.05487033083873116,
@@ -27,7 +28,8 @@
       "uebernutzung": 0.040777771704847296,
       "rel_abschlag": -0.044191357130468206,
       "sprung": 0.2293168625554899,
-      "sprung_ohne_zw": 0.13938429875481795
+      "sprung_ohne_zw": 0.13938429875481795,
+      "verlust_voll": -0.1079141585904071
     },
     {
       "stadt": "fuerth",
@@ -45,7 +47,8 @@
       "alle_ohne_zw": 0.5481615743138271,
       "zwilling_alle": 0.009042170120828998,
       "voll_ohne_zw": 0.6918789808917197,
-      "zwilling_voll": 0.06021445146835241,
+      "zwilling_voll": 0.06019036954087346,
+      "kopie_voll": 0.05003199488081907,
       "halbbreite": 0.05893034079459761,
       "n_sequenzen": 239,
       "halbbreite_voll": 0.06142219242918112,
@@ -56,7 +59,8 @@
       "uebernutzung": 0.2092773702297676,
       "rel_abschlag": -0.25734989159890004,
       "sprung": 0.14944979556501448,
-      "sprung_ohne_zw": 0.14371740657789267
+      "sprung_ohne_zw": 0.14371740657789267,
+      "verlust_voll": -0.006738449206782904
     },
     {
       "stadt": "karlsruhe",
@@ -74,7 +78,8 @@
       "alle_ohne_zw": 0.394045164537234,
       "zwilling_alle": 0.04729241463162845,
       "voll_ohne_zw": 0.5773067482437154,
-      "zwilling_voll": 0.18375563482868973,
+      "zwilling_voll": 0.18374720422090957,
+      "kopie_voll": 0.17923954808740036,
       "halbbreite": 0.05761253130235866,
       "n_sequenzen": 584,
       "halbbreite_voll": 0.04967717597590954,
@@ -85,7 +90,8 @@
       "uebernutzung": 0.13405428837911057,
       "rel_abschlag": -0.1367618739200723,
       "sprung": 0.2201848231872935,
-      "sprung_ohne_zw": 0.18326158370648143
+      "sprung_ohne_zw": 0.18326158370648143,
+      "verlust_voll": -0.062196330403366806
     },
     {
       "stadt": "kaiserslautern",
@@ -104,6 +110,7 @@
       "zwilling_alle": 0.025561816823952747,
       "voll_ohne_zw": 0.806706289363967,
       "zwilling_voll": 0.07405458619050852,
+      "kopie_voll": 0.0474064770181275,
       "halbbreite": 0.045406087416805296,
       "n_sequenzen": 249,
       "halbbreite_voll": 0.047613809049980305,
@@ -114,7 +121,8 @@
       "uebernutzung": 0.2922945684076464,
       "rel_abschlag": -0.31281702224415675,
       "sprung": 0.1590904859770289,
-      "sprung_ohne_zw": 0.15930067580249174
+      "sprung_ohne_zw": 0.15930067580249174,
+      "verlust_voll": -0.0034012869021295966
     },
     {
       "stadt": "wuerzburg",
@@ -133,6 +141,7 @@
       "zwilling_alle": 0.014285002408517848,
       "voll_ohne_zw": 0.42552566795401675,
       "zwilling_voll": 0.07027888975632443,
+      "kopie_voll": 0.06622593558460542,
       "halbbreite": 0.05857318768767242,
       "n_sequenzen": 300,
       "halbbreite_voll": 0.061408783350854534,
@@ -143,7 +152,8 @@
       "uebernutzung": 0.09326861200840242,
       "rel_abschlag": -0.1020047509070623,
       "sprung": 0.14064091607510354,
-      "sprung_ohne_zw": 0.1026924626710255
+      "sprung_ohne_zw": 0.1026924626710255,
+      "verlust_voll": -0.050832661637361776
     },
     {
       "stadt": "jena",
@@ -162,6 +172,7 @@
       "zwilling_alle": 0.06368826271408369,
       "voll_ohne_zw": 0.6377196085367292,
       "zwilling_voll": 0.35826393617207003,
+      "kopie_voll": 0.04283419752439812,
       "halbbreite": 0.03349182092012104,
       "n_sequenzen": 677,
       "halbbreite_voll": 0.035283271239601954,
@@ -172,7 +183,8 @@
       "uebernutzung": 0.018124449655751107,
       "rel_abschlag": -0.023337124834981602,
       "sprung": 0.20564441544761464,
-      "sprung_ohne_zw": 0.21247096083126765
+      "sprung_ohne_zw": 0.21247096083126765,
+      "verlust_voll": 0.015401653343473432
     }
   ],
   "befunde": {
@@ -212,11 +224,205 @@
       "p": 0.10277777777777777,
       "art": "exakt"
     },
-    "zwillinge_sprung_ohne": {
+    "kopien_verlust": {
       "n": 6,
-      "rho": 0.5428571428571429,
-      "p": 0.2972222222222222,
+      "rho": -1.0,
+      "p": 0.002777777777777778,
       "art": "exakt"
+    }
+  },
+  "uebertragung": {
+    "osnabrueck": {
+      "benchmark": {
+        "a": "eigenplaces",
+        "b": "megaloc",
+        "k": 1,
+        "recall_a": 0.48414047842401503,
+        "recall_b": 0.5683044090056285,
+        "differenz": 0.08416393058161348,
+        "ci": [
+          0.055228988193735215,
+          0.1161384951540035
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 53414,
+        "n_sequences": 198
+      },
+      "voll": {
+        "a": "eigenplaces_fullref",
+        "b": "megaloc_fullref",
+        "k": 1,
+        "recall_a": 0.7014965647508147,
+        "recall_b": 0.7976212715611184,
+        "differenz": 0.09612470681030372,
+        "ci": [
+          0.06987783270004928,
+          0.12236060525979167
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 53414,
+        "n_sequences": 198
+      }
+    },
+    "fuerth": {
+      "benchmark": {
+        "a": "eigenplaces",
+        "b": "megaloc",
+        "k": 1,
+        "recall_a": 0.4734804490902052,
+        "recall_b": 0.5491676345334882,
+        "differenz": 0.07568718544328296,
+        "ci": [
+          0.05681528027688314,
+          0.09631672276117628
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 24994,
+        "n_sequences": 239
+      },
+      "voll": {
+        "a": "eigenplaces_fullref",
+        "b": "megaloc_fullref",
+        "k": 1,
+        "recall_a": 0.6271036706568311,
+        "recall_b": 0.6986174300985026,
+        "differenz": 0.07151375944167149,
+        "ci": [
+          0.05204798255701144,
+          0.09217600951752628
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 24994,
+        "n_sequences": 239
+      }
+    },
+    "karlsruhe": {
+      "benchmark": {
+        "a": "eigenplaces",
+        "b": "megaloc",
+        "k": 1,
+        "recall_a": 0.3055699565809086,
+        "recall_b": 0.41931825545978874,
+        "differenz": 0.11374829887888016,
+        "ci": [
+          0.09539988033202548,
+          0.13398789326696164
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 87181,
+        "n_sequences": 584
+      },
+      "voll": {
+        "a": "eigenplaces_fullref",
+        "b": "megaloc_fullref",
+        "k": 1,
+        "recall_a": 0.507356219349086,
+        "recall_b": 0.6395030786470822,
+        "differenz": 0.1321468592979962,
+        "ci": [
+          0.11090194386228366,
+          0.15499840543564009
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 87181,
+        "n_sequences": 584
+      }
+    },
+    "kaiserslautern": {
+      "benchmark": {
+        "a": "eigenplaces",
+        "b": "megaloc",
+        "k": 1,
+        "recall_a": 0.5515682620246639,
+        "recall_b": 0.6510170902890677,
+        "differenz": 0.09944882826440382,
+        "ci": [
+          0.07899491073867305,
+          0.121599592245067
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 58916,
+        "n_sequences": 249
+      },
+      "voll": {
+        "a": "eigenplaces_fullref",
+        "b": "megaloc_fullref",
+        "k": 1,
+        "recall_a": 0.7333027150200491,
+        "recall_b": 0.8101075762660966,
+        "differenz": 0.07680486124604757,
+        "ci": [
+          0.05768360288211971,
+          0.09617123859907081
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 58916,
+        "n_sequences": 249
+      }
+    },
+    "wuerzburg": {
+      "benchmark": {
+        "a": "eigenplaces",
+        "b": "megaloc",
+        "k": 1,
+        "recall_a": 0.26288133119252666,
+        "recall_b": 0.335717413516275,
+        "differenz": 0.07283608232374833,
+        "ci": [
+          0.04542368416628401,
+          0.10583924302444671
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 60203,
+        "n_sequences": 300
+      },
+      "voll": {
+        "a": "eigenplaces_fullref",
+        "b": "megaloc_fullref",
+        "k": 1,
+        "recall_a": 0.3843511450381679,
+        "recall_b": 0.4763583295913785,
+        "differenz": 0.09200718455321061,
+        "ci": [
+          0.057104003436181515,
+          0.1295049307611557
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 60203,
+        "n_sequences": 300
+      }
+    },
+    "jena": {
+      "benchmark": {
+        "a": "eigenplaces",
+        "b": "megaloc",
+        "k": 1,
+        "recall_a": 0.3323985945928113,
+        "recall_b": 0.4166735397456411,
+        "differenz": 0.0842749451528298,
+        "ci": [
+          0.07337769325359647,
+          0.09594550279150656
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 114558,
+        "n_sequences": 677
+      },
+      "voll": {
+        "a": "eigenplaces_fullref",
+        "b": "megaloc_fullref",
+        "k": 1,
+        "recall_a": 0.5204582803346115,
+        "recall_b": 0.6223179551932557,
+        "differenz": 0.10185967485864422,
+        "ci": [
+          0.09088055208643514,
+          0.1129228666407558
+        ],
+        "schliesst_null_ein": false,
+        "n_queries": 114558,
+        "n_sequences": 677
+      }
     }
   },
   "zerlegung": {
