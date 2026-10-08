@@ -1,150 +1,157 @@
-# VPR Osnabrück — Visual Place Recognition auf Mapillary-Bildern
+# VPR Osnabrück — Visual Place Recognition on Mapillary images
 
-[Begriffe](#begriffe-in-einem-satz) ·
-[Ergebnisse](#ergebnisse-auf-einen-blick) ·
-[Schnellstart](#schnellstart) ·
-[Nutzung](#nutzung) ·
-[Ausführliche Ergebnisse](#ergebnisse) ·
-[Befehle](#befehlsreferenz) ·
-[**Nebenuntersuchungen →**](experiments/README.md)
+**English** · [Deutsch](README.de.md)
+
+[Terms](#terms-in-one-sentence) ·
+[Results](#results-at-a-glance) ·
+[Quick start](#quick-start) ·
+[Usage](#usage) ·
+[Detailed results](#results) ·
+[Commands](#command-reference) ·
+[**Side studies →**](experiments/README.md)
 
 [![check](https://github.com/nbomers/VisualPlaceRecognition/actions/workflows/check.yml/badge.svg)](https://github.com/nbomers/VisualPlaceRecognition/actions/workflows/check.yml)
 [![Python 3.11 | 3.14](https://img.shields.io/badge/python-3.11%20%7C%203.14-3776ab?logo=python&logoColor=white)](#installation)
 [![Code MIT](https://img.shields.io/badge/Code-MIT-2e7d32)](LICENSE)
-[![Daten CC BY-SA 4.0](https://img.shields.io/badge/Daten-CC--BY--SA%204.0-ef6c00)](NOTICE.md)
-[![Bilder](https://img.shields.io/badge/Bilder-332.868-1565c0)](#daten)
-[![Städte](https://img.shields.io/badge/St%C3%A4dte-6-1565c0)](#sechs-städte)
+[![Data CC BY-SA 4.0](https://img.shields.io/badge/Data-CC--BY--SA%204.0-ef6c00)](NOTICE.md)
+[![Images](https://img.shields.io/badge/Images-332%2C868-1565c0)](#data)
+[![Cities](https://img.shields.io/badge/Cities-6-1565c0)](#six-cities)
 
-Projekt im Rahmen des Programmierpraktikums an der **Universität Osnabrück**.
+A project for the programming lab (*Programmierpraktikum*) at **Osnabrück University**.
 
-**Ein Straßenfoto rein, ein Ort raus.** Das System vergleicht das Foto mit
-verorteten Referenzbildern aus Osnabrück und gibt die Koordinate des
-ähnlichsten zurück — dazu eine Konfidenz und die Treffer selbst:
+> [!NOTE]
+> **Graded submission:** tag [`abgabe-2026-10-08`](https://github.com/nbomers/VisualPlaceRecognition/releases/tag/abgabe-2026-10-08)
+> (commit `026deeb`). Later commits only translate the documentation; code and results are unchanged.
+> Program output, plot labels and code comments are in German.
+
+**A street photo in, a location out.** The system compares the photo with
+geotagged reference images from Osnabrück and returns the coordinate of the
+most similar one — together with a confidence and the matches themselves:
 
 ```bash
 python locate.py foto.jpg
 ```
 
-Die Encoder kommen fertig trainiert. Der Eigenanteil ist der **Benchmark**
-drumherum: ein Split nach Fahrten statt nach Bildern, drei Definitionen von „richtig",
-Konfidenzintervalle, Fingerabdrücke gegen vertauschte Dateien — und damit
-40 vergleichbare Varianten von fünf Encodern in sechs Städten.
+The encoders come pre-trained. Our own contribution is the **benchmark**
+around them: a split by drives instead of by images, three definitions of "correct",
+confidence intervals, fingerprints against mixed-up files — and with that,
+40 comparable variants of five encoders in six cities.
 
-![Anfrage und die fünf ähnlichsten Referenzbilder, grün = innerhalb 25 m](results/osnabrueck/figures/demo/megaloc_erfolg.png)
+![Query and the five most similar reference images, green = within 25 m](results/osnabrueck/figures/demo/megaloc_erfolg.png)
 
-<sub>Links das Anfragebild, rechts die fünf ähnlichsten Referenzbilder von
-MegaLoc; grün = höchstens 25 m vom echten Ort. Bilder von
-[Mapillary](https://www.mapillary.com), CC BY-SA 4.0, Urheber je Bild in
+<sub>Left the query image, right MegaLoc's five most similar reference images;
+green = at most 25 m from the true location. Images from
+[Mapillary](https://www.mapillary.com), CC BY-SA 4.0, author of each image in
 [QUELLEN.md](results/osnabrueck/figures/demo/QUELLEN.md).</sub>
 
 > [!TIP]
-> **Dieses README fasst zusammen. Wie jede Zahl entstanden ist** — Methode,
-> alle Tabellen, Abbildungen und offene Fragen zu jeder Nebenuntersuchung —
-> steht in **[`experiments/README.md`](experiments/README.md)**.
+> **This README is a summary. How every number came about** — method,
+> all tables, figures and open questions for every side study —
+> is in **[`experiments/README.md`](experiments/README.md)**.
 
 ---
 
-## Inhalt
+## Contents
 
-1. [Begriffe in einem Satz](#begriffe-in-einem-satz)
-2. [Ergebnisse auf einen Blick](#ergebnisse-auf-einen-blick)
-3. [Schnellstart](#schnellstart)
-4. [Das Projekt](#das-projekt)
-5. [So funktioniert es](#so-funktioniert-es)
-6. [Daten](#daten)
+1. [Terms in one sentence](#terms-in-one-sentence)
+2. [Results at a glance](#results-at-a-glance)
+3. [Quick start](#quick-start)
+4. [The project](#the-project)
+5. [How it works](#how-it-works)
+6. [Data](#data)
 7. [Installation](#installation)
-8. [Nutzung](#nutzung)
-9. [Projektstruktur](#projektstruktur)
-10. [Ergebnisse im Detail](#ergebnisse) — mit den [Zwillingsfahrten](#zwillingsfahrten), dem Problem im Datensatz
-11. [Reproduzierbarkeit](#reproduzierbarkeit)
-12. [Grenzen und mögliche Erweiterungen](#grenzen-und-mögliche-erweiterungen)
-13. [Befehlsreferenz](#befehlsreferenz)
-14. [Fehlerbehebung](#fehlerbehebung)
-15. [Team](#team) · [KI-Nutzung](#ki-nutzung) · [Credits](#credits) · [Lizenz](#lizenz)
+8. [Usage](#usage)
+9. [Project structure](#project-structure)
+10. [Results in detail](#results) — including the [twin drives](#twin-drives), the problem in the dataset
+11. [Reproducibility](#reproducibility)
+12. [Limitations and possible extensions](#limitations-and-possible-extensions)
+13. [Command reference](#command-reference)
+14. [Troubleshooting](#troubleshooting)
+15. [Team](#team) · [Use of AI](#use-of-ai) · [Credits](#credits) · [License](#license)
 
-**Nebenuntersuchungen:** alle 20 Experimente mit Methode und Abbildungen in [`experiments/README.md`](experiments/README.md).
+**Side studies:** all 20 experiments with method and figures in [`experiments/README.md`](experiments/README.md).
 
 ---
 
-## Begriffe in einem Satz
+## Terms in one sentence
 
-| Begriff | Bedeutung |
+| Term | Meaning |
 |---|---|
-| **VPR** | *Visual Place Recognition*: den Aufnahmeort eines Fotos finden, indem man es mit Bildern bekannter Orte vergleicht. |
-| **Anfrage, Referenz** | Die **Anfrage** (*query*) ist das Foto, dessen Ort gesucht wird. Die **Referenz** (*database*) sind Bilder mit bekanntem Ort. |
-| **Encoder, Embedding** | Ein neuronales Netz (Encoder) macht aus jedem Bild einen Zahlenvektor (Embedding). Ähnliche Orte ergeben ähnliche Vektoren. |
-| **cos** | Ähnlichkeit zweier Embeddings, von −1 bis 1. Der beste Treffer ist das Referenzbild mit dem höchsten cos. |
-| **Recall@1 (R@1)** | Anteil der Anfragen, bei denen der beste Treffer höchstens 25 m vom echten Ort liegt. **0.568 heißt: 56,8 % richtig.** R@5: irgendeiner der fünf besten. |
-| **lösbar** | Anfrage mit mindestens einem Referenzbild im Umkreis von 25 m. Nur diese zählen im Recall — was nicht in der Referenz liegt, findet kein Modell. |
-| **Ground Truth** | Die Regel für „richtig". **Standard:** höchstens 25 m. **Hard:** zusätzlich ein anderes Konto oder mehr als 180 Tage Abstand. **Blickrichtung:** zusätzlich höchstens 90° Kompassabweichung. |
-| **Fahrt, Sequenz** | Eine zusammenhängende Aufnahmeserie, alle 0,17 s ein Bild. Train, Referenz und Anfragen werden **nach Sequenzen** getrennt, nie nach Einzelbildern. |
-| **Benchmark, volle Referenz** | Zwei Protokolle. Benchmark: 15 % der Sequenzen als Referenz (48.321 Bilder). Volle Referenz: alle 279.453 Bilder, die keine Anfrage sind. |
-| **95-%-Intervall** | Bereich, in dem der wahre Wert mit 95 % Sicherheit liegt. Gerechnet, indem die 198 Anfrage-Fahrten 1.000-mal neu gezogen werden (*Bootstrap*). |
-| **gepaarte Differenz** | Unterschied zweier Varianten auf denselben Anfragen — viel genauer als zwei Einzelzahlen. **„Belegt"** heißt: ihr Intervall schließt 0 aus. |
-| **Adapter** | Eine kleine nachtrainierte Schicht über einem festen Encoder. |
-| **PCA, Whitening** | Feste Rechenvorschriften ohne Training: PCA verkürzt einen Vektor, Whitening gewichtet seine Achsen gleich. |
+| **VPR** | *Visual Place Recognition*: finding where a photo was taken by comparing it with images of known places. |
+| **Query, reference** | The **query** is the photo whose location is sought. The **reference** (*database*) are images with a known location. |
+| **Encoder, embedding** | A neural network (encoder) turns every image into a vector of numbers (embedding). Similar places give similar vectors. |
+| **cos** | Similarity of two embeddings, from −1 to 1. The best match is the reference image with the highest cos. |
+| **Recall@1 (R@1)** | Share of queries whose best match lies at most 25 m from the true location. **0.568 means: 56.8 % correct.** R@5: any of the five best. |
+| **solvable** | A query with at least one reference image within 25 m. Only these count in the recall — what is not in the reference, no model can find. |
+| **Ground truth** | The rule for "correct". **Standard:** at most 25 m. **Hard:** additionally a different account or more than 180 days apart. **Viewing direction:** additionally at most 90° compass difference. |
+| **Drive, sequence** | A continuous capture series, one image every 0.17 s. Train, reference and queries are split **by sequence**, never by single image. |
+| **Benchmark, full reference** | Two protocols. Benchmark: 15 % of the sequences as reference (48,321 images). Full reference: all 279,453 images that are not queries. |
+| **95 % interval** | The range that contains the true value with 95 % confidence. Computed by resampling the 198 query drives 1,000 times (*bootstrap*). |
+| **Paired difference** | The difference between two variants on the same queries — far more precise than two separate numbers. **"Established"** means: its interval excludes 0. |
+| **Adapter** | A small layer trained on top of a frozen encoder. |
+| **PCA, whitening** | Fixed transformations without training: PCA shortens a vector, whitening gives all its axes equal weight. |
 
 ---
 
-## Ergebnisse auf einen Blick
+## Results at a glance
 
-Fünf Encoder, dieselben 53.414 Anfragen aus Osnabrück, R@1 bei 25 m:
+Five encoders, the same 53,414 queries from Osnabrück, R@1 at 25 m:
 
-| Encoder | für Orte trainiert | Dim | volle Referenz | voll, ohne Zwillinge | voll, Hard | Benchmark |
+| Encoder | trained for places | Dim | full reference | full, without twins | full, Hard | Benchmark |
 |---|:---:|---:|---:|---:|---:|---:|
-| **MegaLoc** | ja | 8448 | **0.798** <sub>[0.739, 0.848]</sub> | **0.690** | **0.523** | **0.568** <sub>[0.475, 0.666]</sub> |
-| **EigenPlaces** | ja | 2048 | 0.701 <sub>[0.630, 0.765]</sub> | 0.593 | 0.427 | 0.484 <sub>[0.405, 0.574]</sub> |
-| MixVPR | ja | 4096 | 0.653 <sub>[0.575, 0.724]</sub> | 0.533 | 0.373 | 0.426 <sub>[0.354, 0.509]</sub> |
-| AnyLoc | nein | 4096 | 0.435 <sub>[0.343, 0.533]</sub> | 0.273 | 0.148 | 0.204 <sub>[0.153, 0.265]</sub> |
-| CLIP | nein | 512 | 0.232 <sub>[0.144, 0.349]</sub> | 0.071 | 0.024 | 0.073 <sub>[0.044, 0.108]</sub> |
-| *Raten* | | | *0.0005* | | | *0.0006* |
+| **MegaLoc** | yes | 8448 | **0.798** <sub>[0.739, 0.848]</sub> | **0.690** | **0.523** | **0.568** <sub>[0.475, 0.666]</sub> |
+| **EigenPlaces** | yes | 2048 | 0.701 <sub>[0.630, 0.765]</sub> | 0.593 | 0.427 | 0.484 <sub>[0.405, 0.574]</sub> |
+| MixVPR | yes | 4096 | 0.653 <sub>[0.575, 0.724]</sub> | 0.533 | 0.373 | 0.426 <sub>[0.354, 0.509]</sub> |
+| AnyLoc | no | 4096 | 0.435 <sub>[0.343, 0.533]</sub> | 0.273 | 0.148 | 0.204 <sub>[0.153, 0.265]</sub> |
+| CLIP | no | 512 | 0.232 <sub>[0.144, 0.349]</sub> | 0.071 | 0.024 | 0.073 <sub>[0.044, 0.108]</sub> |
+| *Random guess* | | | *0.0005* | | | *0.0006* |
 
-<sub>Klein dahinter das 95-%-Intervall. Die drei „voll"-Spalten nutzen dieselbe Referenz und zählen
-verschieden streng: alle Treffer; ohne doppelt hochgeladene Fahrten; Hard = nur Treffer von einem anderen Konto oder mit mehr als 180 Tagen Abstand. Warum das
-nötig ist: [Zwillingsfahrten](#zwillingsfahrten). Varianten mit
-PCA, Whitening, Adapter und Nachbearbeitung: [Benchmark-Protokoll](#benchmark-protokoll).</sub>
+<sub>The small numbers are the 95 % interval. The three "full" columns use the same reference and count
+with different strictness: all matches; without drives uploaded twice; Hard = only matches from a different account or more than 180 days apart. Why this
+is needed: [twin drives](#twin-drives). Variants with
+PCA, whitening, adapter and post-processing: [benchmark protocol](#benchmark-protocol).</sub>
 
 > [!IMPORTANT]
-> **Ein Problem im Datensatz, das wir selbst gefunden haben.** Mapillary führt manche Fahrt doppelt: als zwei
-> Sequenzen desselben Kontos, Sekundenbruchteile auseinander. Unser Split trennt nach Sequenzen und sah das nicht.
-> Mit voller Referenz hatten 28 % der Osnabrücker Anfragen eine fast identische Kopie; ohne sie findet MegaLoc
-> **0.690 statt 0.798**. In Jena sind die „Doppelten" dagegen meist keine Kopien, sondern eine zweite Kamera,
-> die in eine andere Richtung schaut. Messung, Erklärung und Folgen: [Zwillingsfahrten](#zwillingsfahrten).
+> **A problem in the dataset that we found ourselves.** Mapillary lists some drives twice: as two
+> sequences of the same account, fractions of a second apart. Our split separates by sequence and did not see this.
+> With the full reference, 28 % of the Osnabrück queries had an almost identical copy; without them MegaLoc finds
+> **0.690 instead of 0.798**. In Jena, by contrast, the "duplicates" are mostly not copies but a second camera
+> looking in another direction. Measurement, explanation and consequences: [twin drives](#twin-drives).
 
-![Recall@1 bei 25 m je Variante, mit 95-%-Intervall](results/osnabrueck/figures/evaluation/vergleich_r1_25m.png)
+![Recall@1 at 25 m per variant, with 95 % interval](results/osnabrueck/figures/evaluation/vergleich_r1_25m.png)
 
 > [!NOTE]
-> **Lesehilfe zum Diagramm**
-> - **Ein Balken** ist der R@1 bei 25 m einer Variante im Benchmark-Protokoll, also gegen die 48.321
->   Referenzbilder. Die Farbe kennzeichnet den Encoder, die Beschriftung die Variante.
-> - **Varianten:** ohne Zusatz der Encoder wie veröffentlicht; `+linear` mit nachtrainiertem Adapter;
->   `+hmm30-25` die Trefferliste als Pfad der Fahrt umsortiert; `+gv20` die 20 besten Treffer geometrisch
->   nachgeprüft.
-> - **Der Fehlerbalken** ist das 95-%-Intervall aus dem Sequenz-Bootstrap. Er ist mit rund ±0.10 breit,
->   weil die 53.414 Anfragen aus nur 198 Fahrten stammen und Bilder einer Fahrt gemeinsam gelingen oder
->   scheitern.
-> - **Zwei Balken vergleichen:** Überlappende Fehlerbalken bedeuten *nicht*, dass kein Unterschied besteht.
->   Ob eine Variante besser ist, entscheidet die [gepaarte Differenz](#unsicherheit) auf denselben Anfragen;
->   ihr Intervall ist meist um ein Vielfaches enger.
+> **How to read the chart**
+> - **One bar** is the R@1 at 25 m of one variant in the benchmark protocol, i.e. against the 48,321
+>   reference images. The colour marks the encoder, the label the variant.
+> - **Variants:** without suffix the encoder as published; `+linear` with a trained adapter;
+>   `+hmm30-25` the match list re-ranked as a path of the drive; `+gv20` the 20 best matches checked
+>   geometrically.
+> - **The error bar** is the 95 % interval from the sequence bootstrap. It is about ±0.10 wide
+>   because the 53,414 queries come from only 198 drives, and images of one drive succeed or fail
+>   together.
+> - **Comparing two bars:** overlapping error bars do *not* mean there is no difference.
+>   Whether a variant is better is decided by the [paired difference](#uncertainty) on the same queries;
+>   its interval is usually several times narrower.
 
-**Acht Befunde.** Jeder ist gemessen; „belegt" heißt, das Intervall schließt 0 aus.
+**Eight findings.** Each one is measured; "established" means the interval excludes 0.
 
-| | Befund | Kernzahl | Mehr |
+| | Finding | Key number | More |
 |---|---|---|---|
-| 1 | **Der Encoder ist der größte Hebel.** | CLIP → MegaLoc +0.496 [+0.405, +0.590], belegt. Die Rangfolge bleibt auch auf 512 Dimensionen. | [Recall](#wie-gut-findet-das-system-den-ort) |
-| 2 | **Mehr Referenz hilft — ein Teil davon sind Zwillinge.** | Benchmark 0.568 → volle Referenz 0.798. Ohne doppelt hochgeladene Fahrten 0.550 → **0.690**: +0.14 statt +0.23. | [Zwillingsfahrten](#zwillingsfahrten) |
-| 3 | **Entscheidend ist ein Vergleichsbild in derselben Blickrichtung.** | 0.653 mit, 0.071 ohne. | [Woran es scheitert](#woran-es-scheitert) |
-| 4 | **Nachtrainieren schadet den guten Encodern.** | MegaLoc mit Adapter −0.126 [−0.179, −0.073]. Der Gewinn bei CLIP war Whitening. | [Adapter](experiments/README.md#adapter-diagnose--adapter_diagnosepy) |
-| 5 | **Nachbearbeitung hilft kaum — nur die Fahrt als Pfad.** | HMM +0.030 [+0.020, +0.041], belegt. Geometrische Verifikation −0.029, nicht belegt. | [Nachbearbeitung](#was-nachbearbeitung-bringt) |
-| 6 | **Fehler kommen geschlossen.** | 45 % der Fehlgriffe liegen unter 100 m, 44 % über 1 km. | [Struktur der Fehler](#struktur-der-fehler) |
-| 7 | **cos ist eine brauchbare Konfidenz.** | Bei cos ≥ 0.30 sind 82 % der Antworten richtig. | [Ablehnung](#wie-sicher-ist-eine-antwort) |
-| 8 | **Eine Stadt ist keine Aussage über ein Verfahren.** | R@1 schwankt zwischen Städten von 0.336 bis 0.651; der Abstand MegaLoc − EigenPlaces nur von +0.073 bis +0.114, in jeder Stadt belegt. | [Sechs Städte](#sechs-städte) |
+| 1 | **The encoder is the biggest lever.** | CLIP → MegaLoc +0.496 [+0.405, +0.590], established. The ranking holds at 512 dimensions too. | [Recall](#how-well-does-the-system-find-the-location) |
+| 2 | **More reference helps — part of it is twins.** | Benchmark 0.568 → full reference 0.798. Without drives uploaded twice 0.550 → **0.690**: +0.14 instead of +0.23. | [Twin drives](#twin-drives) |
+| 3 | **What matters is a reference image facing the same direction.** | 0.653 with, 0.071 without. | [What it fails on](#what-it-fails-on) |
+| 4 | **Fine-tuning hurts the good encoders.** | MegaLoc with adapter −0.126 [−0.179, −0.073]. The gain for CLIP came from whitening. | [Adapter](experiments/README.md#adapter-diagnosis--adapter_diagnosepy) |
+| 5 | **Post-processing barely helps — only the drive as a path.** | HMM +0.030 [+0.020, +0.041], established. Geometric verification −0.029, not established. | [Post-processing](#what-post-processing-brings) |
+| 6 | **Errors come in clusters.** | 45 % of the misses lie within 100 m, 44 % beyond 1 km. | [Structure of the errors](#structure-of-the-errors) |
+| 7 | **cos is a usable confidence.** | At cos ≥ 0.30, 82 % of the answers are correct. | [Rejection](#how-reliable-is-an-answer) |
+| 8 | **One city says nothing about a method.** | R@1 varies between cities from 0.336 to 0.651; the gap MegaLoc − EigenPlaces only from +0.073 to +0.114, established in every city. | [Six cities](#six-cities) |
 
 ---
 
-## Schnellstart
+## Quick start
 
-**Nur die Ergebnisse ansehen** — kein Download, keine GPU. Die Ergebnisdateien liegen im Git:
+**Only look at the results** — no download, no GPU. The result files are in Git:
 
 ```bash
 git clone https://github.com/nbomers/VisualPlaceRecognition.git && cd VisualPlaceRecognition
@@ -158,8 +165,8 @@ conda env create -f environment.yml && conda activate vpr
 python compare.py --ci
 ```
 
-**Alles selbst rechnen** — braucht einen [Mapillary-Token](#installation),
-rund 50 GB für Bilder und je Encoder 3 bis 25 GB:
+**Compute everything yourself** — needs a [Mapillary token](#installation),
+about 50 GB for images and 3 to 25 GB per encoder:
 
 ```bash
 cp .env.example .env
@@ -173,168 +180,168 @@ python setup_external.py
 python run.py
 ```
 
-`run.py` führt die Pipeline-Notebooks 02 bis 08 aus und überspringt jede
-Stufe, deren Ergebnis schon zur `config.yaml` passt. Beim ersten Lauf dauern
-der Bilddownload Stunden und das Encodieren je nach Encoder eine halbe
-Stunde bis eine Nacht; alles danach Minuten.
+`run.py` runs the pipeline notebooks 02 to 08 and skips every
+stage whose result already matches `config.yaml`. On the first run the
+image download takes hours and encoding takes between half an hour and a night,
+depending on the encoder; everything after that takes minutes.
 
-<sub>Ein Block, ein Befehl: das Kopiersymbol übernimmt genau einen Aufruf.
-Kommentare stehen bewusst nicht in den Blöcken — zsh würde ein eingefügtes
-`# …` als Argument weiterreichen.</sub>
-
----
-
-## Das Projekt
-
-**Die Frage.** Wie gut finden veröffentlichte VPR-Verfahren einen Ort in
-einer Stadt, die keines von ihnen je gesehen hat — mit Bildern, die niemand
-für sie ausgesucht hat? Die Forschung misst auf kuratierten Datensätzen
-(Pittsburgh-30k, MSLS). Hier ist es Osnabrück, mit allem, was Mapillary dort hat.
-
-**Drei Teilfragen.**
-1. Wie nah kommen Open-Source-Encoder an ihre Zahlen aus den Papern?
-2. Was begrenzt ein VPR-System in der Praxis — Modell, Daten, Deskriptor oder Nachbearbeitung?
-3. Wie misst man so, dass die Zahlen etwas bedeuten? *Diese wurde die wichtigste.*
-
-**Abgrenzung.**
-- Kein Encoder wird trainiert; alle fünf kommen mit den Gewichten ihrer Autoren.
-- Trainiert wird nur ein linearer Adapter — als Vergleich, nicht als Beitrag.
-- Osnabrück ist die Hauptstadt: alle Varianten und Nebenuntersuchungen laufen dort.
-  Fünf weitere Städte prüfen mit MegaLoc und EigenPlaces, was sich überträgt.
-- Ein Benchmark und eine Demo, kein Produkt.
-
-**Was am Ende stehen sollte — und steht:**
-
-- Ein Split ohne Leakage zwischen den Sequenzen, im Git und per Test nachgerechnet —
-  mit einer Lücke, die wir selbst gefunden und vermessen haben: [Zwillingsfahrten](#zwillingsfahrten)
-- Jede Zeile unter denselben Bedingungen: Fingerabdrücke prüfen jedes Zwischenergebnis
-- Drei Ground-Truth-Definitionen und eine Zufallsbasis
-- Unterschiede statistisch geprüft: 39 gepaarte Vergleiche mit Intervall
-- Ergebnisse erklärt, nicht nur berichtet, samt sechs Negativergebnissen
-- Ein System zum Vorführen: [`locate.py`](locate.py) und [`demo/demo.ipynb`](demo/demo.ipynb)
+<sub>One block, one command: the copy icon takes exactly one call.
+Comments are deliberately left out of the blocks — zsh would pass a pasted
+`# …` on as an argument.</sub>
 
 ---
 
-## So funktioniert es
+## The project
+
+**The question.** How well do published VPR methods find a location in
+a city that none of them has ever seen — with images that nobody
+selected for them? Research measures on curated datasets
+(Pittsburgh-30k, MSLS). Here it is Osnabrück, with everything Mapillary has there.
+
+**Three sub-questions.**
+1. How close do open-source encoders come to the numbers in their papers?
+2. What limits a VPR system in practice — model, data, descriptor or post-processing?
+3. How do you measure so that the numbers mean something? *This one became the most important.*
+
+**Scope.**
+- No encoder is trained; all five come with their authors' weights.
+- Only a linear adapter is trained — as a comparison, not as a contribution.
+- Osnabrück is the main city: all variants and side studies run there.
+  Five more cities test with MegaLoc and EigenPlaces what carries over.
+- A benchmark and a demo, not a product.
+
+**What should be there at the end — and is:**
+
+- A split without leakage between sequences, in Git and re-checked by a test —
+  with a gap that we found and measured ourselves: [twin drives](#twin-drives)
+- Every row under the same conditions: fingerprints check every intermediate result
+- Three ground-truth definitions and a random baseline
+- Differences tested statistically: 39 paired comparisons with intervals
+- Results explained, not just reported, including six negative results
+- A system to demonstrate: [`locate.py`](locate.py) and [`demo/demo.ipynb`](demo/demo.ipynb)
+
+---
+
+## How it works
 
 ```mermaid
 flowchart LR
-    A[01 · Metadaten<br/>und Split] --> B[03 · Bilder]
+    A[01 · Metadata<br/>and split] --> B[03 · Images]
     B --> C[04 · Embeddings]
-    C --> D[06 · Suche<br/>Top-50]
+    C --> D[06 · Search<br/>top 50]
     C -.-> H[05 · Adapter]
     H -.-> D
     D --> E[07 · Recall]
-    D --> F[08 · Koordinate]
+    D --> F[08 · Coordinate]
     E --> G[compare.py]
     F --> G
     A --> I[02 · Audit]
     D -.-> X[experiments/]
 ```
 
-| Stufe | Notebook | Was passiert |
+| Stage | Notebook | What happens |
 |---|---|---|
-| 01 | [`01_mapillary_coverage`](notebooks/01_mapillary_coverage.ipynb) | Bildpunkte der Stadt holen, nach Sequenzen in train / database / query teilen (70 / 15 / 15 %) |
-| 02 | [`02_dataset_audit`](notebooks/02_dataset_audit.ipynb) | Datensatz prüfen: Leakage, Jahre, Abdeckung, Fotografen |
-| 03 | [`03_image_download`](notebooks/03_image_download.ipynb) | Bilder laden (1024 px) und prüfen |
-| 04 | [`04_embeddings`](notebooks/04_embeddings.ipynb) | jedes Bild durch den Encoder |
-| 05 | [`05_adapter`](notebooks/05_adapter.ipynb) | optional: linearen Adapter auf train trainieren |
-| 06 | [`06_retrieval`](notebooks/06_retrieval.ipynb) | je Anfrage die 50 ähnlichsten Referenzbilder |
-| 07 | [`07_evaluation`](notebooks/07_evaluation.ipynb) | Recall bei 5 / 10 / 25 / 50 / 100 m, drei Ground Truths |
-| 08 | [`08_localization`](notebooks/08_localization.ipynb) | aus der Trefferliste eine Koordinate, Fehler in Metern |
+| 01 | [`01_mapillary_coverage`](notebooks/01_mapillary_coverage.ipynb) | fetch the city's image points, split by sequence into train / database / query (70 / 15 / 15 %) |
+| 02 | [`02_dataset_audit`](notebooks/02_dataset_audit.ipynb) | check the dataset: leakage, years, coverage, photographers |
+| 03 | [`03_image_download`](notebooks/03_image_download.ipynb) | download images (1024 px) and verify them |
+| 04 | [`04_embeddings`](notebooks/04_embeddings.ipynb) | every image through the encoder |
+| 05 | [`05_adapter`](notebooks/05_adapter.ipynb) | optional: train a linear adapter on train |
+| 06 | [`06_retrieval`](notebooks/06_retrieval.ipynb) | the 50 most similar reference images per query |
+| 07 | [`07_evaluation`](notebooks/07_evaluation.ipynb) | recall at 5 / 10 / 25 / 50 / 100 m, three ground truths |
+| 08 | [`08_localization`](notebooks/08_localization.ipynb) | a coordinate from the match list, error in metres |
 
-**Warum nach Sequenzen geteilt wird.** Teilte man nach Einzelbildern, stünde
-zu fast jeder Anfrage ein Trainingsbild vom selben Meter — aus derselben
-Fahrt, Sekundenbruchteile später. Der Recall maße dann das Wiederfinden
-desselben Fotos, nicht das Erkennen eines Ortes.
+**Why the split is by sequence.** If you split by single image, almost every
+query would have a training image from the same metre — from the same
+drive, a fraction of a second later. Recall would then measure finding
+the same photo again, not recognising a place.
 
-![Sequenzbasierter Split gegen einen Split je Bild, derselbe Ausschnitt](results/osnabrueck/figures/dataset/split_sequenz_vs_zufall.png)
+![Sequence-based split versus a split per image, same section](results/osnabrueck/figures/dataset/split_sequenz_vs_zufall.png)
 
-<sub>Derselbe 400-m-Ausschnitt. Links liegt jede Fahrt vollständig in einem
-Topf; rechts, je Bild gewürfelt, steht zu fast jeder Anfrage ein Trainingsbild
-daneben.</sub>
+<sub>The same 400 m section. On the left every drive lies entirely in one
+pot; on the right, shuffled per image, almost every query has a training image
+right next to it.</sub>
 
-**Die fünf Encoder.**
+**The five encoders.**
 
-| Encoder | Netz | Dim | für Orte trainiert |
+| Encoder | Network | Dim | trained for places |
 |---|---|---:|:---:|
-| [MegaLoc](https://github.com/gmberton/MegaLoc) | DINOv2 | 8448 | ja |
-| [EigenPlaces](https://github.com/gmberton/EigenPlaces) | ResNet-50 | 2048 | ja |
-| [MixVPR](https://github.com/amaralibey/MixVPR) | ResNet-50 + MLP-Mixer | 4096 | ja |
-| [AnyLoc](https://github.com/AnyLoc/AnyLoc) | DINOv2 ViT-G + VLAD, per PCA auf 4096 | 4096 | nein |
-| [CLIP](https://github.com/openai/CLIP) ViT-B/32 | Vision Transformer | 512 | nein |
+| [MegaLoc](https://github.com/gmberton/MegaLoc) | DINOv2 | 8448 | yes |
+| [EigenPlaces](https://github.com/gmberton/EigenPlaces) | ResNet-50 | 2048 | yes |
+| [MixVPR](https://github.com/amaralibey/MixVPR) | ResNet-50 + MLP-Mixer | 4096 | yes |
+| [AnyLoc](https://github.com/AnyLoc/AnyLoc) | DINOv2 ViT-G + VLAD, PCA to 4096 | 4096 | no |
+| [CLIP](https://github.com/openai/CLIP) ViT-B/32 | Vision Transformer | 512 | no |
 
-Ob ein Encoder für Orte trainiert ist, erklärt später, wie er auf Adapter und
-Whitening reagiert.
+Whether an encoder is trained for places later explains how it reacts to adapter and
+whitening.
 
-**Vier Bausteine.**
-- **[`config.yaml`](config.yaml)** ist der einzige Schalter: Stadt, Split, Encoder, Radien.
-  Wer einen Wert ändert, ändert den Fingerabdruck der betroffenen Dateien — und genau die werden neu gerechnet.
-- **[`src/`](src/)** ist der geteilte Code. Die Recall-Auswertung steht an genau einer Stelle
-  ([`src/evaluation.py`](src/evaluation.py)) und gilt für 07 wie für jedes Experiment.
-- **[`notebooks/`](notebooks/)** sind die Pipeline 01–08; [`run.py`](run.py) führt sie der Reihe nach aus.
-- **[`experiments/`](experiments/README.md)** stellt je Skript eine Frage und antwortet mit denselben Bausteinen.
+**Four building blocks.**
+- **[`config.yaml`](config.yaml)** is the single switch: city, split, encoder, radii.
+  Changing a value changes the fingerprint of the affected files — and exactly those are recomputed.
+- **[`src/`](src/)** is the shared code. The recall evaluation lives in exactly one place
+  ([`src/evaluation.py`](src/evaluation.py)) and applies to 07 as well as to every experiment.
+- **[`notebooks/`](notebooks/)** are the pipeline 01–08; [`run.py`](run.py) runs them in order.
+- **[`experiments/`](experiments/README.md)** asks one question per script and answers with the same building blocks.
 
 <details>
-<summary><b>Die Module in <code>src/</code></b></summary>
+<summary><b>The modules in <code>src/</code></b></summary>
 
-| Modul | Aufgabe |
+| Module | Task |
 |---|---|
-| [`config.py`](src/config.py), [`paths.py`](src/paths.py) | config lesen, Umgebungsvariablen übernehmen, alle Ablageorte je Stadt |
-| [`run_guard.py`](src/run_guard.py) | Fingerabdrücke schreiben und prüfen, config auf Widersprüche prüfen |
-| [`split.py`](src/split.py), [`pairs.py`](src/pairs.py) | Sequenz-Split; Bildpaare für Audit und Adapter |
-| [`evaluation.py`](src/evaluation.py) | die Recall-Auswertung, drei Ground Truths |
-| [`retrieval.py`](src/retrieval.py) | Trefferlisten laden, „lösbar" und Treffer je Anfrage |
-| [`sequence_hmm.py`](src/sequence_hmm.py), [`verification.py`](src/verification.py) | Nachbearbeitung: Fahrt als Pfad, geometrische Verifikation |
-| [`locate.py`](src/locate.py) | Foto → Encoder → Suche → Koordinate mit Konfidenz |
-| [`models/`](src/models/) | ein Modul je Encoder, Adapter, PCA-/Whitening-/Verkettungsvarianten, `factory.py` |
-| [`districts.py`](src/districts.py), [`geo.py`](src/geo.py) | Stadtteile aus OSM; Distanzen und Projektionen |
-| [`mapillary.py`](src/mapillary.py), [`quellen.py`](src/quellen.py) | API-Zugang; Namensnennung je Bild in jeder Abbildung |
-| [`adapter_training.py`](src/adapter_training.py), [`device.py`](src/device.py) | Training des Adapters; cuda / mps / cpu |
+| [`config.py`](src/config.py), [`paths.py`](src/paths.py) | read the config, take over environment variables, all storage locations per city |
+| [`run_guard.py`](src/run_guard.py) | write and check fingerprints, check the config for contradictions |
+| [`split.py`](src/split.py), [`pairs.py`](src/pairs.py) | sequence split; image pairs for audit and adapter |
+| [`evaluation.py`](src/evaluation.py) | the recall evaluation, three ground truths |
+| [`retrieval.py`](src/retrieval.py) | load match lists, "solvable" and hits per query |
+| [`sequence_hmm.py`](src/sequence_hmm.py), [`verification.py`](src/verification.py) | post-processing: drive as a path, geometric verification |
+| [`locate.py`](src/locate.py) | photo → encoder → search → coordinate with confidence |
+| [`models/`](src/models/) | one module per encoder, adapter, PCA / whitening / concatenation variants, `factory.py` |
+| [`districts.py`](src/districts.py), [`geo.py`](src/geo.py) | districts from OSM; distances and projections |
+| [`mapillary.py`](src/mapillary.py), [`quellen.py`](src/quellen.py) | API access; attribution per image in every figure |
+| [`adapter_training.py`](src/adapter_training.py), [`device.py`](src/device.py) | adapter training; cuda / mps / cpu |
 
 </details>
 
 ---
 
-## Daten
+## Data
 
-![Beispielaufnahmen aus dem Datensatz](results/osnabrueck/figures/demo/beispielbilder.png)
+![Sample images from the dataset](results/osnabrueck/figures/demo/beispielbilder.png)
 
-<sub>Bilder von [Mapillary](https://www.mapillary.com), CC BY-SA 4.0:
-[Fußgängerzone](https://www.mapillary.com/app/?pKey=1391533835065315) ·
-[Autobahn](https://www.mapillary.com/app/?pKey=1452480101753239) ·
-[Park](https://www.mapillary.com/app/?pKey=3796249137169638) ·
-[Am Wasser](https://www.mapillary.com/app/?pKey=1120224498685697) ·
-[Wohnstraße](https://www.mapillary.com/app/?pKey=500860001925774) ·
-[Hauptstraße](https://www.mapillary.com/app/?pKey=775519696297537)</sub>
+<sub>Images from [Mapillary](https://www.mapillary.com), CC BY-SA 4.0:
+[pedestrian zone](https://www.mapillary.com/app/?pKey=1391533835065315) ·
+[motorway](https://www.mapillary.com/app/?pKey=1452480101753239) ·
+[park](https://www.mapillary.com/app/?pKey=3796249137169638) ·
+[by the water](https://www.mapillary.com/app/?pKey=1120224498685697) ·
+[residential street](https://www.mapillary.com/app/?pKey=500860001925774) ·
+[main road](https://www.mapillary.com/app/?pKey=775519696297537)</sub>
 
 | | Osnabrück |
 |---|---|
-| **Quelle** | [Mapillary](https://www.mapillary.com): Straßenbilder von Freiwilligen, CC BY-SA 4.0; Gesichter und Kennzeichen unkenntlich |
-| **Umfang** | 332.868 Bilder auf 120 km² Stadtgebiet |
-| **Aufteilung** | nach Sequenzen: train 231.133 · Referenz 48.321 · Anfragen 53.414 (70 / 15 / 15 %) |
-| **Anfragen** | 198 Fahrten; Median 176 Bilder je Fahrt, die längste 3.156 |
-| **Fotografen** | 57 Konten; eines stellt 47,8 % aller Bilder |
-| **Jahre** | 2014 bis 2026, Schwerpunkte 2022 (29 %) und 2016 |
-| **lösbar** | 63,9 % der Anfragen haben ein Referenzbild im Umkreis von 25 m |
+| **Source** | [Mapillary](https://www.mapillary.com): street-level images from volunteers, CC BY-SA 4.0; faces and licence plates blurred |
+| **Size** | 332,868 images over 120 km² of city area |
+| **Split** | by sequence: train 231,133 · reference 48,321 · queries 53,414 (70 / 15 / 15 %) |
+| **Queries** | 198 drives; median 176 images per drive, the longest 3,156 |
+| **Photographers** | 57 accounts; one provides 47.8 % of all images |
+| **Years** | 2014 to 2026, peaks in 2022 (29 %) and 2016 |
+| **Solvable** | 63.9 % of the queries have a reference image within 25 m |
 
 <p align="center">
-  <img src="results/osnabrueck/figures/dataset/coverage_map.png" width="80%" alt="Abdeckung des Stadtgebiets">
+  <img src="results/osnabrueck/figures/dataset/coverage_map.png" width="80%" alt="Coverage of the city area">
 </p>
 <p align="center">
-  <img src="results/osnabrueck/figures/dataset/images_per_year.png" width="80%" alt="Bilder je Jahr">
+  <img src="results/osnabrueck/figures/dataset/images_per_year.png" width="80%" alt="Images per year">
 </p>
 
-<sub>Aus `02_dataset_audit`: oben die räumliche Abdeckung, unten die
-Aufnahmejahre. Weitere Kennzahlen in
+<sub>From `02_dataset_audit`: top the spatial coverage, bottom the
+capture years. More figures in
 [`results/osnabrueck/dataset_audit.json`](results/osnabrueck/dataset_audit.json).</sub>
 
-**Warum 25 Meter?**
-- Das GPS von Smartphones und Dashcams streut in der Stadt typisch 5 bis 15 m.
-  Eine engere Schwelle mäße das Rauschen der Kamera statt den Encoder.
-- 50 m fingen schon die Nachbarstraße ein.
-- MSLS und Pittsburgh-30k nutzen dieselbe Größenordnung.
-- Jede Zahl gibt es zusätzlich bei 5, 10, 50 und 100 m: `python compare.py --threshold 5`.
+**Why 25 metres?**
+- The GPS of smartphones and dashcams typically scatters by 5 to 15 m in a city.
+  A tighter threshold would measure the camera's noise rather than the encoder.
+- 50 m would already catch the neighbouring street.
+- MSLS and Pittsburgh-30k use the same order of magnitude.
+- Every number is also available at 5, 10, 50 and 100 m: `python compare.py --threshold 5`.
 
 ---
 
@@ -342,12 +349,12 @@ Aufnahmejahre. Weitere Kennzahlen in
 
 | | |
 |---|---|
-| **Python** | ab 3.11; getestet mit 3.11 und 3.14 |
-| **Umgebung** | conda (empfohlen) oder uv |
-| **GPU** | nicht nötig, aber hilfreich: 04 encodiert jedes Bild der Stadt. AnyLoc und MegaLoc gehören auf eine CUDA-GPU |
-| **Arbeitsspeicher** | ein Encodersatz ist `Bilder × Dimension × 4 Byte` — MegaLoc in Osnabrück 11,2 GB. 16 GB reichen für Osnabrück |
-| **Platz** | 50 GB Bilder, 3 bis 25 GB je Encoder, 1 GB Ergebnisse |
-| **Mapillary-Token** | kostenloser [Developer-Account](https://www.mapillary.com/developer) |
+| **Python** | 3.11 or newer; tested with 3.11 and 3.14 |
+| **Environment** | conda (recommended) or uv |
+| **GPU** | not required but helpful: 04 encodes every image of the city. AnyLoc and MegaLoc belong on a CUDA GPU |
+| **Memory** | one encoder's embeddings are `images × dimension × 4 bytes` — MegaLoc in Osnabrück 11.2 GB. 16 GB are enough for Osnabrück |
+| **Disk** | 50 GB images, 3 to 25 GB per encoder, 1 GB results |
+| **Mapillary token** | free [developer account](https://www.mapillary.com/developer) |
 
 ```bash
 conda env create -f environment.yml
@@ -365,91 +372,91 @@ nbstripout --install --attributes .gitattributes
 pytest tests/
 ```
 
-`nbstripout` hält Zellausgaben aus dem Git; `pytest` prüft die Installation
-ohne Torch und ohne Bilder. **Auf dem Mac** danach einmal die
-[Fehlerbehebung](#fehlerbehebung) lesen — sonst stürzt die Demo beim ersten
-eigenen Foto ohne Meldung ab.
+`nbstripout` keeps cell outputs out of Git; `pytest` checks the installation
+without Torch and without images. **On a Mac**, read the
+[troubleshooting](#troubleshooting) section once afterwards — otherwise the demo crashes silently on the first
+photo of your own.
 
-**Token.** Der Mapillary-Token gehört in eine lokale `.env`, nie ins Repository:
+**Token.** The Mapillary token belongs in a local `.env`, never in the repository:
 
 ```bash
 cp .env.example .env
 ```
 
-**Fremd-Repositories.** AnyLoc und MixVPR werden aus ihren Original-Repos
-importiert; ein Skript holt sie auf festen Commits, dazu die MixVPR-Gewichte
-(mit SHA-256-Prüfung) und das AnyLoc-Vokabular:
+**Third-party repositories.** AnyLoc and MixVPR are imported from their original
+repos; a script fetches them at pinned commits, together with the MixVPR weights
+(with SHA-256 check) and the AnyLoc vocabulary:
 
 ```bash
 python setup_external.py
 ```
 
-EigenPlaces und MegaLoc laden sich beim ersten Lauf selbst über `torch.hub`
-— nicht auf einen Commit festgelegt. Welche Lizenz jede Komponente hat, steht
+EigenPlaces and MegaLoc download themselves on the first run via `torch.hub`
+— not pinned to a commit. The license of every component is listed
 in [NOTICE.md](NOTICE.md).
 
 <details>
-<summary><b>Alternative mit uv</b>, und welche Versionen geprüft sind</summary>
+<summary><b>Alternative with uv</b>, and which versions are tested</summary>
 
 ```bash
 uv venv --python 3.14 && source .venv/bin/activate && uv pip install -r requirements.txt
 ```
 
-`requirements.txt` und `environment.yml` nennen untere Grenzen, keine festen
-Versionen. Eine Auflösung, unter der Tests, Linter und Pipeline nachweislich
-liefen, ist eingefroren:
+`requirements.txt` and `environment.yml` give lower bounds, not pinned
+versions. A resolution under which tests, linter and pipeline demonstrably
+ran is frozen:
 
 ```bash
 uv pip install -r requirements.lock.txt
 ```
 
-`conda install --file requirements.txt` funktioniert **nicht** — mehrere
-Pakete gibt es nur über pip. Die passende PyTorch-Variante nennt der
-[Konfigurator von PyTorch](https://pytorch.org/get-started/locally/).
+`conda install --file requirements.txt` does **not** work — several
+packages are only available via pip. The right PyTorch build is given by the
+[PyTorch configurator](https://pytorch.org/get-started/locally/).
 
 </details>
 
 <details>
-<summary><b>Die wichtigsten Schlüssel in <code>config.yaml</code></b></summary>
+<summary><b>The most important keys in <code>config.yaml</code></b></summary>
 
-`validate_config` prüft die Datei beim Laden auf Widersprüche, bevor eine
-Stufe Stunden rechnet.
+`validate_config` checks the file for contradictions on load, before a
+stage computes for hours.
 
-| Schlüssel | Bedeutung |
+| Key | Meaning |
 |---|---|
-| `city` | Stadt — und der Ordnername aller Ergebnisse; per `VPR_CITY` überschreibbar |
-| `vpr.method`, `vpr.adapter` | Encoder und Adapter; `run.py --method/--adapter` überschreibt beides |
-| `vpr.uncertain_radius_m` | die 25 m der Ground Truth |
-| `vpr.max_heading_diff_deg` | die 90° der Blickrichtungs-Auswertung |
-| `retrieval.top_k`, `k_values`, `thresholds` | gespeicherte Treffer, berichtete R@k und Schwellen |
-| `retrieval.min_days_apart` | die 180 Tage der Hard-Ground-Truth |
-| `image_root` | wo die Bilder liegen; per `VPR_IMAGE_ROOT` überschreibbar |
-| `osm.overpass_url`, `osm.timeout_s` | Endpunkt und Zeitlimit für OpenStreetMap; per `VPR_OVERPASS_URL` |
+| `city` | city — and the folder name of all results; can be overridden with `VPR_CITY` |
+| `vpr.method`, `vpr.adapter` | encoder and adapter; `run.py --method/--adapter` overrides both |
+| `vpr.uncertain_radius_m` | the 25 m of the ground truth |
+| `vpr.max_heading_diff_deg` | the 90° of the viewing-direction evaluation |
+| `retrieval.top_k`, `k_values`, `thresholds` | stored matches, reported R@k and thresholds |
+| `retrieval.min_days_apart` | the 180 days of the Hard ground truth |
+| `image_root` | where the images are; can be overridden with `VPR_IMAGE_ROOT` |
+| `osm.overpass_url`, `osm.timeout_s` | endpoint and timeout for OpenStreetMap; via `VPR_OVERPASS_URL` |
 
 </details>
 
 ---
 
-## Nutzung
+## Usage
 
-**Die häufigsten Befehle.** Alle übrigen stehen in der [Befehlsreferenz](#befehlsreferenz).
+**The most common commands.** All others are in the [command reference](#command-reference).
 
-| Aufgabe | Befehl |
+| Task | Command |
 |---|---|
-| Pipeline rechnen, Fertiges überspringen | `python run.py` |
-| Was liegt auf diesem Rechner vor? | `python run.py --bestand` |
-| Anderer Encoder | `python run.py --method megaloc` |
-| Vergleichstabelle mit Intervallen | `python compare.py --ci` |
-| Ein Foto verorten | `python locate.py foto.jpg` |
+| Run the pipeline, skip what is done | `python run.py` |
+| What is available on this machine? | `python run.py --bestand` |
+| Another encoder | `python run.py --method megaloc` |
+| Comparison table with intervals | `python compare.py --ci` |
+| Locate a photo | `python locate.py foto.jpg` |
 | Tests | `pytest tests/` |
 
-### Ein eigenes Foto verorten
+### Locating a photo of your own
 
-Eigene Fotos gehören in den Ordner `test/` neben dem Bildordner der Stadt,
-bei Standardeinstellung `~/Downloads/mapillary/test`:
+Your own photos go into the folder `test/` next to the city's image folder,
+by default `~/Downloads/mapillary/test`:
 
 <p align="center">
-  <img src="demo/testordner.png" width="60%" alt="Finder: im Ordner mapillary liegen osnabrueck (der Bildbestand) und test (eigene Fotos)">
+  <img src="demo/testordner.png" width="60%" alt="Finder: the folder mapillary contains osnabrueck (the image collection) and test (your own photos)">
 </p>
 
 ```bash
@@ -457,66 +464,67 @@ python locate.py ~/Downloads/mapillary/test
 python locate.py ~/Downloads/mapillary/test --referenz alle
 ```
 
-**Gegen welche Bilder gesucht wird.** Standard ist die Referenz der Auswertung
-(48.321 Bilder, 15 % der Fahrten). Eigene Fotos gehören zu keinem Split, also
-darf es mehr sein: `--referenz alle` sucht gegen alle 332.868 Bilder, `voll`
-gegen alles außer den Anfragen. Mehr Referenz heißt öfter ein Bild in der Nähe
-(MegaLoc im Benchmark: 0.568 → 0.690 ohne Kopien). Was nicht in den Speicher
-passt, wird blockweise von der Platte gelesen. Die cos-Schwelle unten ist gegen
-die Standard-Referenz gemessen.
+**Which images are searched.** The default is the evaluation's reference
+(48,321 images, 15 % of the drives). Your own photos belong to no split, so
+it may be more: `--referenz alle` searches all 332,868 images, `voll`
+everything except the queries. More reference means a nearby image more often
+(MegaLoc: 0.568 with the benchmark reference → 0.690 with the full reference, without copies). What does not fit into memory
+is read block by block from disk. The cos threshold below was measured against
+the default reference.
 
-`--method` wählt einen anderen Encoder, `--k` die Zahl der Treffer, `--json`
-gibt alles maschinenlesbar aus. Dasselbe mit Bildern und Karte:
-[`demo/demo.ipynb`](demo/demo.ipynb), Abschnitt „Eigene Fotos testen".
+`--method` selects another encoder, `--k` the number of matches, `--json`
+prints everything machine-readable. The same with images and a map:
+[`demo/demo.ipynb`](demo/demo.ipynb), section "Eigene Fotos testen".
 
-**So liest man die Ausgabe.**
-- **Koordinate** = der Ort des besten Treffers.
-- **cos** = die Konfidenz. Bei MegaLoc sind ab cos 0.30 82 % der Antworten richtig; darunter warnt die Demo.
-- **Abstand zu #1** = wie weit die übrigen Treffer vom besten entfernt liegen, aus den Koordinaten der
-  Referenzbilder. Das eigene Foto braucht dafür kein GPS.
-- **Streuung** = der größte dieser Abstände. Sie misst, ob sich die Treffer einig sind — **nicht**, ob sie
-  stimmen: fünf Bilder derselben Fahrt liegen immer nah beieinander, auch am falschen Ort.
-- **cos über 0.95** heißt fast dasselbe Bild. Liegt das Foto selbst im Datensatz, findet `--referenz alle` es wieder.
+**How to read the output.**
+- **Coordinate** = the location of the best match.
+- **cos** = the confidence. With MegaLoc, 82 % of the answers at cos 0.30 or above are correct; below that the demo warns.
+- **Distance to #1** = how far the other matches lie from the best one, computed from the coordinates of the
+  reference images. Your own photo needs no GPS for this.
+- **Spread** = the largest of these distances. It measures whether the matches agree — **not** whether they
+  are right: five images of the same drive always lie close together, even at the wrong place.
+- **cos above 0.95** means practically the same image. If the photo itself is in the dataset, `--referenz alle` finds it again.
 
-### Was die Demo zeigt
+### What the demo shows
 
 <p align="center">
-  <img src="results/osnabrueck/figures/demo/megaloc_fehlschlag.png" width="100%" alt="Gescheiterte Anfrage: alle Treffer weiter als 25 m">
+  <img src="results/osnabrueck/figures/demo/megaloc_fehlschlag.png" width="100%" alt="Failed query: all matches farther than 25 m">
 </p>
 <p align="center">
-  <img src="results/osnabrueck/figures/demo/megaloc_karte_zwei_gruppen.png" width="49%" alt="Treffer auf dem Straßennetz: zwei Gruppen">
-  <img src="results/osnabrueck/figures/demo/megaloc_karte_fehlschlag.png" width="49%" alt="Treffer auf dem Straßennetz: Fehlgriff">
+  <img src="results/osnabrueck/figures/demo/megaloc_karte_zwei_gruppen.png" width="49%" alt="Matches on the street network: two groups">
+  <img src="results/osnabrueck/figures/demo/megaloc_karte_fehlschlag.png" width="49%" alt="Matches on the street network: a miss">
 </p>
 
-<sub>Oben eine gescheiterte Anfrage (rot = mehr als 25 m daneben), obwohl es
-Referenzbilder in der Nähe gibt. Unten die Treffer auf dem Straßennetz: links
-liegt der beste Treffer richtig, andere über 200 m weit weg — zwei Gruppen; rechts liegt
-kein Treffer näher als 200 m. Als Beispiele gelten nur Treffer von einem anderen
-Konto, und nur langsame Fahrten abseits der Autobahn.</sub>
+<sub>Top: a failed query (red = more than 25 m off), although there are
+reference images nearby. Bottom: the matches on the street network: on the left
+the best match is correct, others are more than 200 m away — two groups; on the right
+no match is closer than 200 m. Only matches from a different account count as examples,
+and only slow drives away from the motorway.</sub>
 
-Dasselbe Anfragebild durch alle fünf Encoder:
+The same query image through all five encoders:
 
-![Top-5 je Encoder für dieselbe Anfrage](results/osnabrueck/figures/demo/vergleich_encoder.png)
+![Top 5 per encoder for the same query](results/osnabrueck/figures/demo/vergleich_encoder.png)
 
-<sub>Eine Zeile je Encoder; grün = höchstens 25 m daneben. Bilder von
-[Mapillary](https://www.mapillary.com), CC BY-SA 4.0, Urheber je Bild in
+<sub>One row per encoder; green = at most 25 m off. Note that each encoder has its own cos scale:
+CLIP gives wrong matches 0.90, MegaLoc gives the right one 0.41. Images from
+[Mapillary](https://www.mapillary.com), CC BY-SA 4.0, author of each image in
 [QUELLEN.md](results/osnabrueck/figures/demo/QUELLEN.md).</sub>
 
 ---
 
-## Projektstruktur
+## Project structure
 
 ```text
 .
-├── README.md             dieses Dokument
-├── config.yaml           alle Parameter — der einzige Schalter
-├── run.py                Pipeline 01–08, überspringt Fertiges
-├── compare.py            Vergleichstabellen und -abbildungen
-├── locate.py             ein Foto verorten
-├── setup_external.py     Fremd-Repos und Gewichte holen
-├── environment.yml       conda-Umgebung (requirements.txt für uv)
+├── README.md             this document (English); README.de.md in German
+├── config.yaml           all parameters — the single switch
+├── run.py                pipeline 01–08, skips what is done
+├── compare.py            comparison tables and figures
+├── locate.py             locate a photo
+├── setup_external.py     fetch third-party repos and weights
+├── environment.yml       conda environment (requirements.txt for uv)
 │
-├── notebooks/            die Pipeline
+├── notebooks/            the pipeline
 │   ├── 01_mapillary_coverage.ipynb
 │   ├── 02_dataset_audit.ipynb
 │   ├── 03_image_download.ipynb
@@ -525,59 +533,60 @@ Dasselbe Anfragebild durch alle fünf Encoder:
 │   ├── 06_retrieval.ipynb
 │   ├── 07_evaluation.ipynb
 │   └── 08_localization.ipynb
-├── demo/demo.ipynb       Trefferreihen, Karten, eigene Fotos
+├── demo/demo.ipynb       match rows, maps, your own photos
 │
-├── experiments/          Nebenuntersuchungen — eigenes README
-├── src/                  geteilter Code
+├── experiments/          side studies — own README
+├── src/                  shared code
 ├── tests/                pytest
-├── data/<stadt>/         Metadaten und Split
-└── results/<stadt>/      Ergebnisse und Abbildungen
+├── data/<city>/          metadata and split
+└── results/<city>/       results and figures
 ```
 
 <details>
-<summary><b>Was beim Rechnen entsteht</b> (nicht im Git)</summary>
+<summary><b>What is created when computing</b> (not in Git)</summary>
 
 ```text
-data/<stadt>/embeddings/<encoder>/    Embeddings aus 04 und 05
-results/<stadt>/retrieval/<encoder>/  Trefferlisten aus 06
-weights/                              Adapter, MixVPR-Gewichte
-external/                             AnyLoc und MixVPR
-cache/                                OpenStreetMap-Antworten
-~/Downloads/mapillary/<stadt>/        die Bilder (image_root)
-~/Downloads/mapillary/test/           eigene Fotos
+data/<city>/embeddings/<encoder>/     embeddings from 04 and 05
+results/<city>/retrieval/<encoder>/   match lists from 06
+weights/                              adapter, MixVPR weights
+external/                             AnyLoc and MixVPR
+cache/                                OpenStreetMap responses
+~/Downloads/mapillary/<city>/         the images (image_root)
+~/Downloads/mapillary/test/           your own photos
 ```
 
-Alle Ablageorte kommen aus [`src/paths.py`](src/paths.py); `<stadt>` ist
-der Ordnername aus `city` (`Osnabrück, Germany` → `osnabrueck`).
+All storage locations come from [`src/paths.py`](src/paths.py); `<city>` is
+the folder name derived from `city` (`Osnabrück, Germany` → `osnabrueck`).
 
 </details>
 
 ---
 
-## Ergebnisse
+## Results
 
-Der rote Faden in sechs Fragen. Jede Antwort hat einen ausführlichen
-Abschnitt in den [Nebenuntersuchungen](experiments/README.md).
+The common thread in six questions. Each answer has a detailed
+section in the [side studies](experiments/README.md).
 
-1. [Wie gut findet das System den Ort?](#wie-gut-findet-das-system-den-ort)
-2. [Gilt das auch in anderen Städten?](#sechs-städte)
-3. [Woran scheitert es?](#woran-es-scheitert)
-4. [Was bringt Nachbearbeitung?](#was-nachbearbeitung-bringt)
-5. [Wie sicher ist eine Antwort?](#wie-sicher-ist-eine-antwort)
-6. [Was kostet es?](#was-es-kostet)
+1. [How well does the system find the location?](#how-well-does-the-system-find-the-location)
+2. [Does this hold in other cities too?](#six-cities)
+3. [What does it fail on?](#what-it-fails-on)
+4. [What does post-processing bring?](#what-post-processing-brings)
+5. [How reliable is an answer?](#how-reliable-is-an-answer)
+6. [What does it cost?](#what-it-costs)
 
-<sub>Zahlenblöcke sind entweder die **wörtliche Ausgabe** eines Befehls oder
-ein **Auszug** aus einer versionierten JSON; die Quelle steht jeweils
-darunter. In Blöcken stehen Zahlen, wie die Programme sie drucken
-(Dezimalpunkt, Tausenderkomma).</sub>
+<sub>Number blocks are either the **verbatim output** of a command or
+an **excerpt** from a versioned JSON; the source is given below each.
+Blocks show numbers as the programs print them (decimal point, thousands
+comma). Program output is in German: *Alle Queries* = all queries, *loesbare* = solvable,
+*Schwelle* = threshold, *Zufall (Raten)* = random guess.</sub>
 
-### Wie gut findet das System den Ort?
+### How well does the system find the location?
 
-> **Kurz:** MegaLoc findet mit voller Referenz 8 von 10 lösbaren Anfragen auf
-> 25 m genau. Ein Teil davon sind doppelt hochgeladene Fahrten — ohne sie
-> sind es knapp 7 von 10 (0.690).
+> **In short:** with the full reference, MegaLoc locates 8 out of 10 solvable queries
+> within 25 m. Part of that are drives uploaded twice — without them
+> it is just under 7 out of 10 (0.690).
 
-#### Volle Referenz
+#### Full reference
 
 ```text
 Alle Queries  |  Schwelle 25 m  |  48,177 loesbare Queries  |  Referenz: 279,453 Bilder (database + train)
@@ -596,16 +605,16 @@ Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.
 Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
 ```
 
-<sub>Wörtliche Ausgabe von `python compare.py --reference full --ci`.</sub>
+<sub>Verbatim output of `python compare.py --reference full --ci`.</sub>
 
-- **Dieselbe Rangfolge wie im Benchmark, jede Zahl rund 0.2 höher.**
-- Ohne Adapter: der Adapter lernte auf `train`, `train` als Referenz wäre für ihn Leakage.
-- Alle 18 Zeilen samt PCA und Whitening: `--derived` und
-  [Volle Referenz](experiments/README.md#volle-referenz--full_referencepy).
+- **The same ranking as in the benchmark, every number about 0.2 higher.**
+- No adapter: the adapter learned on `train`, and `train` as reference would be leakage for it.
+- All 18 rows including PCA and whitening: `--derived` and
+  [full reference](experiments/README.md#full-reference--full_referencepy).
 
-#### Benchmark-Protokoll
+#### Benchmark protocol
 
-Hier werden alle 40 Varianten verglichen: Adapter, PCA, Whitening, Verkettung, Nachbearbeitung.
+Here all 40 variants are compared: adapter, PCA, whitening, concatenation, post-processing.
 
 ```text
 Alle Queries  |  Schwelle 25 m  |  34,112 loesbare Queries  |  Referenz: 48,321 Bilder (database)
@@ -632,51 +641,51 @@ Intervall: Sequenz-Bootstrap, 2,5- und 97,5-Perzentil (experiments/bootstrap_ci.
 Fuer den Vergleich zweier Zeilen gilt die gepaarte Differenz dort, nicht die Ueberlappung.
 ```
 
-<sub>Wörtliche Ausgabe von `python compare.py --ci`.</sub>
+<sub>Verbatim output of `python compare.py --ci`.</sub>
 
-| Variante | heißt |
+| Variant | means |
 |---|---|
-| `none` | Encoder wie veröffentlicht |
-| `linear` | mit trainiertem linearem Adapter |
-| `hmm30-25` | Trefferlisten einer Fahrt als Pfad umsortiert ([Fahrt als Pfad](#was-nachbearbeitung-bringt)) |
-| `gv20` | Top-20 geometrisch nachgeprüft und umsortiert |
-| `_pca512`, `_pcaw512`, `_concat`, `seq3` | per PCA verkürzt, zusätzlich gewhitent, zwei Encoder verkettet, Nachbarbilder summiert — mit `--derived` |
+| `none` | encoder as published |
+| `linear` | with a trained linear adapter |
+| `hmm30-25` | match lists of a drive re-ranked as a path ([drive as a path](#what-post-processing-brings)) |
+| `gv20` | top 20 checked geometrically and re-ranked |
+| `_pca512`, `_pcaw512`, `_concat`, `seq3` | shortened by PCA, additionally whitened, two encoders concatenated, neighbouring images summed — with `--derived` |
 
-Die wichtigsten abgeleiteten Varianten:
+The most important derived variants:
 
-| Variante | Dim | Benchmark | volle Referenz |
+| Variant | Dim | Benchmark | full reference |
 |---|---:|---:|---:|
 | MegaLoc | 8448 | 0.568 | 0.798 |
-| MegaLoc, PCA + Whitening | 512 | 0.541 | 0.778 |
-| EigenPlaces + MegaLoc verkettet | 1024 | 0.572 | 0.778 |
-| EigenPlaces, PCA + Whitening | 512 | 0.507 | 0.715 |
+| MegaLoc, PCA + whitening | 512 | 0.541 | 0.778 |
+| EigenPlaces + MegaLoc concatenated | 1024 | 0.572 | 0.778 |
+| EigenPlaces, PCA + whitening | 512 | 0.507 | 0.715 |
 
-<sub>Die Verkettung liegt im Benchmark nicht „vor" MegaLoc: +0.004 [−0.005, +0.014]
-schließt 0 ein. Mehr unter [PCA und Whitening](experiments/README.md#pca-und-whitening--pca_reducepy)
-und [Verkettung](experiments/README.md#verkettung--concat_embeddingspy).</sub>
+<sub>In the benchmark the concatenation is not "ahead" of MegaLoc: +0.004 [−0.005, +0.014]
+includes 0. More under [PCA and whitening](experiments/README.md#pca-and-whitening--pca_reducepy)
+and [concatenation](experiments/README.md#concatenation--concat_embeddingspy).</sub>
 
-#### Zwillingsfahrten
+#### Twin drives
 
 > [!WARNING]
-> **Ein Teil der „richtigen" Treffer ist dieselbe Fahrt, zweimal hochgeladen.**
-> Mapillary führt manche Fahrt als zwei Sequenzen — selbes Konto, Zeitstempel
-> Sekundenbruchteile auseinander, dieselben Koordinaten. Der Split trennt nach
-> Sequenzen und sieht das nicht. Landet eine Kopie bei den Anfragen und die
-> andere in der Referenz, findet jeder Encoder ein fast identisches Bild: 0 m
-> daneben, cos um 0.99.
+> **Part of the "correct" matches are the same drive, uploaded twice.**
+> Mapillary lists some drives as two sequences — same account, timestamps
+> fractions of a second apart, the same coordinates. The split separates by
+> sequence and does not see this. If one copy ends up among the queries and the
+> other in the reference, every encoder finds an almost identical image: 0 m
+> away and far ahead of all other candidates (example with MegaLoc: cos 0.56, rank 2 only 0.35).
 
-**Wie oft?** Zwilling heißt hier: selbes Konto, höchstens 60 s Abstand, im
-Umkreis von 25 m. In Osnabrück haben ihn **3,4 %** der Anfragen im
-Benchmark und **28,2 %** mit voller Referenz — dort liegen in `train` viele
-Kopien. 97 % dieser Zwillinge schauen in dieselbe Richtung wie die Anfrage.
-Das ist nicht überall so: In Jena sind es nur 12 %, dort laden Kameras mit
-mehreren Blickrichtungen zeitgleiche Sequenzen hoch ([Sechs Städte](#sechs-städte)).
+**How often?** Twin here means: same account, at most 60 s apart, within
+25 m. In Osnabrück **3.4 %** of the queries have one in the
+benchmark and **28.2 %** with the full reference — `train` contains many
+copies. 97 % of these twins face the same direction as the query.
+That is not the case everywhere: in Jena it is only 12 %; there, cameras with
+several viewing directions upload simultaneous sequences ([six cities](#six-cities)).
 
-**Was es ausmacht.** `experiments/zwillinge.py` nimmt die Kopien aus der
-Trefferliste, als wären sie nie hochgeladen worden — die nächsten Kandidaten
-rücken auf:
+**What it changes.** `experiments/zwillinge.py` removes the copies from the
+match list as if they had never been uploaded — the next candidates
+move up:
 
-| R@1 bei 25 m | Benchmark | ohne Zwillinge | volle Referenz | ohne Zwillinge |
+| R@1 at 25 m | Benchmark | without twins | full reference | without twins |
 |---|---:|---:|---:|---:|
 | MegaLoc | 0.568 | 0.550 | 0.798 | **0.690** |
 | EigenPlaces | 0.484 | 0.464 | 0.701 | **0.593** |
@@ -684,29 +693,29 @@ rücken auf:
 | AnyLoc | 0.204 | 0.167 | 0.435 | 0.273 |
 | CLIP | 0.073 | 0.031 | 0.232 | 0.071 |
 
-<sub>Aus `experiments/results/osnabrueck/zwillinge.json`. „Ohne Zwillinge" zählt
-nur Anfragen, die auch ohne Kopie lösbar sind (Benchmark 33.146 statt 34.112,
-voll 47.800 statt 48.177). Ohne Intervall.</sub>
+<sub>From `experiments/results/osnabrueck/zwillinge.json`. "Without twins" counts
+only queries that are solvable without a copy too (benchmark 33,146 instead of 34,112,
+full 47,800 instead of 48,177). No interval.</sub>
 
-- **Im Benchmark wenig** (MegaLoc −0.018): die Encoder-Vergleiche und gepaarten Differenzen halten.
-- **Mit voller Referenz viel:** MegaLoc −0.108; bei 18 % aller Anfragen war der erste Treffer ein Zwilling.
-- **Die Rangfolge bleibt**, und der Abstand MegaLoc − EigenPlaces ist mit und ohne Zwillinge +0.097.
-- **Schwache Encoder leben von Kopien:** CLIP fällt mit voller Referenz von 0.232 auf 0.071, AnyLoc von 0.435 auf 0.273.
-- **Mehr Referenz hilft trotzdem:** 0.550 → 0.690 statt 0.568 → 0.798.
-- **Ehrlich zu berichten ist 0.690.** Die Hard-Spalte der [Kopftabelle](#ergebnisse-auf-einen-blick)
-  (MegaLoc 0.523) ist noch strenger: Sie streicht auch echte Wiederholungsfahrten desselben Fotografen.
+- **Little effect in the benchmark** (MegaLoc −0.018): the encoder comparisons and paired differences hold.
+- **A large effect with the full reference:** MegaLoc −0.108; for 18 % of all queries the first match was a twin.
+- **The ranking holds**, and the gap MegaLoc − EigenPlaces is +0.097 with and without twins.
+- **Weak encoders live off copies:** with the full reference CLIP drops from 0.232 to 0.071, AnyLoc from 0.435 to 0.273.
+- **More reference still helps:** 0.550 → 0.690 instead of 0.568 → 0.798.
+- **The honest number to report is 0.690.** The Hard column of the [summary table](#results-at-a-glance)
+  (MegaLoc 0.523) is stricter still: it also removes genuine repeat drives by the same photographer.
 
-Die Messung je Stadt, die Methode, was es für jedes andere Ergebnis heißt und wie man es behebt: [Zwillingsfahrten](experiments/README.md#zwillingsfahrten--zwillingepy).
+The measurement per city, the method, what it means for every other result and how to fix it: [twin drives](experiments/README.md#twin-drives--zwillingepy).
 
-#### Unsicherheit
+#### Uncertainty
 
-Die 53.414 Anfragen stammen aus nur 198 Fahrten, und Bilder derselben Fahrt
-scheitern gemeinsam. Deshalb zieht der Bootstrap die **Fahrten** neu, nicht die Bilder.
+The 53,414 queries come from only 198 drives, and images of the same drive
+fail together. The bootstrap therefore resamples the **drives**, not the images.
 
-- **Eine einzelne Zahl** ist nur auf eine Nachkommastelle genau: ±0.03 (CLIP)
-  bis ±0.10 (MegaLoc). Der übliche binomiale Fehler hätte ±0.005 behauptet.
-- **Ein Unterschied zweier Varianten** ist viel genauer (±0.005 bis ±0.09),
-  weil beide auf denselben schweren Fahrten scheitern.
+- **A single number** is only accurate to one decimal place: ±0.03 (CLIP)
+  to ±0.10 (MegaLoc). The usual binomial error would have claimed ±0.005.
+- **A difference between two variants** is much more precise (±0.005 to ±0.09),
+  because both fail on the same hard drives.
 
 ```text
 Vergleich (a → b)                             ΔR@1   95-%-Intervall     belegt
@@ -722,17 +731,18 @@ megaloc → megaloc_linear                    -0.126   [-0.179, -0.073]   ja
 clip_pcaw512 → clip_pcaw512_linear          +0.009   [-0.002, +0.021]   nein
 ```
 
-<sub>Auszug aus [`experiments/results/osnabrueck/bootstrap_ci.json`](experiments/results/osnabrueck/bootstrap_ci.json);
-dort alle 39 Paare, auch für R@5 bis R@20. Methode:
-[Konfidenzintervalle](experiments/README.md#konfidenzintervalle--bootstrap_cipy).</sub>
+<sub>Excerpt from [`experiments/results/osnabrueck/bootstrap_ci.json`](experiments/results/osnabrueck/bootstrap_ci.json);
+it contains all 39 pairs, also for R@5 to R@20 (*belegt* = established, *ja/nein* = yes/no). Method:
+[confidence intervals](experiments/README.md#confidence-intervals--bootstrap_cipy).
+The upper bound for `megaloc_gv20` is +0.0003, so that result is a borderline case.</sub>
 
-### Sechs Städte
+### Six cities
 
-> **Kurz:** Das Niveau hängt an der Stadt, der Abstand der Modelle nicht.
+> **In short:** the level depends on the city, the gap between the models does not.
 
-Dieselbe Pipeline in fünf weiteren Städten, vorab aus 50 Kandidaten nach
-Mapillary-Metadaten ausgewählt — bevor ein einziges Bild geladen war
-([Stadtwahl](experiments/README.md#stadtwahl--city_coveragepy)).
+The same pipeline in five more cities, selected in advance from 50 candidates by
+Mapillary metadata — before a single image was downloaded
+([city selection](experiments/README.md#city-selection--city_coveragepy)).
 
 ```text
 Was sich uebertraegt   R@1 bei 25 m (MegaLoc voll = volle Referenz)
@@ -750,14 +760,15 @@ jena              114,558     677    0.332    0.417   +0.084 [+0.073, +0.096]  0
   MegaLoc vorn mit Intervall ueber 0: 12 von 12 (Staedte x Protokolle)
 ```
 
-<sub>Wörtliche Ausgabe von `python experiments/city_comparison.py`, erster Teil.</sub>
+<sub>Verbatim output of `python experiments/city_comparison.py`, first part
+(*Anfragen* = queries, *Fahrten* = drives, *voll* = full reference, *Niveau* = level, *Abstand* = gap).</sub>
 
-- **Das Niveau wandert:** MegaLoc von 0.336 (Würzburg) bis 0.651 (Kaiserslautern) — eine Spanne von 0.315.
-- **Der Abstand bleibt:** MegaLoc vor EigenPlaces in allen sechs Städten und beiden Protokollen, alle zwölf Intervalle schließen 0 aus. Spanne nur 0.041.
-- **Würzburg** hat 98 % Straßenabdeckung und trotzdem den niedrigsten Recall: nur 45,5 % der Anfragen sind lösbar, und die Bilder sind alt (Median 627 Tage zwischen Anfrage und Treffer).
-- **Der Hard-Filter kostet** zwischen 0.010 (Jena) und 0.204 (Kaiserslautern) — und das lässt sich exakt erklären ([Städtevergleich](experiments/README.md#städtevergleich--city_comparisonpy)).
+- **The level moves:** MegaLoc from 0.336 (Würzburg) to 0.651 (Kaiserslautern) — a range of 0.315.
+- **The gap stays:** MegaLoc ahead of EigenPlaces in all six cities and both protocols, all twelve intervals exclude 0. Range only 0.041.
+- **Würzburg** has 98 % street coverage and still the lowest recall: only 45.5 % of the queries are solvable, and the images are old (median 627 days between query and match).
+- **The Hard filter costs** between 0.010 (Jena) and 0.204 (Kaiserslautern) — and this can be explained exactly ([city comparison](experiments/README.md#city-comparison--city_comparisonpy)).
 
-**Zwillinge je Stadt.** Die Spalte „voll" ist nicht überall gleich stark aufgebläht:
+**Twins per city.** The "full" column is not inflated equally everywhere:
 
 ```text
 Zwillingsfahrten (selbes Konto, <= 60 s): R@1 mit und ohne
@@ -773,53 +784,56 @@ jena               6.4%  0.417  0.425    35.8%   4.3%  0.622  0.638  +0.206 +0.2
   Blickrichtung (<= 30 Grad), als Anteil aller Anfragen; Sprung = voll - Alle.
 ```
 
-<sub>Ausgabe von `python experiments/city_comparison.py`, Abschnitt Zwillingsfahrten (MegaLoc). Die Anteile
-stammen aus `zwillinge.py`; „Kopie" heißt dieselbe Blickrichtung wie die Anfrage.</sub>
+<sub>Output of `python experiments/city_comparison.py`, section on twin drives (MegaLoc). *Zw* = share of queries
+with a twin nearby; *Kopie* = of those, with the same viewing direction (≤ 30°), as a share of all queries;
+*Alle* = all matches, *ohne* = without twins, *Sprung* = jump from benchmark to full reference.
+The shares come from `zwillinge.py`.</sub>
 
-- **Kopien heben den Recall, zweite Kameras nicht.** Je mehr echte Kopien, desto größer der Verlust ohne sie:
-  Osnabrück −0.108, Karlsruhe −0.063, Würzburg −0.050, die übrigen kaum. In Osnabrück sind 97 % der Zwillinge Kopien.
-- **Jena** hat die meisten Zwillinge (35,8 %), aber nur 12 % davon sind Kopien; der Rest sind zeitgleiche Kameras, die woandershin schauen. Sie machen eine
-  Anfrage nach der Ground Truth „lösbar", ohne dass ein Encoder sie finden kann — ohne sie steigt R@1 sogar.
-- **Ohne Zwillinge ist Osnabrück Mittelfeld:** Kaiserslautern 0.807, Fürth 0.692, Osnabrück 0.690, Jena 0.638,
+- **Copies raise the recall, second cameras do not.** The more genuine copies, the larger the loss without them:
+  Osnabrück −0.108, Karlsruhe −0.063, Würzburg −0.050, the others barely. In Osnabrück 97 % of the twins are copies.
+- **Jena** has the most twins (35.8 %), but only 12 % of them are copies; the rest are simultaneous cameras looking elsewhere — on a
+  visually checked example, the front and rear camera of the same bicycle. They make a query "solvable" by the ground truth
+  without any encoder being able to find it — without them R@1 even rises.
+- **Without twins Osnabrück is mid-table:** Kaiserslautern 0.807, Fürth 0.692, Osnabrück 0.690, Jena 0.638,
   Karlsruhe 0.577, Würzburg 0.426.
-- **Der Abstand der Modelle bleibt:** MegaLoc − EigenPlaces ohne Zwillinge +0.076 bis +0.116 im Benchmark.
+- **The gap between the models stays:** MegaLoc − EigenPlaces without twins +0.076 to +0.116 in the benchmark.
 
-### Woran es scheitert
+### What it fails on
 
-> **Kurz:** An den Daten, nicht am Modell. Entscheidend ist, ob an der Straße
-> der Anfrage ein Referenzbild steht, das in dieselbe Richtung schaut.
+> **In short:** on the data, not on the model. What matters is whether the query's street
+> has a reference image facing the same direction.
 
-#### Referenzdichte
+#### Reference density
 
 <p align="center">
-  <img src="experiments/results/osnabrueck/database_density_megaloc.png" width="49%" alt="Recall gegen Referenzdichte, MegaLoc">
-  <img src="experiments/results/osnabrueck/database_density_eigenplaces.png" width="49%" alt="Recall gegen Referenzdichte, EigenPlaces">
+  <img src="experiments/results/osnabrueck/database_density_megaloc.png" width="49%" alt="Recall versus reference density, MegaLoc">
+  <img src="experiments/results/osnabrueck/database_density_eigenplaces.png" width="49%" alt="Recall versus reference density, EigenPlaces">
 </p>
 
-`train` stufenweise zur Referenz dazugenommen:
+`train` added to the reference step by step:
 
-| train dazu | Referenzbilder | lösbar | MegaLoc | EigenPlaces |
+| train added | reference images | solvable | MegaLoc | EigenPlaces |
 |---:|---:|---:|---:|---:|
-| 0 % | 48.321 | 63,9 % | 0.568 | 0.484 |
-| 25 % | 107.449 | 78,4 % | 0.636 | 0.545 |
-| 50 % | 160.981 | 84,9 % | 0.689 | 0.595 |
-| 75 % | 222.300 | 88,4 % | 0.774 | 0.672 |
-| 100 % | 279.453 | 90,2 % | 0.798 | 0.701 |
+| 0 % | 48,321 | 63.9 % | 0.568 | 0.484 |
+| 25 % | 107,449 | 78.4 % | 0.636 | 0.545 |
+| 50 % | 160,981 | 84.9 % | 0.689 | 0.595 |
+| 75 % | 222,300 | 88.4 % | 0.774 | 0.672 |
+| 100 % | 279,453 | 90.2 % | 0.798 | 0.701 |
 
-<sub>R@1 bei 25 m unter den lösbaren Anfragen. Auszug aus
+<sub>R@1 at 25 m among the solvable queries. Excerpt from
 `experiments/results/osnabrueck/database_density_<encoder>.json`.</sub>
 
-- Mehr Anfragen werden lösbar, **und** der Recall unter ihnen steigt — obwohl die neu lösbaren die schwereren sind.
-- Ein Teil des Anstiegs sind [Zwillinge](#zwillingsfahrten) aus `train`: ohne sie steigt MegaLoc von 0.550 auf 0.690 statt von 0.568 auf 0.798.
-- Ohne Intervall. Details: [Referenzdichte](experiments/README.md#referenzdichte--database_densitypy).
+- More queries become solvable, **and** the recall among them rises — although the newly solvable ones are the harder ones.
+- Part of the rise are [twins](#twin-drives) from `train`: without them MegaLoc rises from 0.550 to 0.690 instead of from 0.568 to 0.798.
+- No interval. Details: [reference density](experiments/README.md#reference-density--database_densitypy).
 
-#### Blickrichtung, Zeit, Nachbarn
+#### Viewing direction, time, neighbours
 
 <p align="center">
-  <img src="experiments/results/osnabrueck/recall_by_difficulty_megaloc.png" width="100%" alt="R@1 nach Eigenschaften der Anfrage, MegaLoc">
+  <img src="experiments/results/osnabrueck/recall_by_difficulty_megaloc.png" width="100%" alt="R@1 by properties of the query, MegaLoc">
 </p>
 <p align="center">
-  <img src="experiments/results/osnabrueck/recall_by_difficulty_eigenplaces.png" width="100%" alt="dieselbe Zerlegung für EigenPlaces">
+  <img src="experiments/results/osnabrueck/recall_by_difficulty_eigenplaces.png" width="100%" alt="the same breakdown for EigenPlaces">
 </p>
 
 ```text
@@ -846,131 +860,133 @@ Nachbar vom selben Konto am selben Tag
   nein                                                    30,944   0.556   █████████████████▊
 ```
 
-<sub>Auszug aus `experiments/results/osnabrueck/recall_by_difficulty_megaloc.json`.
-32 Zeichen Balken entsprächen R@1 = 1.0.</sub>
+<sub>Excerpt from `experiments/results/osnabrueck/recall_by_difficulty_megaloc.json`.
+A bar of 32 characters would be R@1 = 1.0. Classes, top to bottom: a neighbour faces the same direction (yes/no);
+days to the temporally nearest neighbour; neighbours within 25 m; a neighbour from the same account on the same day.</sub>
 
-- **Blickrichtung trennt am schärfsten:** ohne Nachbarn in derselben Richtung 7 %, mit einem 65 %.
-- **Zeit und Nachbarzahl wirken schwächer und nicht gleichmäßig:** 8–30 Tage Abstand ist die beste Klasse,
-  0–7 Tage nur Mittelfeld; bei den Nachbarn hebt sich nur 51+ ab.
-- **Ein Nachbar vom selben Konto am selben Tag hilft:** R@1 0.690 gegen 0.556 ohne einen solchen — derselbe Effekt wie die Zwillinge, die in dieser Klasse stecken.
-- Dieselbe Zerlegung für EigenPlaces zeigt die zweite Abbildung. Klassen ohne Intervall; Unterschiede unter etwa 0.1 nicht deuten.
-  Details: [Schwierigkeit je Anfrage](experiments/README.md#schwierigkeit-je-anfrage--recall_by_difficultypy).
+- **Viewing direction separates most sharply:** without a neighbour facing the same direction 7 %, with one 65 %.
+- **Time and number of neighbours act more weakly and not evenly:** 8–30 days apart is the best class,
+  0–7 days only mid-table; among the neighbour counts only 51+ stands out.
+- **A neighbour from the same account on the same day helps:** R@1 0.690 versus 0.556 without one — the same effect as the twins contained in this class.
+- The second figure shows the same breakdown for EigenPlaces. Classes without interval; do not interpret differences below about 0.1.
+  Details: [difficulty per query](experiments/README.md#difficulty-per-query--recall_by_difficultypy).
 
-#### Stadtteile
+#### Districts
 
 <p align="center">
-  <img src="experiments/results/osnabrueck/recall_by_district_megaloc.png" width="100%" alt="Recall je Stadtteil, MegaLoc">
+  <img src="experiments/results/osnabrueck/recall_by_district_megaloc.png" width="100%" alt="Recall per district, MegaLoc">
 </p>
 <p align="center">
-  <img src="experiments/results/osnabrueck/recall_by_district_eigenplaces.png" width="100%" alt="Recall je Stadtteil, EigenPlaces">
+  <img src="experiments/results/osnabrueck/recall_by_district_eigenplaces.png" width="100%" alt="Recall per district, EigenPlaces">
 </p>
 
-- **Faktor 12 beim selben Encoder:** MegaLoc 0.07 in Sutthausen, 0.83 in Atter.
-- **Die Karte zeigt die Daten, nicht den Encoder:** EigenPlaces (zweite Karte) ordnet die Stadtteile praktisch gleich (Spearman 0.96).
-- **Bilder je km² erklären es nicht** (ρ = 0.27): die Innenstadt hat die dichteste Referenz und nur 38 % lösbare Anfragen.
-- **Gründe je Stadtteil:** Haste — kaum passende Blickrichtung; Hellern — fast ein Jahr Abstand zur Referenz; Sutthausen — eine einzige
-  Fahrt, die 208 von 414 Anfragen ins 4 km entfernte Hellern legt.
-  Details: [Stadtteile](experiments/README.md#stadtteile--recall_by_districtpy).
+- **A factor of 12 with the same encoder:** MegaLoc 0.07 in Sutthausen, 0.83 in Atter.
+- **The map shows the data, not the encoder:** EigenPlaces (second map) ranks the districts practically the same (Spearman 0.96).
+- **Images per km² do not explain it** (ρ = 0.27): the city centre has the densest reference and only 38 % solvable queries.
+- **Reasons per district:** Haste — hardly any matching viewing direction; Hellern — almost a year between query and reference; Sutthausen — a single
+  drive that places 208 of its 414 queries in Hellern, 4 km away. The extremes rest on few drives.
+  Details: [districts](experiments/README.md#districts--recall_by_districtpy).
 
-#### Struktur der Fehler
+#### Structure of the errors
 
-![Fehlgriffe als Pfeile von der echten zur geschätzten Position](experiments/results/osnabrueck/confusion_atlas_megaloc.png)
+![Misses as arrows from the true to the estimated position](experiments/results/osnabrueck/confusion_atlas_megaloc.png)
 
-Von 34.112 lösbaren Anfragen verfehlt MegaLoc 14.726. Wohin?
+Of 34,112 solvable queries, MegaLoc misses 14,726. Where do they land?
 
-| Fehler | Anteil | heißt |
+| Error | Share | means |
 |---|---:|---|
-| unter 100 m | 45 % | dieselbe Straße, knapp jenseits der Schwelle |
-| 100 m bis 1 km | 11 % | |
-| über 1 km | 44 % | ein anderes Viertel |
+| under 100 m | 45 % | the same street, just beyond the threshold |
+| 100 m to 1 km | 11 % | |
+| over 1 km | 44 % | another neighbourhood |
 
-- **Bimodal:** fast nichts in der Mitte — ein Median beschreibt das schlecht.
-- **Keine dominante Verwechslung:** das häufigste Stadtteil-Paar trägt 1,6 % der Fehler.
-- **Nicht die Autobahn:** die langen roten Linien auf der Karte täuschen. Autobahn-Anfragen scheitern nicht öfter
-  (R@1 0.570 gegen 0.565), die groben Fehler sitzen in Wohnstraßen.
-- **Folge:** bei einer groben Verwechslung liegen auch die übrigen Treffer am falschen Ort — deshalb scheitert jede Mittelung.
-  Details: [Verwechslungsatlas](experiments/README.md#verwechslungsatlas--confusion_atlaspy).
+- **Bimodal:** almost nothing in between — a median describes this badly.
+- **No dominant confusion:** the most frequent pair of districts accounts for 1.6 % of the errors.
+- **Not the motorway:** the long red lines on the map are misleading. Motorway queries do not fail more often
+  (R@1 0.570 versus 0.565); the large errors sit in residential streets.
+- **Consequence:** in a gross confusion the other matches are at the wrong place too — which is why every averaging fails.
+  Details: [confusion atlas](experiments/README.md#confusion-atlas--confusion_atlaspy).
 
-### Was Nachbearbeitung bringt
+### What post-processing brings
 
-> **Kurz:** Kaum etwas. Nur die Fahrt als Pfad schlägt den besten Einzeltreffer, und auch nur knapp.
+> **In short:** hardly anything. Only the drive as a path beats the best single match, and only narrowly.
 
-| Verfahren | Idee | Ergebnis (MegaLoc) | belegt |
+| Method | Idea | Result (MegaLoc) | established |
 |---|---|---|:---:|
-| Mitteln, Clustern (5 Arten) | mehrere Treffer zu einer Koordinate | alle schlechter als Top-1 (Clustering 0.318 gegen 0.363) | — |
-| Nachbarbilder summieren (`seq3`) | Trefferlisten benachbarter Fotos zusammenzählen | −0.009 [−0.017, −0.001] (EigenPlaces, 512) | ja, schlechter |
-| **Fahrt als Pfad (HMM)** | ein Kandidat muss zur Fahrt passen — in 0,2 s fährt man keine 6 km | **+0.030 [+0.020, +0.041]** | **ja** |
-| Geometrische Verifikation | Top-20 mit lokalen Merkmalen nachprüfen | −0.029 [−0.062, +0.000] | nein |
-| Mapillary-Detections | Objekte im Bild als zweites Signal | kein Gewinn; trennt schlechter als der Deskriptor (AUC 0.56 gegen 0.73, EigenPlaces) | — |
+| Averaging, clustering (5 kinds) | several matches into one coordinate | all worse than top 1 (clustering 0.318 versus 0.363, share of all queries) | — |
+| Summing neighbouring images (`seq3`) | add up the match lists of neighbouring photos | −0.009 [−0.017, −0.001] (EigenPlaces, 512) | yes, worse |
+| **Drive as a path (HMM)** | a candidate must fit the drive — nobody drives 6 km in 0.2 s | **+0.030 [+0.020, +0.041]** | **yes** |
+| Geometric verification | re-check the top 20 with local features | −0.029 [−0.062, +0.000] | no (borderline) |
+| Mapillary detections | objects in the image as a second signal | no gain; separates worse than the descriptor (AUC 0.56 versus 0.73, EigenPlaces) | — |
 
 <p align="center">
-  <img src="results/osnabrueck/figures/localization/megaloc_lokalisierungsfehler.png" width="49%" alt="Verteilung des Lokalisierungsfehlers, MegaLoc">
-  <img src="experiments/results/osnabrueck/localization_aggregation_megaloc.png" width="49%" alt="Aggregationsverfahren gegen Top-1, MegaLoc">
+  <img src="results/osnabrueck/figures/localization/megaloc_lokalisierungsfehler.png" width="49%" alt="Distribution of the localisation error, MegaLoc">
+  <img src="experiments/results/osnabrueck/localization_aggregation_megaloc.png" width="49%" alt="Aggregation methods versus top 1, MegaLoc">
 </p>
 
-<sub>Links der Fehler des besten Treffers über alle 53.414 Anfragen (Median 94 m),
-rechts die fünf Mittelungsverfahren gegen Top-1. Dieselben Abbildungen für
+<sub>Left the error of the best match over all 53,414 queries (median 94 m),
+right the five averaging methods versus top 1. The same figures for
 EigenPlaces: [`eigenplaces_lokalisierungsfehler.png`](results/osnabrueck/figures/localization/eigenplaces_lokalisierungsfehler.png),
 [`localization_aggregation_eigenplaces.png`](experiments/results/osnabrueck/localization_aggregation_eigenplaces.png).</sub>
 
-**Fahrt als Pfad.** Ein Hidden-Markov-Modell liest die Top-k aufeinanderfolgender
-Bilder als möglichen Weg. Die Parameter (β = 30, σ = 25 m) standen vor dem Lauf fest.
-- MegaLoc 0.568 → **0.598**, EigenPlaces 0.484 → 0.501 — beide belegt.
-- Der Gewinn ist klein, weil die meisten Fehler kohärent sind: eine ganze Fahrt auf der falschen Straße ist auch als Pfad stimmig.
-- Bei EigenPlaces kostet es R@10 (0.650 → 0.633).
-  Details: [Fahrt als Pfad](experiments/README.md#fahrt-als-pfad--sequence_hmmpy).
+**Drive as a path.** A hidden Markov model reads the top k of consecutive
+images as a possible route. The parameters (β = 30, σ = 25 m) were fixed before the run.
+- MegaLoc 0.568 → **0.598**, EigenPlaces 0.484 → 0.501 — both established.
+- The gain is small because most errors are coherent: a whole drive on the wrong street is consistent as a path too.
+- For EigenPlaces it costs R@10 (0.650 → 0.633).
+  Details: [drive as a path](experiments/README.md#drive-as-a-path--sequence_hmmpy).
 
-**Geometrische Verifikation.** SuperPoint + LightGlue prüfen die Top-20 mit lokalen Merkmalen
-und sortieren nach übereinstimmenden Punkten. Gerechnet für Osnabrück, 8,6 Stunden.
+**Geometric verification.** SuperPoint + LightGlue re-check the top 20 with local features
+and re-rank by matching points. Computed for Osnabrück, 8.6 hours.
 
 | R@1 | 5 m | 10 m | 25 m | 50 m | 100 m |
 |---|---:|---:|---:|---:|---:|
 | MegaLoc | 0.230 | 0.353 | 0.568 | 0.666 | 0.637 |
-| + Verifikation | 0.242 | 0.363 | 0.539 | 0.632 | 0.599 |
-| Differenz | +0.013 | +0.010 | −0.029 | −0.034 | −0.039 |
+| + verification | 0.242 | 0.363 | 0.539 | 0.632 | 0.599 |
+| Difference | +0.013 | +0.010 | −0.029 | −0.034 | −0.039 |
 
-<sub>Aus `results/osnabrueck/evaluation/megaloc{,_gv20}.json`; ein Intervall gibt es nur bei 25 m.</sub>
+<sub>From `results/osnabrueck/evaluation/megaloc{,_gv20}.json`; an interval exists only at 25 m.</sub>
 
-- **Sie schärft die Position, findet aber nicht öfter den richtigen Ort.** Lesart: übereinstimmende Punkte messen,
-  wie stark sich zwei Bilder überlappen — nicht, ob es derselbe Ort ist.
-- 87 % aller Kandidaten kommen über die 15-Punkte-Schwelle; sie trennt kaum.
-- Gemessen ist eine Einstellung in einer Stadt. Details:
-  [Geometrische Verifikation](experiments/README.md#geometrische-verifikation--geometric_verificationpy).
+- **It sharpens the position but does not find the right place more often.** Reading: matching points measure
+  how much two images overlap — not whether they show the same place.
+- 87 % of all candidates pass the 15-point threshold; it barely separates.
+- One setting in one city was measured. Details:
+  [geometric verification](experiments/README.md#geometric-verification--geometric_verificationpy).
 
-### Wie sicher ist eine Antwort?
+### How reliable is an answer?
 
-> **Kurz:** Der cos-Wert des besten Treffers ist eine brauchbare Konfidenz. Wer
-> bei niedrigem cos schweigt, liegt deutlich öfter richtig.
+> **In short:** the cos value of the best match is a usable confidence. If you
+> stay silent at low cos, you are right considerably more often.
 
 <p align="center">
-  <img src="experiments/results/osnabrueck/rejection_curve_megaloc.png" width="100%" alt="Präzision gegen Anteil beantworteter Anfragen, MegaLoc">
+  <img src="experiments/results/osnabrueck/rejection_curve_megaloc.png" width="100%" alt="Precision versus share of answered queries, MegaLoc">
 </p>
 <p align="center">
-  <img src="experiments/results/osnabrueck/rejection_curve_eigenplaces.png" width="100%" alt="Präzision gegen Anteil beantworteter Anfragen, EigenPlaces">
+  <img src="experiments/results/osnabrueck/rejection_curve_eigenplaces.png" width="100%" alt="Precision versus share of answered queries, EigenPlaces">
 </p>
 
-MegaLoc, lösbare Anfragen; Präzision = Anteil richtiger Antworten:
+MegaLoc, solvable queries; precision = share of correct answers:
 
-| beantwortet | 100 % | 80 % | 50 % | 20 % |
+| answered | 100 % | 80 % | 50 % | 20 % |
 |---|---:|---:|---:|---:|
-| nach cos | 0.568 | **0.689** | 0.793 | 0.887 |
-| nach Abstand zu Platz 2 | 0.568 | 0.618 | 0.724 | 0.860 |
-| nach Einigkeit der Top-10 | 0.568 | 0.597 | 0.706 | 0.798 |
+| by cos | 0.568 | **0.689** | 0.793 | 0.887 |
+| by gap to rank 2 | 0.568 | 0.618 | 0.724 | 0.860 |
+| by agreement of the top 10 | 0.568 | 0.597 | 0.706 | 0.798 |
 
-<sub>Auszug aus [`experiments/results/osnabrueck/rejection_curve_megaloc.json`](experiments/results/osnabrueck/rejection_curve_megaloc.json).</sub>
+<sub>Excerpt from [`experiments/results/osnabrueck/rejection_curve_megaloc.json`](experiments/results/osnabrueck/rejection_curve_megaloc.json).</sub>
 
-- **cos ≥ 0.30:** 82 % richtig, beantwortet werden 37 % der lösbaren Anfragen.
-- **cos ≥ 0.20:** 75 % richtig bei 69 %.
-- Der rohe cos schlägt die anderen Maße bei jeder Abdeckung; `locate.py` meldet ihn als Konfidenz.
-- Die Verkettung EigenPlaces + MegaLoc liegt gleichauf (0.695 bei 80 %). Details: [Ablehnung](experiments/README.md#ablehnung--rejection_curvepy).
+- **cos ≥ 0.30:** 82 % correct, 37 % of the solvable queries are answered.
+- **cos ≥ 0.20:** 75 % correct at 69 %.
+- The raw cos beats the other measures at every coverage; `locate.py` reports it as the confidence.
+- cos is only comparable within one encoder: CLIP gives even wrong matches about 0.90.
+- The concatenation EigenPlaces + MegaLoc is on par (0.695 at 80 %). Details: [rejection](experiments/README.md#rejection--rejection_curvepy).
 
-### Was es kostet
+### What it costs
 
-> **Kurz:** Am genauesten ist MegaLoc. **Den besten Kompromiss bietet MegaLoc,
-> auf 512 Dimensionen gewhitent:** 0.028 weniger R@1, aber ein 16,5-mal
-> kleinerer Index und eine viermal schnellere Suche.
+> **In short:** MegaLoc is the most accurate. **The best trade-off is MegaLoc
+> whitened to 512 dimensions:** 0.028 less R@1, but a 16.5 times
+> smaller index and four times faster search.
 
-![Encodier-Durchsatz und Suchzeit gegen Recall@1](experiments/results/osnabrueck/timing.png)
+![Encoding throughput and search time versus Recall@1](experiments/results/osnabrueck/timing.png)
 
 ```text
 Encoder                        Dim     R@1  ms/Anfrage  Index MB  Bilder/s  alle Bilder
@@ -1000,74 +1016,75 @@ clip                           512   0.073        0.19        94     178.6      
   anyloc: ohne PCA-Projektion gemessen
 ```
 
-<sub>Ausgabe von `python experiments/timing.py --skip-encode --skip-search` (druckt die gespeicherten
-Messungen aus [`timing.json`](experiments/results/osnabrueck/timing.json), ohne neu zu messen). Encodiert auf
-einem Apple-M1-Pro, AnyLoc auf einer CUDA-GPU.</sub>
+<sub>Output of `python experiments/timing.py --skip-encode --skip-search` (prints the stored
+measurements from [`timing.json`](experiments/results/osnabrueck/timing.json) without measuring again;
+*ms/Anfrage* = ms per query, *Bilder/s* = images per second, *alle Bilder* = all 332,868 images). Encoded on
+an Apple M1 Pro, AnyLoc on a CUDA GPU (RTX 3070, batch 4) — so its 6.3 h are not comparable with the others.</sub>
 
-- **Gewinner: `megaloc_pcaw512`.** 0.028 weniger R@1 als MegaLoc, aber 94 statt 1.557 MB Index und 0,18 statt 0,74 ms je Anfrage.
-- **Warum nicht die Verkettung oben in der Liste?** Sie braucht beim Encodieren zwei Netze (EigenPlaces und MegaLoc),
-  liegt im Benchmark nicht belegt vor MegaLoc (+0.004 [−0.005, +0.014]) und mit voller Referenz sicher dahinter (−0.019).
-- **Der Index wächst linear mit der Breite, die Suchzeit nicht:** 16,5-mal mehr Speicher, nur 4-mal langsamer.
-- Bei 48.321 Referenzbildern ist das egal (10 s gegen 39 s für alle Anfragen); bei einer Million wären es 32 GB gegen 2 GB Index.
-- Encodieren hängt am Netz und an der Bildgröße, nicht an der PCA: `megaloc_pcaw512` encodiert so schnell wie MegaLoc.
-- **Speicher vorher ausrechnen:** `Bilder × Dimension × 4 Byte`. MegaLoc in Jena: 23,6 GB.
-  Details: [Laufzeit und Speicher](experiments/README.md#laufzeit-und-speicher--timingpy).
-
----
-
-## Reproduzierbarkeit
-
-**Ein Seed für alles.**
-`vpr.split_seed: 42` steuert den Split, das Adapter-Training, die PCA-Stichproben, die Zufallsbasis und den Bootstrap.
-
-**Metadaten und Split liegen im Git.**
-`data/<stadt>/processed/metadata.parquet` (5 bis 17 MB je Stadt) und die drei Split-Listen.
-Ein Test rechnet den Split aus dem Seed nach. 01 läuft nur noch für eine neue Stadt — Mapillary ändert sich, ein frischer Lauf ergäbe einen anderen Datensatz.
-
-**Fingerabdrücke statt Vertrauen.**
-Neben jeder Zwischendatei liegt eine `.fingerprint.json`: Encoder, Modellkonfiguration, Split, Hash der Metadaten.
-Jede Stufe prüft ihre Eingaben dagegen und bricht ab, statt mit einer Datei aus einem anderen Lauf falsche Zahlen zu rechnen.
-
-**Jede Ergebnisdatei kennt ihren Code.**
-Die JSONs aus 07 und 08 tragen den Git-Commit und einen Hash der Auswertung (`evaluation.py`, `geo.py`, `retrieval.py`).
-Ein Test prüft, dass dieser Commit im Repository existiert.
-
-**Tests rechnen die Ergebnisse nach.**
-Der Bootstrap muss jede Recall-Zahl aus 07 exakt treffen; dazu die Auswertung gegen eine handgerechnete Erwartung,
-der Split gegen die Listen und die config gegen Tippfehler. Dieselben Tests laufen bei jedem Push im
-[CI](.github/workflows/check.yml), unter Python 3.11 und 3.14.
-
-**Zwei Rechner.**
-Die Encoder wurden auf zwei Rechnern gerechnet und die Embeddings per `rsync` zusammengeführt.
-Folge: dieselben Bilder stehen je Encoder in anderer Zeilenreihenfolge, und MegaLoc fehlen zwei Trainingsbilder.
-Alles, was Encoder nebeneinanderlegt, richtet deshalb über die `image_id` aus.
-
-**Nicht bitgleich.**
-Die randomisierte SVD der PCA-Varianten rundet auf anderer Hardware minimal anders, und GPU-Training ist nicht bitgenau.
-Wer die exakten Zahlen will, nimmt die Embeddings, mit denen sie gerechnet wurden.
+- **Winner: `megaloc_pcaw512`.** 0.028 less R@1 than MegaLoc, but a 94 instead of 1,557 MB index and 0.18 instead of 0.74 ms per query.
+- **Why not the concatenation at the top of the list?** It needs two networks for encoding (EigenPlaces and MegaLoc),
+  is not established ahead of MegaLoc in the benchmark (+0.004 [−0.005, +0.014]) and clearly behind it with the full reference (−0.019).
+- **The index grows linearly with the width, the search time does not:** 16.5 times more memory, only 4 times slower.
+- With 48,321 reference images this does not matter (10 s versus 39 s for all queries); with a million it would be a 32 GB versus 2 GB index.
+- Encoding depends on the network and the image size, not on the PCA: `megaloc_pcaw512` encodes as fast as MegaLoc.
+- **Compute the memory beforehand:** `images × dimension × 4 bytes`. MegaLoc in Jena: 23.6 GB.
+  Details: [runtime and memory](experiments/README.md#runtime-and-memory--timingpy).
 
 ---
 
-## Grenzen und mögliche Erweiterungen
+## Reproducibility
 
-| Grenze | Folge | Mögliche Erweiterung |
+**One seed for everything.**
+`vpr.split_seed: 42` controls the split, the adapter training, the PCA samples, the random baseline and the bootstrap.
+
+**Metadata and split are in Git.**
+`data/<city>/processed/metadata.parquet` (5 to 17 MB per city) and the three split lists.
+A test recomputes the split from the seed. 01 now only runs for a new city — Mapillary changes, and a fresh run would produce a different dataset.
+
+**Fingerprints instead of trust.**
+Next to every intermediate file lies a `.fingerprint.json`: encoder, model configuration, split, hash of the metadata.
+Every stage checks its inputs against it and aborts rather than compute wrong numbers with a file from a different run.
+
+**Every result file knows its code.**
+The JSONs from 07 and 08 carry the Git commit and a hash of the evaluation (`evaluation.py`, `geo.py`, `retrieval.py`).
+A test checks that this commit exists in the repository.
+
+**Tests recompute the results.**
+The bootstrap must hit every recall number from 07 exactly; in addition, the evaluation is checked against a hand-computed expectation,
+the split against the lists and the config against typos. The same tests run on every push in
+[CI](.github/workflows/check.yml), under Python 3.11 and 3.14.
+
+**Two machines.**
+The encoders were computed on two machines and the embeddings merged with `rsync`.
+Consequence: the same images are in a different row order per encoder, and MegaLoc lacks two training images.
+Everything that puts encoders side by side therefore aligns via the `image_id`.
+
+**Not bit-identical.**
+The randomised SVD of the PCA variants rounds minimally differently on other hardware, and GPU training is not bit-exact.
+If you want the exact numbers, use the embeddings they were computed with.
+
+---
+
+## Limitations and possible extensions
+
+| Limitation | Consequence | Possible extension |
 |---|---|---|
-| **Zwillingsfahrten** | Teile des Recalls, vor allem mit voller Referenz, sind wiedergefundene Kopien; in Jena sind die meisten Zwillinge zweite Kameras, keine Kopien | Split nach Konto und Zeit statt nach Sequenz; bis dahin die Zahl ohne Zwillinge mitlesen (MegaLoc voll 0.690 statt 0.798) |
-| **Ein Split-Seed** | wie viel am Zufall des Splits hängt, ist nicht gemessen | zweiter Seed |
-| **Fünf Städte nur mit zwei Encodern** | die volle Rangfolge ist nur in Osnabrück belegt | weitere Encoder dort rechnen |
-| **Geometrische Verifikation nur in Osnabrück** | eine Einstellung, eine Stadt | eine Bewertung, die übereinstimmende Punkte mit cos verrechnet — auf einer Stadt, die nicht berichtet wird |
-| **Adapter mit Lernrate 1e-3** | mit 1e-4 schadet er EigenPlaces nicht mehr ([Raster](experiments/README.md#adapter-raster--adapter_sweeppy)) | umstellen und alle Adapter-Zeilen neu rechnen |
-| **AnyLoc ohne Whitening** | AnyLoc wirkt schwächer, als es ist (+0.117 mit Whitening) | Absicht: `anyloc` bleibt, was seine Autoren veröffentlicht haben; die gewhitente Zeile steht daneben |
+| **Twin drives** | parts of the recall, especially with the full reference, are re-found copies; in Jena most twins are second cameras, not copies | split by account and time instead of by sequence; until then read the number without twins as well (MegaLoc full 0.690 instead of 0.798) |
+| **One split seed** | how much depends on the randomness of the split is not measured | a second seed |
+| **Five cities with only two encoders** | the full ranking is only established in Osnabrück | compute more encoders there |
+| **Geometric verification only in Osnabrück** | one setting, one city | a score that combines matching points with cos — tuned on a city that is not reported |
+| **Adapter with learning rate 1e-3** | with 1e-4 it no longer hurts EigenPlaces ([grid](experiments/README.md#adapter-grid--adapter_sweeppy)) | switch and recompute all adapter rows |
+| **AnyLoc without whitening** | AnyLoc appears weaker than it is (+0.117 with whitening) | deliberate: `anyloc` stays what its authors published; the whitened row is listed next to it |
 
-**An den Fremd-Repositories.** MixVPR hat keine Lizenzdatei. AnyLocs Download-Links
-sind tot (`setup_external.py` holt das Vokabular von Hugging Face), und AnyLocs
-`VLAD.generate()` bricht mit CUDA-Tensoren ab.
+**About the third-party repositories.** MixVPR has no license file. AnyLoc's download links
+are dead (`setup_external.py` fetches the vocabulary from Hugging Face), and AnyLoc's
+`VLAD.generate()` fails with CUDA tensors.
 
 ---
 
-## Befehlsreferenz
+## Command reference
 
-**Häufig gebraucht**
+**Frequently used**
 
 ```bash
 python run.py
@@ -1089,33 +1106,33 @@ python locate.py foto.jpg
 pytest tests/
 ```
 
-Jeder Befehl kennt `--help`. Für eine andere Stadt `VPR_CITY="Jena, Germany"`
-voranstellen; ebenso überschreiben `VPR_METHOD`, `VPR_ADAPTER` und
-`VPR_IMAGE_ROOT` die `config.yaml`. Was jedes Experiment misst, steht in den
-[Nebenuntersuchungen](experiments/README.md).
+Every command knows `--help`. For another city, prefix `VPR_CITY="Jena, Germany"`;
+likewise `VPR_METHOD`, `VPR_ADAPTER` and
+`VPR_IMAGE_ROOT` override `config.yaml`. What each experiment measures is described in the
+[side studies](experiments/README.md).
 
 <details>
 <summary><b>Pipeline</b></summary>
 
-Anderer Encoder, ohne `config.yaml` zu ändern (auch `clip,mixvpr`):
+Another encoder, without changing `config.yaml` (also `clip,mixvpr`):
 
 ```bash
 python run.py --method mixvpr
 ```
 
-Alle Encoder, je ohne und mit Adapter:
+All encoders, each without and with adapter:
 
 ```bash
 python run.py --method all --adapter all
 ```
 
-Ab einer Stufe, erzwungen:
+From a given stage, forced:
 
 ```bash
 python run.py --from 06
 ```
 
-Alles neu:
+Everything from scratch:
 
 ```bash
 python run.py --force
@@ -1124,39 +1141,39 @@ python run.py --force
 </details>
 
 <details>
-<summary><b>Vergleichen</b></summary>
+<summary><b>Comparing</b></summary>
 
-Mit allen abgeleiteten Varianten:
+With all derived variants:
 
 ```bash
 python compare.py --derived
 ```
 
-Andere Schwelle (5, 10, 25, 50, 100 m):
+Another threshold (5, 10, 25, 50, 100 m):
 
 ```bash
 python compare.py --threshold 5
 ```
 
-Hard-Ground-Truth; ebenso `"Blickrichtung: Treffer nur bei <= 90 Grad Abweichung"`:
+Hard ground truth; likewise `"Blickrichtung: Treffer nur bei <= 90 Grad Abweichung"` (viewing direction):
 
 ```bash
 python compare.py --split "Hard: anderer creator_id ODER > 180 Tage Abstand"
 ```
 
-Volle Referenz:
+Full reference:
 
 ```bash
 python compare.py --reference full --ci
 ```
 
-Lokalisierung in Metern:
+Localisation in metres:
 
 ```bash
 python compare.py --localization
 ```
 
-Abbildungen, mit `--derived` als kleine Vielfache:
+Figures, with `--derived` as small multiples:
 
 ```bash
 python compare.py --plot
@@ -1165,46 +1182,46 @@ python compare.py --plot
 </details>
 
 <details>
-<summary><b>Experimente</b> — eine Zeile je Skript; Standard ist MegaLoc</summary>
+<summary><b>Experiments</b> — one line per script; MegaLoc is the default</summary>
 
-| Frage | Befehl |
+| Question | Command |
 |---|---|
-| PCA- und Whitening-Varianten schreiben | `python experiments/pca_reduce.py` |
-| zwei Encoder verketten | `python experiments/concat_embeddings.py` |
-| danach die Pipeline über alle Varianten | `python run.py --method derived --adapter all` |
-| volle Referenz | `python experiments/full_reference.py` |
-| Konfidenzintervalle | `python experiments/bootstrap_ci.py` |
-| Zwillingsfahrten | `python experiments/zwillinge.py` |
-| Adapter-Diagnose | `python experiments/adapter_diagnose.py` |
-| Adapter-Raster | `python experiments/adapter_sweep.py --method eigenplaces` |
-| Referenzdichte | `python experiments/database_density.py` |
-| Schwierigkeit je Anfrage | `python experiments/recall_by_difficulty.py` |
-| Stadtteile | `python experiments/recall_by_district.py` |
-| Verwechslungsatlas | `python experiments/confusion_atlas.py` |
-| Mittelungsverfahren | `python experiments/localization_aggregation.py` |
-| Nachbarbilder summieren | `python experiments/sequence_retrieval.py` |
-| Fahrt als Pfad | `python experiments/sequence_hmm.py --method megaloc` |
-| geometrische Verifikation (GPU) | `python experiments/geometric_verification.py --n-queries 0` |
-| Detections | `python experiments/detection_rerank.py` |
-| Ablehnungskurve | `python experiments/rejection_curve.py` |
-| Laufzeit | `python experiments/timing.py --skip-search` |
-| Städte vorab bewerten | `python experiments/city_coverage.py "Heidelberg, Germany"` |
-| Städte vergleichen | `python experiments/city_comparison.py` |
+| write the PCA and whitening variants | `python experiments/pca_reduce.py` |
+| concatenate two encoders | `python experiments/concat_embeddings.py` |
+| then the pipeline over all variants | `python run.py --method derived --adapter all` |
+| full reference | `python experiments/full_reference.py` |
+| confidence intervals | `python experiments/bootstrap_ci.py` |
+| twin drives | `python experiments/zwillinge.py` |
+| adapter diagnosis | `python experiments/adapter_diagnose.py` |
+| adapter grid | `python experiments/adapter_sweep.py --method eigenplaces` |
+| reference density | `python experiments/database_density.py` |
+| difficulty per query | `python experiments/recall_by_difficulty.py` |
+| districts | `python experiments/recall_by_district.py` |
+| confusion atlas | `python experiments/confusion_atlas.py` |
+| averaging methods | `python experiments/localization_aggregation.py` |
+| summing neighbouring images | `python experiments/sequence_retrieval.py` |
+| drive as a path | `python experiments/sequence_hmm.py --method megaloc` |
+| geometric verification (GPU) | `python experiments/geometric_verification.py --n-queries 0` |
+| detections | `python experiments/detection_rerank.py` |
+| rejection curve | `python experiments/rejection_curve.py` |
+| runtime | `python experiments/timing.py --skip-search` |
+| assess cities in advance | `python experiments/city_coverage.py "Heidelberg, Germany"` |
+| compare cities | `python experiments/city_comparison.py` |
 
-Mit EigenPlaces: `--method eigenplaces` anhängen.
+With EigenPlaces: append `--method eigenplaces`.
 
 </details>
 
 <details>
-<summary><b>Weitere Städte</b></summary>
+<summary><b>More cities</b></summary>
 
-Vorher prüfen, ob sich eine Stadt lohnt — eine Minute, ohne Bilder:
+First check whether a city is worth it — one minute, without images:
 
 ```bash
 python experiments/city_coverage.py "Heidelberg, Germany"
 ```
 
-Dann die Pipeline ab 01, danach die übrigen Encoder:
+Then the pipeline from 01, afterwards the remaining encoders:
 
 ```bash
 VPR_CITY="Heidelberg, Germany" python run.py --from 01
@@ -1214,23 +1231,23 @@ VPR_CITY="Heidelberg, Germany" python run.py --from 01
 VPR_CITY="Heidelberg, Germany" python run.py --method all
 ```
 
-Drei Stolpersteine:
-1. **Stadtgrenze.** 01 druckt die Fläche. Liefert Nominatim den gleichnamigen Landkreis, `city` genauer angeben,
-   etwa `"Stadt Osnabrück, Niedersachsen, Germany"`.
-2. **Der Split entsteht beim ersten Lauf** und wird danach aus den Listen übernommen.
-3. **Overpass** ist ein öffentlicher Dienst. Fällt er aus, läuft 01 trotzdem zu Ende; ein Spiegel über `VPR_OVERPASS_URL` hilft.
+Three pitfalls:
+1. **City boundary.** 01 prints the area. If Nominatim returns the district of the same name, give `city` more precisely,
+   for example `"Stadt Osnabrück, Niedersachsen, Germany"`.
+2. **The split is created on the first run** and taken over from the lists afterwards.
+3. **Overpass** is a public service. If it is down, 01 still runs to completion; a mirror via `VPR_OVERPASS_URL` helps.
 
 </details>
 
 ---
 
-## Fehlerbehebung
+## Troubleshooting
 
 <details>
-<summary><b>Kernel stirbt ohne Meldung (macOS)</b></summary>
+<summary><b>Kernel dies without a message (macOS)</b></summary>
 
-Zwei OpenMP-Bibliotheken im selben Prozess: conda-forge (scikit-learn, faiss) und das pip-Wheel von torch.
-torch auf die conda-Version umlenken, nach jeder Neuinstallation von torch erneut:
+Two OpenMP libraries in the same process: conda-forge (scikit-learn, faiss) and torch's pip wheel.
+Redirect torch to the conda version, again after every reinstallation of torch:
 
 ```bash
 cd $CONDA_PREFIX/lib/python3.*/site-packages/torch/lib
@@ -1238,7 +1255,7 @@ mv libomp.dylib libomp.dylib.orig && ln -s $CONDA_PREFIX/lib/libomp.dylib libomp
 cd -
 ```
 
-`KMP_DUPLICATE_LIB_OK=TRUE` ist kein Ersatz. Allgemein zeigt `python -X faulthandler skript.py`, was Jupyter verschluckt.
+`KMP_DUPLICATE_LIB_OK=TRUE` is not a substitute. In general, `python -X faulthandler script.py` shows what Jupyter swallows.
 
 </details>
 
@@ -1252,57 +1269,57 @@ cd -
 | [@D4ne2kk](https://github.com/D4ne2kk) | Niels Dähne |
 | [@eknight04](https://github.com/eknight04) | Erasmus Ritter |
 
-Entwickelt in Feature-Branches, `main` bleibt lauffähig. Commits mit
-Ergebnis-JSONs **nicht rebasen**, sondern mergen: ihr vermerkter Commit
-verschwände sonst, und `tests/test_results.py` schlägt an.
+Developed in feature branches, `main` stays runnable. **Do not rebase** commits with
+result JSONs, merge them instead: otherwise the commit they record would
+disappear, and `tests/test_results.py` fails.
 
-## KI-Nutzung
+## Use of AI
 
-KI-Assistenten waren im Projekt erlaubt und wurden genutzt, vor allem
-Claude (Anthropic) über [claude.ai](https://claude.ai). Wofür:
+AI assistants were allowed in the project and were used, mainly
+Claude (Anthropic) via [claude.ai](https://claude.ai). What for:
 
-- **Code schreiben** — Entwürfe für Module, Experimente und Tests; vor der
-  Übernahme gelesen, ausgeführt und mit `pytest` geprüft.
-- **Code-Review und Fehlersuche** — Durchsicht von Code, Kommentaren und
-  Dokumentation; Eingrenzen von Abstürzen wie dem
-  [OpenMP-Konflikt auf macOS](#fehlerbehebung).
-- **Dokumentation** — Formulieren und Überarbeiten der READMEs und
-  Docstrings.
-- **Recherche** — Einordnung von Verfahren, Literatur und Lizenzen.
+- **Writing code** — drafts for modules, experiments and tests; read,
+  run and checked with `pytest` before being adopted.
+- **Code review and debugging** — review of code, comments and
+  documentation; narrowing down crashes such as the
+  [OpenMP conflict on macOS](#troubleshooting).
+- **Documentation** — wording and revising the READMEs and
+  docstrings, including this English translation.
+- **Research** — placing methods, literature and licenses in context.
 
-Jede Zahl in diesem Repository stammt aus dem Code hier und den
-versionierten Ergebnis-JSONs, nicht aus einer KI-Ausgabe; `pytest` rechnet
-die Ergebnisse gegeneinander nach.
+Every number in this repository comes from the code here and the
+versioned result JSONs, not from an AI output; `pytest` cross-checks
+the results.
 
 ## Credits
 
-| | Lizenz | Verwendung |
+| | License | Use |
 |---|---|---|
-| [Mapillary](https://www.mapillary.com) — Bilder und Metadaten | [CC BY-SA 4.0](https://www.mapillary.com/terms) | der Datensatz |
-| [MegaLoc](https://github.com/gmberton/MegaLoc) | MIT | Encoder; Gewichte über [Hugging Face](https://huggingface.co/gberton/MegaLoc) |
-| [EigenPlaces](https://github.com/gmberton/EigenPlaces) | MIT | Encoder, nutzt Teile von [CosPlace](https://github.com/gmberton/CosPlace) (MIT) |
-| [MixVPR](https://github.com/amaralibey/MixVPR) | keine Lizenzdatei | Encoder und Gewichte |
-| [AnyLoc](https://github.com/AnyLoc/AnyLoc) | BSD-3-Clause | VLAD über DINOv2-Merkmale |
-| [DINOv2](https://github.com/facebookresearch/dinov2) | Apache-2.0 | Grundlage von AnyLoc und MegaLoc |
-| [CLIP](https://github.com/openai/CLIP) über 🤗 Transformers | MIT | Baseline ohne Ortstraining |
-| [LightGlue](https://github.com/cvg/LightGlue) | Apache-2.0 | geometrische Verifikation |
-| [SuperPoint](https://github.com/magicleap/SuperPointPretrainedNetwork) | [nur nichtkommerziell](https://github.com/magicleap/SuperPointPretrainedNetwork/blob/master/LICENSE) | geometrische Verifikation |
-| [FAISS](https://github.com/facebookresearch/faiss) | MIT | die Suche in 06 |
-| [OSMnx](https://github.com/gboeing/osmnx) / OpenStreetMap | MIT / [ODbL](https://www.openstreetmap.org/copyright) | Stadtgrenze, Straßennetz, Stadtteile |
+| [Mapillary](https://www.mapillary.com) — images and metadata | [CC BY-SA 4.0](https://www.mapillary.com/terms) | the dataset |
+| [MegaLoc](https://github.com/gmberton/MegaLoc) | MIT | encoder; weights via [Hugging Face](https://huggingface.co/gberton/MegaLoc) |
+| [EigenPlaces](https://github.com/gmberton/EigenPlaces) | MIT | encoder, uses parts of [CosPlace](https://github.com/gmberton/CosPlace) (MIT) |
+| [MixVPR](https://github.com/amaralibey/MixVPR) | no license file | encoder and weights |
+| [AnyLoc](https://github.com/AnyLoc/AnyLoc) | BSD-3-Clause | VLAD over DINOv2 features |
+| [DINOv2](https://github.com/facebookresearch/dinov2) | Apache-2.0 | basis of AnyLoc and MegaLoc |
+| [CLIP](https://github.com/openai/CLIP) via 🤗 Transformers | MIT | baseline without place training |
+| [LightGlue](https://github.com/cvg/LightGlue) | Apache-2.0 | geometric verification |
+| [SuperPoint](https://github.com/magicleap/SuperPointPretrainedNetwork) | [non-commercial only](https://github.com/magicleap/SuperPointPretrainedNetwork/blob/master/LICENSE) | geometric verification |
+| [FAISS](https://github.com/facebookresearch/faiss) | MIT | the search in 06 |
+| [OSMnx](https://github.com/gboeing/osmnx) / OpenStreetMap | MIT / [ODbL](https://www.openstreetmap.org/copyright) | city boundary, street network, districts |
 
-Werkzeug: [claude.ai](https://claude.ai) — siehe [KI-Nutzung](#ki-nutzung).
+Tool: [claude.ai](https://claude.ai) — see [use of AI](#use-of-ai).
 
 <details>
-<summary><b>Literatur</b></summary>
+<summary><b>Literature</b></summary>
 
 - CLIP — Radford et al., *Learning Transferable Visual Models From Natural Language Supervision*, ICML 2021
 - DINOv2 — Oquab et al., *DINOv2: Learning Robust Visual Features without Supervision*, TMLR 2024
 - AnyLoc — Keetha et al., *AnyLoc: Towards Universal Visual Place Recognition*, IEEE RA-L 2023
 - MixVPR — Ali-bey, Chaib-draa, Giguère, *MixVPR: Feature Mixing for Visual Place Recognition*, WACV 2023
 - EigenPlaces — Berton, Trivigno, Caputo, Masone, *EigenPlaces: Training Viewpoint Robust Models for Visual Place Recognition*, ICCV 2023
-- MegaLoc — Berton, Masone, *MegaLoc: One Retrieval to Place Them All*, CVPR Workshops 2025, S. 2886–2892 ([arXiv 2502.17237](https://arxiv.org/abs/2502.17237))
+- MegaLoc — Berton, Masone, *MegaLoc: One Retrieval to Place Them All*, CVPR Workshops 2025, pp. 2886–2892 ([arXiv 2502.17237](https://arxiv.org/abs/2502.17237))
 - VLAD — Jégou, Douze, Schmid, Pérez, *Aggregating local descriptors into a compact image representation*, CVPR 2010
-- PCA-Whitening für VLAD — Jégou, Chum, *Negative evidences and co-occurences in image retrieval: The benefit of PCA and whitening*, ECCV 2012
+- PCA whitening for VLAD — Jégou, Chum, *Negative evidences and co-occurences in image retrieval: The benefit of PCA and whitening*, ECCV 2012
 - MSLS — Warburg et al., *Mapillary Street-Level Sequences: A Dataset for Lifelong Place Recognition*, CVPR 2020
 - SuperPoint — DeTone, Malisiewicz, Rabinovich, *SuperPoint: Self-Supervised Interest Point Detection and Description*, CVPR Workshops 2018
 - LightGlue — Lindenberger, Sarlin, Pollefeys, *LightGlue: Local Feature Matching at Light Speed*, ICCV 2023
@@ -1310,29 +1327,29 @@ Werkzeug: [claude.ai](https://claude.ai) — siehe [KI-Nutzung](#ki-nutzung).
 
 </details>
 
-## Lizenz
+## License
 
-Der **Code** steht unter der [MIT-Lizenz](LICENSE).
+The **code** is under the [MIT license](LICENSE).
 
-Nicht darunter fallen die Mapillary-Daten, die OSM-Daten, die Fremd-Repositories
-unter `external/` und alle Modellgewichte — Einzelheiten in [NOTICE.md](NOTICE.md).
-Zwei Einschränkungen: **SuperPoint** nur für nichtkommerzielle Forschung
-(betrifft allein die geometrische Verifikation), **MixVPR** ohne Lizenzdatei.
+Not covered are the Mapillary data, the OSM data, the third-party repositories
+under `external/` and all model weights — details in [NOTICE.md](NOTICE.md).
+Two restrictions: **SuperPoint** only for non-commercial research
+(affects only the geometric verification), **MixVPR** without a license file.
 
-Die Bilder liegen nicht im Repository, **die Metadaten schon** (rund 66 MB über
-sechs Städte, CC BY-SA 4.0). Wer daraus Datensätze ableitet, gibt sie unter
-denselben Bedingungen weiter und nennt Mapillary. Karten enthalten
-OSM-Daten (ODbL, © OpenStreetMap-Mitwirkende).
+The images are not in the repository, **the metadata are** (about 66 MB across
+six cities, CC BY-SA 4.0). Anyone deriving datasets from them passes them on under
+the same terms and credits Mapillary. Maps contain
+OSM data (ODbL, © OpenStreetMap contributors).
 
-### Personenbezug
+### Personal data
 
-Mapillary macht Gesichter und Kennzeichen in den **Bildern** unkenntlich. Die
-**Metadaten** enthalten aber `creator_id` (eine pseudonyme Konto-ID) mit
-Koordinaten und Zeit — je Konto eine Aufnahmespur.
+Mapillary blurs faces and licence plates in the **images**. The
+**metadata**, however, contain `creator_id` (a pseudonymous account ID) together with
+coordinates and time — one capture trail per account.
 
-Gebraucht wird davon nur, **ob** zwei Bilder vom selben Konto stammen: für die
-Hard-Ground-Truth, den Städtevergleich und die Zwillingsfahrten. Die IDs
-werden nirgends aufgelöst oder verknüpft.
+Only **whether** two images come from the same account is used: for the
+Hard ground truth, the city comparison and the twin drives. The IDs
+are never resolved or linked.
 
 > [!IMPORTANT]
-> Das Repository ist ein Benchmark-Datensatz, kein anonymisierter.
+> The repository is a benchmark dataset, not an anonymised one.
